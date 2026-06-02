@@ -29,6 +29,9 @@ with engine.connect() as conn:
             "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='valor_anterior') THEN "
             "ALTER TABLE productos ADD COLUMN valor_anterior FLOAT; "
             "END IF; "
+            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='origen') THEN "
+            "ALTER TABLE productos ADD COLUMN origen VARCHAR(20); "
+            "END IF; "
             "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
             "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
             "END IF; "
@@ -70,6 +73,7 @@ class ProductoResponse(BaseModel):
     unidad: str
     valor: float
     valor_anterior: float | None = None
+    origen: str | None = None
     tienda: str
     url_origen: str
     created_at: datetime | None = None
@@ -134,7 +138,7 @@ def require_admin(user: Usuario = Depends(get_current_user)):
 
 # ─── Upsert ───────────────────────────────────────────────────
 
-def _upsert_producto(db: Session, producto) -> dict:
+def _upsert_producto(db: Session, producto, origen: str = "manual") -> dict:
     if not producto.codigo:
         return "sin_cambio"
     existente = (
@@ -150,6 +154,7 @@ def _upsert_producto(db: Session, producto) -> dict:
         existente.unidad = producto.unidad
         existente.valor = producto.valor
         existente.url_origen = producto.url
+        existente.origen = existente.origen or origen
         existente.updated_at = func.now()
         return "actualizado"
     else:
@@ -160,6 +165,7 @@ def _upsert_producto(db: Session, producto) -> dict:
             valor=producto.valor,
             tienda=producto.tienda,
             url_origen=producto.url,
+            origen=origen,
         )
         db.add(db_item)
         return "nuevo"
@@ -266,7 +272,7 @@ def _procesar_urls_bg(urls: list[str]):
                 continue
             try:
                 producto = scraper.scrape()
-                _upsert_producto(bg_db, producto)
+                _upsert_producto(bg_db, producto, origen="sheet")
                 bg_db.commit()
             except Exception:
                 bg_db.rollback()
@@ -292,7 +298,7 @@ async def scrape_daily(db: Session = Depends(get_db)):
             continue
         try:
             producto = scraper.scrape()
-            resultado = _upsert_producto(db, producto)
+            resultado = _upsert_producto(db, producto, origen="sheet")
             if resultado == "nuevo":
                 nuevos += 1
             elif resultado == "actualizado":

@@ -91,7 +91,7 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
       <input type="email" id="reg-email" placeholder="Tu email" autocomplete="email">
       <button class="btn" onclick="registrarse()">Crear cuenta gratis</button>
     </div>
-    <div id="login-token" style="display:none">
+    <div id="login-token-section" style="display:none">
       <input type="email" id="login-email" placeholder="Email" autocomplete="email">
       <input type="password" id="login-token" placeholder="Token" autocomplete="off">
       <button class="btn" onclick="login()">Ingresar</button>
@@ -173,7 +173,7 @@ function cambiarLogin(modo, el){
   document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
-  document.getElementById('login-token').style.display = modo==='token' ? 'block' : 'none';
+  document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
   document.getElementById('login-error').textContent = '';
   document.getElementById('token-creado')?.remove();
 }

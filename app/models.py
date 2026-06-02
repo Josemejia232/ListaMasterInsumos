@@ -14,6 +14,7 @@ class Producto(Base):
     unidad = Column(String(50), nullable=False)
     valor = Column(Float, nullable=False)
     valor_anterior = Column(Float, nullable=True)
+    origen = Column(String(20), nullable=True)  # sheet | manual
     tienda = Column(String(200), nullable=False)
     url_origen = Column(String(1000), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
