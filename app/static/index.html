@@ -140,13 +140,22 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
   <div class="page-wrap">
     <!-- Lista Insumos -->
     <div class="section active" id="section-ver-insumos">
-      <h2 id="insumos-title">Lista de Insumos</h2>
+      <h2>Lista de Insumos</h2>
       <div class="form-row">
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
       </div>
-      <div class="table-wrap">
+      <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem">
+        <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
         <table>
-          <thead id="insumos-thead"><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
+          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th></tr></thead>
+          <tbody id="admin-ins-tbody"></tbody>
+        </table>
+        <div class="empty" id="admin-ins-empty">No hay productos.</div>
+      </div>
+      <div class="table-wrap">
+        <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Usuario &mdash; datos ajustados</h3>
+        <table>
+          <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
           <tbody id="ver-ins-tbody"></tbody>
         </table>
         <div class="empty" id="ver-ins-empty">No hay productos.</div>
@@ -312,26 +321,43 @@ function renderVer(){
   const q = (document.getElementById('ver-filtro').value||'').toLowerCase().trim();
   const isAdmin = _user && _user.tipo === 'admin';
   const filtrados = !q ? _verProds : _verProds.filter(p =>
-    p.descripcion.toLowerCase().includes(q) ||
+    (p.descripcion||'').toLowerCase().includes(q) ||
     (p.categoria||'').toLowerCase().includes(q)
   );
-  const thead = document.getElementById('insumos-thead');
+
+  // Admin table (raw data)
+  const adminWrap = document.getElementById('admin-table-wrap');
+  if(isAdmin){
+    adminWrap.style.display = 'block';
+    const tbody = document.getElementById('admin-ins-tbody');
+    const empty = document.getElementById('admin-ins-empty');
+    if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; }
+    else {
+      empty.style.display='none';
+      tbody.innerHTML = filtrados.map((p, idx) => `<tr>
+        <td>${String(idx+1).padStart(4,'0')}</td>
+        <td>${p.descripcion}</td>
+        <td>${p.unidad}</td>
+        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
+        <td>${p.categoria||''}</td>
+      </tr>`).join('');
+    }
+  } else {
+    adminWrap.style.display = 'none';
+  }
+
+  // User table (adjusted data)
   const tbody = document.getElementById('ver-ins-tbody');
   const empty = document.getElementById('ver-ins-empty');
-  if(isAdmin){
-    document.getElementById('insumos-title').textContent = 'Todos los Productos';
-    thead.innerHTML = '<tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th></tr>';
-  } else {
-    document.getElementById('insumos-title').textContent = 'Lista de Insumos';
-    thead.innerHTML = '<tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th><th>CATEGORIA</th></tr>';
-  }
   if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML = filtrados.map((p, idx) => {
-    const id = String(idx+1).padStart(4,'0');
-    if(isAdmin) return `<tr><td>${id}</td><td>${p.descripcion}</td><td>${p.unidad}</td><td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td><td>${p.categoria||''}</td></tr>`;
-    return `<tr><td>${id}</td><td>${descripcionAjustada(p.descripcion,p.id)}</td><td>${p.unidad}</td><td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td><td>${p.categoria||''}</td></tr>`;
-  }).join('');
+  tbody.innerHTML = filtrados.map((p, idx) => `<tr>
+    <td>${String(idx+1).padStart(4,'0')}</td>
+    <td>${descripcionAjustada(p.descripcion,p.id)}</td>
+    <td>${p.unidad}</td>
+    <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
+    <td>${p.categoria||''}</td>
+  </tr>`).join('');
 }
 function filtrarVer(){ renderVer(); }
 // ─── Usuarios ───────────────────────────────────────────
