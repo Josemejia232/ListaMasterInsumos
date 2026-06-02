@@ -150,7 +150,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
         <table>
-          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
+          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th></tr></thead>
           <tbody id="admin-ins-tbody"></tbody>
         </table>
         <div class="empty" id="admin-ins-empty">No hay productos.</div>
@@ -331,10 +331,8 @@ function renderVer(){
       tbody.innerHTML = filtrados.map((p, idx) => `<tr>
         <td>${String(idx+1).padStart(4,'0')}</td>
         <td>${p.descripcion}</td>
-        <td>${descripcionAjustada(p.descripcion,p.id)}</td>
         <td>${p.unidad}</td>
-        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
-        <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
+        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
         <td>${p.categoria||''}</td>
       </tr>`).join('');
     }
