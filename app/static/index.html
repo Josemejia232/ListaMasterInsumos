@@ -227,9 +227,10 @@ function buildSidebar(){
     items.push({label:'ADMIN', header:true});
     items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
     items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
+  } else {
+    items.push({label:'LISTA INSUMOS', header:true});
+    items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos'});
   }
-  items.push({label:'LISTA INSUMOS', header:true});
-  if(!isAdmin) items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
