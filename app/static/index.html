@@ -44,7 +44,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .form-inline{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
 .form-inline input{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.375rem .5rem;color:var(--text);font-size:.8125rem;min-width:80px}
 .form-inline input:focus{outline:none;border-color:var(--accent)}
-.form-inline .btn{margin-left:auto}
 .btn{background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .btn:hover{opacity:.85}
 .btn-green{background:var(--green)}
@@ -54,13 +53,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:.5rem;overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:.8125rem}
-th{text-align:left;padding:.625rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
-td{padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+th{text-align:left;padding:.625rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:.5rem .75rem;border-bottom:1px solid var(--border);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
-td:nth-child(3){max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-td:nth-child(8){max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-td:nth-child(8) a{color:var(--accent);text-decoration:none;font-size:.75rem}
 td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
 #result-box{margin-top:1rem}
@@ -68,17 +64,40 @@ td .actions{display:flex;gap:.25rem}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
+
+/* ─── Responsive ───────────────────────────────────────── */
+@media(max-width:768px){
+  .sidebar{position:fixed;z-index:100;left:0;top:0;height:100%}
+  .sidebar.collapsed{left:calc(var(--sidebar)*-1)}
+  .content{padding:1rem}
+  .topbar h1{font-size:1.1rem}
+  .topbar .sub{display:none}
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .cards .card{padding:.75rem}
+  .card-value{font-size:1.1rem}
+  .table-wrap{overflow-x:auto}
+  table{font-size:.75rem}
+  th,td{padding:.4rem .5rem}
+  h2{font-size:1rem}
+}
+@media(max-width:480px){
+  .content{padding:.75rem}
+  .form-row{flex-direction:column}
+  .form-row input{width:100%}
+  .cards{grid-template-columns:1fr}
+  table{font-size:.7rem}
+  th,td{padding:.3rem .35rem}
+}
 </style>
 </head>
 <body>
 
 <!-- ─── Sidebar ─────────────────────────────────────────── -->
-<div class="sidebar" id="sidebar">
+<div class="sidebar collapsed" id="sidebar">
   <div class="sidebar-header">
     <span class="logo">L</span>
     <span>ListaMaster</span>
   </div>
-
   <div class="menu-label">Admin</div>
   <div class="menu-item active" data-section="dashboard" onclick="irA('dashboard',this)">
     <span class="ico">&#9632;</span> Dashboard
@@ -89,14 +108,12 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
   <div class="menu-item" data-section="insumos" onclick="irA('insumos',this)">
     <span class="ico">&#9776;</span> Insumos
   </div>
-
   <div class="menu-label">Usuario</div>
   <div class="menu-item" data-section="ver-insumos" onclick="irA('ver-insumos',this)">
     <span class="ico">&#128196;</span> Lista Insumos
   </div>
-
   <div class="sidebar-footer">
-    <div class="btn-toggle" onclick="toggleSidebar()">&larr; Ocultar men&uacute;</div>
+    <div class="btn-toggle" onclick="toggleSidebar()">&larr; Cerrar</div>
   </div>
 </div>
 
@@ -106,7 +123,7 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
     <button class="btn-menu" onclick="toggleSidebar()" title="Men&uacute;">&#9776;</button>
     <div>
       <h1 id="page-title">Dashboard</h1>
-      <div class="sub">Panel de control &mdash; Insumos de construcci&oacute;n</div>
+      <div class="sub" id="page-sub">Panel de control</div>
     </div>
   </div>
 
@@ -156,10 +173,9 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
   <!-- Lista Insumos (Usuario) -->
   <div class="section" id="section-ver-insumos">
     <h2>Lista de Insumos</h2>
-    <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">Consulta de insumos disponibles.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>ID</th><th>Descripci&oacute;n</th><th>Unidad</th><th>Valor</th><th>Valor.</th><th>Descripcion.</th></tr></thead>
+        <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
         <tbody id="ver-ins-tbody"></tbody>
       </table>
       <div class="empty" id="ver-ins-empty">No hay insumos registrados.</div>
@@ -185,14 +201,22 @@ function descripcionAjustada(desc, id){
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('collapsed');
 }
+document.addEventListener('click', function(e){
+  const s = document.getElementById('sidebar');
+  if(window.innerWidth<=768 && !s.contains(e.target) && !e.target.closest('.btn-menu')){
+    s.classList.add('collapsed');
+  }
+});
 
 function irA(section, el){
   document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   if(el) el.classList.add('active');
   document.getElementById('section-'+section).classList.add('active');
-  const titles = {dashboard:'Dashboard', scraping:'Scraping', insumos:'Admin — Insumos', 'ver-insumos':'Lista de Insumos'};
-  document.getElementById('page-title').textContent = titles[section]||section;
+  const subs = {dashboard:'Panel de control', scraping:'Scraping autom&aacute;tico', insumos:'Administraci&oacute;n de insumos', 'ver-insumos':'Consulta de insumos'};
+  document.getElementById('page-title').textContent = section==='ver-insumos'?'Lista de Insumos':section==='insumos'?'Admin Insumos':section==='scraping'?'Scraping':'Dashboard';
+  document.getElementById('page-sub').innerHTML = subs[section]||'';
+  if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='dashboard') cargarDashboard();
   if(section==='insumos') cargarInsumos();
   if(section==='ver-insumos') cargarVerInsumos();
@@ -306,11 +330,11 @@ async function cargarVerInsumos(){
   const empty = document.getElementById('ver-ins-empty');
   if(!items.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML = items.map(i => `<tr>
-    <td>${i.id}</td><td>${i.descripcion}</td><td>${i.un}</td>
-    <td>$${Number(i.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
-    <td>$${precioAjustado(i.valor,i.id).toLocaleString('es-CO')}</td>
+  tbody.innerHTML = items.map((i, idx) => `<tr>
+    <td>${String(idx+1).padStart(4,'0')}</td>
     <td>${descripcionAjustada(i.descripcion,i.id)}</td>
+    <td>${i.un}</td>
+    <td>$${precioAjustado(i.valor,i.id).toLocaleString('es-CO')}</td>
   </tr>`).join('');
 }
 
