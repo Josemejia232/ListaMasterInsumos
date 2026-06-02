@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ListaMasterInsumos</title>
 <style>
-:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#eab308}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
@@ -16,6 +16,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .login-box input:focus{outline:none;border-color:var(--accent)}
 .login-box .btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.6rem;font-size:.875rem;cursor:pointer}
 .login-box .btn:hover{opacity:.85}
+.login-box .btn-green{background:var(--green);margin-top:.5rem}
+.login-tab{padding:.5rem .75rem;cursor:pointer;font-size:.8rem;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.login-tab:hover{color:var(--text)}
+.login-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.login-box .token-creado{background:var(--card);border:1px solid var(--green);border-radius:.375rem;padding:.75rem;margin-top:.75rem;font-size:.8rem;word-break:break-all}
+.login-box .token-creado strong{color:var(--green)}
 .error{color:var(--red);font-size:.8rem;margin-top:.5rem}
 .app-wrap{display:none}
 .app-wrap.visible{display:block}
@@ -76,10 +82,20 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
 <div class="login-wrap" id="login-wrap">
   <div class="login-box">
     <h1>ListaMaster</h1>
-    <div class="sub">Inicia sesi&oacute;n</div>
-    <input type="email" id="login-email" placeholder="Email" autocomplete="email">
-    <input type="password" id="login-token" placeholder="Token" autocomplete="off">
-    <button class="btn" onclick="login()">Ingresar</button>
+    <div class="sub">Accede a tu lista de insumos</div>
+    <div style="display:flex;gap:.25rem;margin-bottom:1.25rem;border-bottom:1px solid var(--border)">
+      <div class="login-tab active" data-login="registro" onclick="cambiarLogin('registro',this)">Registrarse gratis</div>
+      <div class="login-tab" data-login="token" onclick="cambiarLogin('token',this)">Con token</div>
+    </div>
+    <div id="login-registro">
+      <input type="email" id="reg-email" placeholder="Tu email" autocomplete="email">
+      <button class="btn" onclick="registrarse()">Crear cuenta gratis</button>
+    </div>
+    <div id="login-token" style="display:none">
+      <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="login-token" placeholder="Token" autocomplete="off">
+      <button class="btn" onclick="login()">Ingresar</button>
+    </div>
     <div class="error" id="login-error"></div>
   </div>
 </div>
@@ -153,6 +169,37 @@ let _editUsrId = null;
 let _verProds = [];
 
 // ─── Auth ───────────────────────────────────────────────
+function cambiarLogin(modo, el){
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
+  document.getElementById('login-token').style.display = modo==='token' ? 'block' : 'none';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('token-creado')?.remove();
+}
+function registrarse(){
+  const email = document.getElementById('reg-email').value.trim();
+  if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
+  document.getElementById('login-error').textContent='';
+  fetch(API+'/api/auth/register', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,token:''})
+  }).then(r=>{
+    if(!r.ok) return r.json().then(e=>{ throw new Error(e.detail||'Error'); });
+    return r.json();
+  }).then(u=>{
+    _user = u;
+    localStorage.setItem('user', JSON.stringify(u));
+    const old = document.getElementById('token-creado');
+    if(old) old.remove();
+    const div = document.createElement('div');
+    div.id = 'token-creado';
+    div.className = 'token-creado';
+    div.innerHTML = 'Cuenta creada. Tu token es:<br><strong>'+u.token+'</strong><br><span style="color:var(--muted);font-size:.75rem">Guárdalo para iniciar sesión después.</span>';
+    document.querySelector('.login-box').appendChild(div);
+    initApp();
+  }).catch(e=>{ document.getElementById('login-error').textContent=e.message; });
+}
 function login(){
   const email = document.getElementById('login-email').value.trim();
   const token = document.getElementById('login-token').value.trim();

@@ -91,6 +91,9 @@ class LoginResponse(BaseModel):
     email: str
     tipo: str
 
+class RegisterResponse(LoginResponse):
+    token: str
+
 class UsuarioRequest(BaseModel):
     email: str
     token: str = ""
@@ -158,6 +161,19 @@ def _upsert_producto(db: Session, producto) -> dict:
 
 
 # ─── Auth endpoints ───────────────────────────────────────────
+
+@app.post("/api/auth/register", response_model=RegisterResponse)
+def register(req: LoginRequest, db: Session = Depends(get_db)):
+    existente = db.query(Usuario).filter(Usuario.email == req.email).first()
+    if existente:
+        raise HTTPException(status_code=400, detail="Email ya registrado")
+    import secrets
+    token = secrets.token_hex(16)
+    user = Usuario(email=req.email, token=token, activo=True, tipo="usuario")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return RegisterResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
@@ -400,7 +416,7 @@ def seed_admin():
     try:
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
         if not admin:
-            admin_email = os.getenv("ADMIN_EMAIL", "admin@lista.com")
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
             admin_token = os.getenv("ADMIN_TOKEN", "admin123")
             db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
             db.commit()
