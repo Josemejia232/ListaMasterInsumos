@@ -48,9 +48,11 @@
   - **Usuario**: módulo **LISTA INSUMOS** (Insumos) con contador total
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
-- 4.6. Tabla Insumos para admin (datos originales): columnas ID, DESCRIPCION, UNIDAD, VALOR, CATEGORIA
+- 4.6. Tabla Insumos para admin (datos originales + ajustados): columnas ID, DESCRIPCION, DESCRIPCION., UNIDAD, VALOR, VALOR., CATEGORIA
   - DESCRIPCION = descripción original del scraper
+  - DESCRIPCION. = descripción homologada (misma que ve el usuario)
   - VALOR = precio original sin ajustes
+  - VALOR. = precio ajustado (mismo que ve el usuario)
 - 4.6.1. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
 - 4.6.2. La vista admin debe mostrar el número total de insumos (ej: "Total: X insumos") sobre la tabla
 - 4.7. Tabla Insumos para usuario (datos ajustados): columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA

@@ -23,7 +23,7 @@ async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
         return []
 
     headers = [h.strip().lower() for h in next(iter(lines), "").split(",")]
-    url_col = next((i for i, h in enumerate(headers) if h == "url"), None)
+    url_col = next((i for i, h in enumerate(headers) if h in ("url", "insumo")), None)
     cat_col = next((i for i, h in enumerate(headers) if "categ" in h), None)
 
     results = []
