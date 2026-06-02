@@ -1,9 +1,13 @@
 import asyncio
 import os
+import json
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header, Request
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
@@ -54,6 +58,13 @@ app = FastAPI(
     title="ListaMasterInsumos",
     description="API para scrapeo de insumos de construcción desde Google Sheets",
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
+# Simple in-memory cache
+_cache = {}
+_cache_time = 0
+CACHE_TTL = 10  # seconds
 
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
@@ -331,6 +342,8 @@ async def scrape_daily(db: Session = Depends(get_db)):
             fallidos += 1
             continue
     db.commit()
+    global _cache_time
+    _cache_time = 0  # invalidate cache
     return ScrapeResponse(
         total=len(urls), nuevos=nuevos, actualizados=actualizados,
         sin_cambio=sin_cambio, fallidos=fallidos,
@@ -347,10 +360,20 @@ def listar_productos(
     limit: int = 500,
     db: Session = Depends(get_db),
 ):
+    global _cache, _cache_time
+    now = time.time()
+    if (now - _cache_time) < CACHE_TTL and not tienda:
+        return JSONResponse(content=json.loads(_cache["data"]), headers={"X-Cache":"HIT","ETag":_cache["etag"]})
+
     query = db.query(Producto)
     if tienda:
         query = query.filter(Producto.tienda.ilike(f"%{tienda}%"))
-    return query.order_by(Producto.created_at.desc()).offset(skip).limit(limit).all()
+    result = query.order_by(Producto.created_at.desc()).offset(skip).limit(limit).all()
+    data = json.dumps(jsonable_encoder(result))
+    etag = f'W/"prod-{hash(data)}"'
+    _cache = {"data": data, "etag": etag}
+    _cache_time = now
+    return JSONResponse(content=json.loads(data), headers={"X-Cache":"MISS","ETag":etag})
 
 @app.get("/productos/{producto_id}", response_model=ProductoResponse)
 def obtener_producto(producto_id: int, db: Session = Depends(get_db)):

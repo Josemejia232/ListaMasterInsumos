@@ -145,7 +145,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
     <div class="section active" id="section-ver-insumos">
       <h2>Lista de Insumos</h2>
       <div class="form-row">
-        <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
+        <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVerDebounced()">
       </div>
       <div id="total-count" style="padding:.5rem 0;font-size:.85rem;color:var(--muted)"></div>
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem;display:none">
@@ -195,6 +195,11 @@ let _user = null;
 let _editUsrId = null;
 let _verProds = [];
 let _viewMode = null;
+let _debounceTimer = null;
+
+function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
+
+var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
 
 // ─── Auth ───────────────────────────────────────────────
 function cambiarLogin(modo, el){
@@ -295,9 +300,12 @@ function initApp(){
         .catch(() => logout());
     }
   }
-  setInterval(() => {
-    if(_viewMode){ cargarVerInsumos(); if(_user && _user.tipo==='admin') cargarUsuarios(); }
+  var _refreshTimer = setInterval(() => {
+    if(_viewMode && document.visibilityState !== 'hidden'){ cargarVerInsumos(); if(_user && _user.tipo==='admin') cargarUsuarios(); }
   }, 30000);
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible' && _viewMode){ cargarVerInsumos(); }
+  });
 })();
 
 // ─── Helpers ────────────────────────────────────────────
@@ -350,8 +358,15 @@ async function cargarVerInsumos(){
   try {
     const r = await apiFetch('/productos?limit=500');
     if(!r.ok) return;
-    _verProds = await r.json();
-    renderVer();
+    var data = await r.text();
+    var newData = JSON.parse(data);
+    var changed = true;
+    if(_verProds.length === newData.length){
+      var oldIds = _verProds.map(function(p){ return p.id + '|' + p.valor + '|' + p.categoria + '|' + p.descripcion_ajustada; }).join();
+      var newIds = newData.map(function(p){ return p.id + '|' + p.valor + '|' + p.categoria + '|' + p.descripcion_ajustada; }).join();
+      changed = oldIds !== newIds;
+    }
+    if(changed){ _verProds = newData; renderVer(); }
   } catch(e){}
 }
 function renderVer(){
@@ -409,6 +424,8 @@ function renderVer(){
 function filtrarVer(){ renderVer(); }
 // ─── Usuarios ───────────────────────────────────────────
 async function cargarUsuarios(){
+  var sec = document.getElementById('section-usuarios');
+  if(!sec || !sec.classList.contains('active')) return;
   try {
     const r = await apiFetch('/api/usuarios');
     if(!r.ok) return;
