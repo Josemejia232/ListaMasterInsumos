@@ -1,91 +1,124 @@
 /**
  * ListaMasterInsumos — Google Apps Script
  *
- * Configuración:
+ * Sincroniza los precios scrapeados con tu Google Sheet.
+ *
+ * ⚠️ IMPORTANTE: Google Apps Script corre en servidores de Google,
+ *    NO puede acceder a localhost. Necesitas una URL pública.
+ *
+ * Para desarrollo local:
+ *   Usa ngrok (https://ngrok.com) para exponer localhost:
+ *     ngrok http 8000
+ *   Luego pon la URL de ngrok en CONFIG_API_URL abajo o en celda Z1.
+ *
+ * Configuración (en el Sheet):
+ *   Celda Z1 = URL de la API (ej: http://localhost:8000 o https://miapp.onrender.com)
+ *   Celda Z2 = Token de admin
+ *
+ * Instalación:
  *   1. Abre tu Google Sheet → Extensiones → Apps Script
- *   2. Copia este archivo en el editor
- *   3. Reemplaza API_BASE_URL con la URL de tu app (ej: https://tuapp.onrender.com)
- *   4. Guarda (Ctrl+S) y ejecuta syncPrices() para probar
- *   5. En el editor, ve al reloj ⏰ → Agregar trigger:
+ *   2. Copia este código y pega en el editor
+ *   3. Guarda (Ctrl+S) y ejecuta syncPrices() una vez para probar
+ *   4. Ve al reloj ⏰ → Agregar trigger:
  *      - Función: syncPrices
- *      - Tipo: Time-driven → Every hour (o lo que prefieras)
+ *      - Tipo: Time-driven → Cada hora
  */
 
-// ─── Config ───────────────────────────────────────────────
-var API_BASE_URL = 'https://tuapp.onrender.com';  // ← CAMBIA ESTO
-var AUTH_TOKEN   = 'admin123';                     // ← Token de admin
+// ─── Config (se lee del Sheet si existe, si no usa defaults) ──
 
-// Columnas esperadas en la hoja (fila 1 = headers)
-// A: URL, B: CATEGORIA, C: ÚLTIMO PRECIO, D: ÚLTIMA ACTUALIZACIÓN
-var COL_URL   = 1;  // Columna A
-var COL_PRECIO = 3; // Columna C — se escribe aquí
-var COL_FECHA  = 4; // Columna D — se escribe aquí
+function getConfig() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var apiUrl = sheet.getRange('Z1').getValue();
+  var token  = sheet.getRange('Z2').getValue();
+  return {
+    apiUrl: (apiUrl && apiUrl.toString().trim()) ? apiUrl.toString().trim() : 'http://localhost:8000',
+    token:  (token && token.toString().trim())  ? token.toString().trim()  : 'admin123'
+  };
+}
 
-// ─── Principal ────────────────────────────────────────────
+// ─── Principal ────────────────────────────────────────────────
 
 function syncPrices() {
+  var cfg = getConfig();
   var sheet = SpreadsheetApp.getActiveSheet();
   var data  = sheet.getDataRange().getValues();
   if (data.length < 2) { Logger.log('Sin datos'); return; }
 
-  var headers = data[0];
-  // Buscar columna URL si no está en A
-  var urlCol = headers.findIndex(function(h) { return h.toString().toLowerCase() === 'url'; });
-  if (urlCol === -1) urlCol = COL_URL - 1;
-  // Buscar o crear columna ÚLTIMO PRECIO
-  var precioCol = headers.findIndex(function(h) { return h.toString().toLowerCase().indexOf('ultimo') !== -1 || h.toString().toLowerCase().indexOf('precio') !== -1; });
-  if (precioCol === -1) { precioCol = headers.length; sheet.getRange(1, precioCol+1).setValue('ÚLTIMO PRECIO'); }
-  // Buscar o crear columna ÚLTIMA ACTUALIZACIÓN
-  var fechaCol = headers.findIndex(function(h) { return h.toString().toLowerCase().indexOf('actualizaci') !== -1; });
-  if (fechaCol === -1) { fechaCol = headers.length + (precioCol === headers.length ? 1 : 0); sheet.getRange(1, fechaCol+1).setValue('ÚLTIMA ACTUALIZACIÓN'); }
-  // Ajustar index si creamos ambas
-  if (precioCol === headers.length && fechaCol === headers.length + 1) { /*ok*/ }
+  var headers = data[0].map(function(h) { return h.toString().toLowerCase().trim(); });
+
+  // Detectar columnas por nombre
+  var urlCol = headers.indexOf('url');
+  if (urlCol === -1) { Logger.log('No se encontró columna URL'); return; }
+
+  var fechaCol = -1;
+  for (var i = 0; i < headers.length; i++) {
+    if (headers[i].indexOf('actualizaci') !== -1) { fechaCol = i; break; }
+  }
 
   // 1. Disparar scrape diario
   try {
-    UrlFetchApp.fetch(API_BASE_URL + '/scrape/daily', {
+    var scrapeResp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/daily', {
       method: 'get',
-      headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+      headers: { 'Authorization': 'Bearer ' + cfg.token },
       muteHttpExceptions: true
     });
-    Logger.log('Scrape triggered');
-  } catch (e) { Logger.log('Scrape error: ' + e); }
+    var code = scrapeResp.getResponseCode();
+    if (code !== 200) {
+      Logger.log('Scrape respondió ' + code + ': ' + scrapeResp.getContentText().substring(0, 200));
+    } else {
+      Logger.log('Scrape OK');
+    }
+  } catch (e) {
+    Logger.log('Error llamando a /scrape/daily: ' + e);
+    Logger.log('¿Está la app corriendo y accesible desde internet?');
+    return;
+  }
 
-  Utilities.sleep(5000); // esperar 5s a que termine
+  Utilities.sleep(3000);
 
   // 2. Obtener productos actualizados
   var resp;
   try {
-    resp = UrlFetchApp.fetch(API_BASE_URL + '/productos?limit=500', {
-      headers: { 'Authorization': 'Bearer ' + AUTH_TOKEN },
+    resp = UrlFetchApp.fetch(cfg.apiUrl + '/productos?limit=500', {
+      headers: { 'Authorization': 'Bearer ' + cfg.token },
       muteHttpExceptions: true
     });
-  } catch (e) { Logger.log('Fetch productos error: ' + e); return; }
+    if (resp.getResponseCode() !== 200) {
+      Logger.log('Productos respondió ' + resp.getResponseCode() + ': ' + resp.getContentText().substring(0, 200));
+      return;
+    }
+  } catch (e) { Logger.log('Error obteniendo productos: ' + e); return; }
 
-  var productos = JSON.parse(resp.getContentText());
+  var productos;
+  try { productos = JSON.parse(resp.getContentText()); }
+  catch (e) { Logger.log('Error parseando JSON: ' + e + ' — Respuesta: ' + resp.getContentText().substring(0, 100)); return; }
+
+  if (!productos || !productos.length) { Logger.log('No hay productos'); return; }
+
   var now = new Date();
+  var actualizados = 0;
 
-  // 3. Actualizar filas
+  // 3. Crear columna ÚLTIMA ACTUALIZACIÓN si no existe
+  if (fechaCol === -1) {
+    fechaCol = headers.length;
+    sheet.getRange(1, fechaCol + 1).setValue('ÚLTIMA ACTUALIZACIÓN');
+  }
+
+  // 4. Recorrer filas y actualizar precios
   for (var i = 1; i < data.length; i++) {
     var url = data[i][urlCol] ? data[i][urlCol].toString().trim() : '';
     if (!url) continue;
-    var match = productos.filter(function(p) { return p.url_origen === url; });
-    if (match.length) {
-      var p = match[0];
-      sheet.getRange(i+1, precioCol+1).setValue(p.valor);
-      sheet.getRange(i+1, fechaCol+1).setValue(now);
+
+    var match = null;
+    for (var j = 0; j < productos.length; j++) {
+      if (productos[j].url_origen === url) { match = productos[j]; break; }
+    }
+
+    if (match) {
+      sheet.getRange(i + 1, fechaCol + 1).setValue(now);
+      actualizados++;
     }
   }
 
-  Logger.log('Sincronización completa: ' + (data.length - 1) + ' filas procesadas');
-}
-
-/**
- * Helper: Array.findIndex polyfill
- */
-if (!Array.prototype.findIndex) {
-  Array.prototype.findIndex = function(pred) {
-    for (var i = 0; i < this.length; i++) { if (pred(this[i], i, this)) return i; }
-    return -1;
-  };
+  Logger.log('Sincronización completa — ' + actualizados + ' filas actualizadas');
 }

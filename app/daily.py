@@ -26,7 +26,7 @@ from app.scrapers import get_scraper
 from sqlalchemy import func
 
 
-def upsert_producto(db, producto):
+def upsert_producto(db, producto, origen="sheet", categoria=None):
     if not producto.codigo:
         return "sin_cambio"
     existente = (
@@ -35,12 +35,16 @@ def upsert_producto(db, producto):
         .first()
     )
     if existente:
+        if categoria and existente.categoria != categoria:
+            existente.categoria = categoria
         if abs(existente.valor - producto.valor) < 0.01:
             return "sin_cambio"
+        existente.valor_anterior = existente.valor
         existente.descripcion = producto.descripcion
         existente.unidad = producto.unidad
         existente.valor = producto.valor
         existente.url_origen = producto.url
+        existente.origen = existente.origen or origen
         existente.updated_at = func.now()
         return "actualizado"
     else:
@@ -51,6 +55,8 @@ def upsert_producto(db, producto):
             valor=producto.valor,
             tienda=producto.tienda,
             url_origen=producto.url,
+            origen=origen,
+            categoria=categoria,
         )
         db.add(db_item)
         return "nuevo"
@@ -66,13 +72,20 @@ async def main():
     print(f"  Sheet: {sheet_url}")
 
     try:
-        urls = await read_urls_from_sheet(sheet_url)
-        urls = list(dict.fromkeys(urls))
+        entries = await read_urls_from_sheet(sheet_url)
+        urls_set = set()
+        entries_unicas = []
+        for e in entries:
+            u = e["url"] if isinstance(e, dict) else e
+            if u not in urls_set:
+                urls_set.add(u)
+                entries_unicas.append(e)
+        entries = entries_unicas
     except Exception as e:
         print(f"[ERROR] Leyendo Google Sheets: {e}")
         sys.exit(1)
 
-    print(f"  URLs encontradas: {len(urls)} ({len(urls)} únicas)")
+    print(f"  URLs encontradas: {len(entries)} ({len(entries)} únicas)")
 
     db = SessionLocal()
     nuevos = 0
@@ -80,26 +93,28 @@ async def main():
     sin_cambio = 0
     fallidos = 0
 
-    for i, url in enumerate(urls, 1):
+    for i, entry in enumerate(entries, 1):
+        url = entry["url"] if isinstance(entry, dict) else entry
+        cat = entry.get("categoria") if isinstance(entry, dict) else None
         scraper = get_scraper(url)
         if not scraper:
             fallidos += 1
             continue
         try:
             producto = scraper.scrape()
-            resultado = upsert_producto(db, producto)
+            resultado = upsert_producto(db, producto, origen="sheet", categoria=cat)
             if resultado == "nuevo":
                 nuevos += 1
-                print(f"  [{i}/{len(urls)}] NUEVO: {producto.descripcion[:60]} | ${producto.valor:,.2f}")
+                print(f"  [{i}/{len(entries)}] NUEVO: {producto.descripcion[:60]} | ${producto.valor:,.2f}")
             elif resultado == "actualizado":
                 actualizados += 1
-                print(f"  [{i}/{len(urls)}] ACTUALIZADO: {producto.descripcion[:60]} | ${producto.valor:,.2f}")
+                print(f"  [{i}/{len(entries)}] ACTUALIZADO: {producto.descripcion[:60]} | ${producto.valor:,.2f}")
             else:
                 sin_cambio += 1
         except Exception as e:
             db.rollback()
             fallidos += 1
-            print(f"  [{i}/{len(urls)}] FALLIDO: {url[:80]} — {e}")
+            print(f"  [{i}/{len(entries)}] FALLIDO: {url[:80]} — {e}")
             continue
 
     db.commit()
@@ -107,7 +122,7 @@ async def main():
 
     print()
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Resumen diario:")
-    print(f"  Total URLs    : {len(urls)}")
+    print(f"  Total URLs    : {len(entries)}")
     print(f"  Nuevos        : {nuevos}")
     print(f"  Actualizados  : {actualizados}")
     print(f"  Sin cambio    : {sin_cambio}")
