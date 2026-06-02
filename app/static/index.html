@@ -330,14 +330,14 @@ function renderVer(){
     thead.innerHTML = '<tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th></tr>';
   } else {
     document.getElementById('insumos-title').textContent = 'Lista de Insumos';
-    thead.innerHTML = '<tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr>';
+    thead.innerHTML = '<tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th><th>CATEGORIA</th></tr>';
   }
   if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   tbody.innerHTML = filtrados.map((p, idx) => {
     const id = String(idx+1).padStart(4,'0');
     if(isAdmin) return `<tr><td>${id}</td><td>${p.descripcion}</td><td>${p.unidad}</td><td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td><td>${p.categoria||''}</td></tr>`;
-    return `<tr><td>${id}</td><td>${descripcionAjustada(p.descripcion,p.id)}</td><td>${p.unidad}</td><td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td></tr>`;
+    return `<tr><td>${id}</td><td>${descripcionAjustada(p.descripcion,p.id)}</td><td>${p.unidad}</td><td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td><td>${p.categoria||''}</td></tr>`;
   }).join('');
 }
 function filtrarVer(){ renderVer(); }
