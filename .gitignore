@@ -6,3 +6,4 @@ venv/
 .venv/
 *.db
 htdocs/
+node_modules/
