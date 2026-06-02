@@ -145,7 +145,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
       </div>
       <div id="total-count" style="padding:.5rem 0;font-size:.85rem;color:var(--muted)"></div>
-      <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem">
+      <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem;display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
         <table>
           <thead><tr><th>ID</th><th>DESCRIPCION</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
@@ -153,7 +153,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
         </table>
         <div class="empty" id="admin-ins-empty">No hay productos.</div>
       </div>
-      <div id="user-table-wrap" class="table-wrap">
+      <div id="user-table-wrap" class="table-wrap" style="display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Usuario &mdash; datos ajustados</h3>
         <table>
           <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
@@ -286,9 +286,7 @@ function initApp(){
   document.getElementById('side-email').textContent = _user.email;
   buildSidebar();
   if(_user.tipo === 'admin') cargarUsuarios();
-  cargarVerInsumos();
-  var firstItem = document.querySelectorAll('[data-section="ver-insumos"]');
-  irA('ver-insumos', firstItem[firstItem.length - 1]);
+  irA('ver-insumos', document.querySelectorAll('[data-section="ver-insumos"]')[document.querySelectorAll('[data-section="ver-insumos"]').length-1]);
 }
 (function(){
   const saved = localStorage.getItem('user');
