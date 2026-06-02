@@ -149,6 +149,8 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
         .first()
     )
     if existente:
+        if categoria and existente.categoria != categoria:
+            existente.categoria = categoria
         if abs(existente.valor - producto.valor) < 0.01:
             return "sin_cambio"
         existente.valor_anterior = existente.valor
@@ -157,8 +159,6 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
         existente.valor = producto.valor
         existente.url_origen = producto.url
         existente.origen = existente.origen or origen
-        if categoria:
-            existente.categoria = categoria
         existente.updated_at = func.now()
         return "actualizado"
     else:
