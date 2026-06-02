@@ -369,6 +369,38 @@ async def scrape_daily(db: Session = Depends(get_db)):
         mensaje=f"Nuevos: {nuevos} | Actualizados: {actualizados} | Sin cambio: {sin_cambio} | Fallidos: {fallidos}",
     )
 
+@app.post("/sync/categories", response_model=ScrapeResponse)
+async def sync_categories(db: Session = Depends(get_db)):
+    """Sincroniza SOLO categorías desde Google Sheet sin hacer scrape. Rápido."""
+    if not SHEET_URL:
+        raise HTTPException(status_code=400, detail="SHEET_URL no configurada")
+    try:
+        entries = await read_urls_from_sheet(SHEET_URL)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
+    actualizados = 0
+    for entry in entries:
+        url = entry["url"] if isinstance(entry, dict) else entry
+        cat = entry.get("categoria") if isinstance(entry, dict) else None
+        if not cat:
+            continue
+        prod = db.query(Producto).filter(Producto.url_origen == url).first()
+        if prod:
+            prod.origen = prod.origen or "sheet"
+            if prod.categoria != cat:
+                prod.categoria = cat
+                actualizados += 1
+        else:
+            # Producto no existe aún — crear con URL y categoría pendiente de scrape
+            pass
+    db.commit()
+    global _cache_time
+    _cache_time = 0
+    return ScrapeResponse(
+        total=len(entries), nuevos=0, actualizados=actualizados, sin_cambio=len(entries)-actualizados, fallidos=0,
+        mensaje=f"Categorías sincronizadas: {actualizados} actualizadas",
+    )
+
 
 # ─── Productos ────────────────────────────────────────────────
 

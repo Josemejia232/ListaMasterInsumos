@@ -189,5 +189,18 @@ function syncPrices() {
     }
   }
 
+  // ⑥ Sincronizar categorías automáticamente (sin scrape, rápido)
+  try {
+    var catResp = UrlFetchApp.fetch(cfg.apiUrl + '/sync/categories', {
+      method: 'post',
+      headers: { 'Authorization': 'Bearer ' + cfg.token },
+      muteHttpExceptions: true
+    });
+    if (catResp.getResponseCode() === 200) {
+      var catData = JSON.parse(catResp.getContentText());
+      Logger.log('Categorías sincronizadas: ' + catData.actualizados);
+    }
+  } catch (e) { Logger.log('Sync categorías error: ' + e); }
+
   Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas actualizadas, ' + cambios + ' cambios de precio');
 }
