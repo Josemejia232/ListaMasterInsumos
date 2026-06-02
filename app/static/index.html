@@ -317,14 +317,23 @@ function descripcionAjustada(desc, id, ajustada){
 }
 const $auth = () => _user ? 'Bearer '+_user.token : '';
 
+async function apiFetch(url, opts){
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers['Authorization'] = $auth();
+  var r = await fetch(API+url, opts);
+  if(r.status === 401){ logout(); throw new Error('Sesión expirada'); }
+  return r;
+}
+
 async function guardarAjustada(id, texto){
   var original = _verProds.find(p => p.id === id);
   if(!original) return;
   texto = (texto||'').trim();
   if(!texto) texto = null;
   try {
-    await fetch(API+'/productos/'+id+'/ajustada', {
-      method:'PUT', headers:{'Content-Type':'application/json','Authorization':$auth()},
+    await apiFetch('/productos/'+id+'/ajustada', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({descripcion_ajustada:texto})
     });
     original.descripcion_ajustada = texto;
@@ -335,7 +344,8 @@ async function guardarAjustada(id, texto){
 // ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
   try {
-    const r = await fetch(API+'/productos?limit=500', {headers:{'Authorization':$auth()}});
+    const r = await apiFetch('/productos?limit=500');
+    if(!r.ok) return;
     _verProds = await r.json();
     renderVer();
   } catch(e){}
@@ -396,7 +406,7 @@ function filtrarVer(){ renderVer(); }
 // ─── Usuarios ───────────────────────────────────────────
 async function cargarUsuarios(){
   try {
-    const r = await fetch(API+'/api/usuarios', {headers:{'Authorization':$auth()}});
+    const r = await apiFetch('/api/usuarios');
     if(!r.ok) return;
     const items = await r.json();
     const tbody = document.getElementById('usr-tbody');
@@ -429,10 +439,10 @@ async function guardarUsuario(){
   const body = {email, token, tipo, activo: true};
   try {
     if(_editUsrId){
-      await fetch(API+'/api/usuarios/'+_editUsrId, {method:'PUT', headers:{'Content-Type':'application/json','Authorization':$auth()}, body:JSON.stringify(body)});
+      await apiFetch('/api/usuarios/'+_editUsrId, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
       _editUsrId=null; document.querySelector('#section-usuarios .btn-green').textContent='Agregar';
     } else {
-      await fetch(API+'/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json','Authorization':$auth()}, body:JSON.stringify(body)});
+      await apiFetch('/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
     }
     document.getElementById('usr-email').value=''; document.getElementById('usr-token').value='';
     document.getElementById('usr-tipo').value='usuario';
@@ -441,13 +451,13 @@ async function guardarUsuario(){
 }
 async function toggleActivo(id, activo){
   try {
-    await fetch(API+'/api/usuarios/'+id, {method:'PUT', headers:{'Content-Type':'application/json','Authorization':$auth()}, body:JSON.stringify({email:'', activo:activo})});
+    await apiFetch('/api/usuarios/'+id, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:'', activo:activo})});
     await cargarUsuarios();
   } catch(e){}
 }
 async function eliminarUsuario(id){
   if(!confirm('Eliminar este usuario?')) return;
-  await fetch(API+'/api/usuarios/'+id, {method:'DELETE', headers:{'Authorization':$auth()}});
+  await apiFetch('/api/usuarios/'+id, {method:'DELETE'});
   await cargarUsuarios();
 }
 </script>
