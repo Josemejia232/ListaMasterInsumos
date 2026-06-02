@@ -252,8 +252,16 @@ function irA(section, el){
 // ─── Product helpers ───────────────────────────────────
 function precioAjustado(valor, id){
   const seed = ((id * 9301 + 49297) % 233280) / 233280;
-  const factor = 0.98 + seed * 0.01;
+  const factor = 0.9996 + seed * 0.0002;
   return Math.round(valor * factor);
+}
+function diffHtml(p){
+  if(p.valor_anterior == null) return '';
+  const cambio = p.valor - p.valor_anterior;
+  const pct = (cambio / p.valor_anterior * 100);
+  if(cambio > 0) return `<span style="color:var(--red)"> ↑ ${pct.toFixed(2)}%</span>`;
+  if(cambio < 0) return `<span style="color:var(--green)"> ↓ ${Math.abs(pct).toFixed(2)}%</span>`;
+  return '';
 }
 function descripcionAjustada(desc, id){
   const sufijos = [" - A", " *", " +", " /", " v2", ""];
@@ -283,7 +291,7 @@ function renderVer(){
     <td>${String(idx+1).padStart(4,'0')}</td>
     <td>${descripcionAjustada(p.descripcion,p.id)}</td>
     <td>${p.unidad}</td>
-    <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}</td>
+    <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
   </tr>`).join('');
 }
 function filtrarVer(){ renderVer(); }

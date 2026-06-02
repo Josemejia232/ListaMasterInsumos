@@ -26,6 +26,9 @@ with engine.connect() as conn:
             "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='updated_at') THEN "
             "ALTER TABLE productos ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); "
             "END IF; "
+            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='valor_anterior') THEN "
+            "ALTER TABLE productos ADD COLUMN valor_anterior FLOAT; "
+            "END IF; "
             "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
             "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
             "END IF; "
@@ -66,6 +69,7 @@ class ProductoResponse(BaseModel):
     descripcion: str
     unidad: str
     valor: float
+    valor_anterior: float | None = None
     tienda: str
     url_origen: str
     created_at: datetime | None = None
@@ -141,6 +145,7 @@ def _upsert_producto(db: Session, producto) -> dict:
     if existente:
         if abs(existente.valor - producto.valor) < 0.01:
             return "sin_cambio"
+        existente.valor_anterior = existente.valor
         existente.descripcion = producto.descripcion
         existente.unidad = producto.unidad
         existente.valor = producto.valor
