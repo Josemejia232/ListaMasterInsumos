@@ -24,8 +24,8 @@
 - 2.5. Unique constraint `(codigo, tienda)` en productos
 - 2.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
 - 2.7. `DATABASE_URL` desde variable de entorno (`.env` en local, env var en Render)
-- 2.8. La base de datos debe identificar automáticamente si ingreso un nuevo insumo desde google sheets, se copia el insumo en la bd
-- 2.9. El google sheets se debe actualizar si nota un cambio de precios desde la url
+- 2.8. La BD debe identificar automáticamente si ingresa un nuevo insumo desde Google Sheets y copiarlo en la BD (ver sección 6)
+- 2.9. El Google Sheet debe actualizarse cuando se detecta un cambio de precio (ver sección 6)
 
 
 ## 3. Scraping
@@ -58,3 +58,13 @@
 - 5.2. Python 3.12.7 (runtime.txt)
 - 5.3. Variables de entorno: `DATABASE_URL`, `SHEET_URL`, `ADMIN_EMAIL`, `ADMIN_TOKEN`
 - 5.4. Comando dev local: `uvicorn app.main:app --reload`
+
+## 6. Sincronización Google Sheets ↔ BD
+
+- 6.1. **Sheet → BD**: Al ejecutar `/scrape/daily` o `python -m app.daily`, la app lee las URLs y categorías desde Google Sheets, scrapea los precios y los upserta en la tabla `productos`. Si una URL nueva aparece en el sheet, se crea un nuevo registro en BD. Si cambia la categoría en el sheet, se actualiza en BD aunque el precio no haya cambiado.
+- 6.2. **BD → Sheet (pendiente)**: Cuando el scraper detecta un cambio de precio en una URL, ese nuevo precio debe escribirse de vuelta en el Google Sheet (columna ÚLTIMO PRECIO). Actualmente esto no está implementado. Se requiere Google Apps Script (`scripts/syncPrices.gs`) que:
+  - Se ejecuta periódicamente (time-driven trigger)
+  - Llama a `/scrape/daily` para actualizar la BD
+  - Consulta `/productos` y escribe los precios actuales en el sheet
+  - Para producción, la API debe tener URL pública (Render). Para local, usar ngrok.
+- 6.3. La URL del Google Sheet (`SHEET_URL`) nunca se expone al frontend.
