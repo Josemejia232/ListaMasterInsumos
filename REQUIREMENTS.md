@@ -48,12 +48,16 @@
   - **Usuario**: módulo **LISTA INSUMOS** (Insumos) con contador total
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
-- 4.6. Tabla Insumos para admin: columnas ID, DESCRIPCION, UNIDAD, VALOR, CATEGORIA
+- 4.6. Tabla Insumos para admin (datos originales): columnas ID, DESCRIPCION, UNIDAD, VALOR, CATEGORIA
+  - DESCRIPCION = descripción original del scraper
+  - VALOR = precio original sin ajustes
 - 4.6.1. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
 - 4.6.2. La vista admin debe mostrar el número total de insumos (ej: "Total: X insumos") sobre la tabla
-- 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA
+- 4.7. Tabla Insumos para usuario (datos ajustados): columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA
+  - DESCRIPCION. = descripción homologada, NO es la misma descripción original (ver 4.9)
+  - VALOR. = precio con reducción % aplicada (ver 4.8)
 - 4.8. Columna VALOR. para usuario: precio original reducido aleatoriamente 0.02%-0.04% (entero, sin decimales)
-- 4.9. Columna DESCRIPCION. para usuario: descripción con sufijo aleatorio para diferir del original
+- 4.9. Columna DESCRIPCION. para usuario: descripción homologada con sufijo aleatorio para diferir de la original
 - 4.10. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
 - 4.11. Auto-refresh de productos cada 30 segundos
 - 4.12. La URL de Google Sheets **no** se expone al frontend
