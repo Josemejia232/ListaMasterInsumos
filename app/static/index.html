@@ -154,7 +154,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
         </table>
         <div class="empty" id="admin-ins-empty">No hay productos.</div>
       </div>
-      <div class="table-wrap">
+      <div id="user-table-wrap" class="table-wrap">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Usuario &mdash; datos ajustados</h3>
         <table>
           <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
@@ -337,18 +337,24 @@ function renderVer(){
     adminWrap.style.display = 'none';
   }
 
-  // User table (adjusted data)
-  const tbody = document.getElementById('ver-ins-tbody');
-  const empty = document.getElementById('ver-ins-empty');
-  if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  tbody.innerHTML = filtrados.map((p, idx) => `<tr>
-    <td>${String(idx+1).padStart(4,'0')}</td>
-    <td>${descripcionAjustada(p.descripcion,p.id)}</td>
-    <td>${p.unidad}</td>
-    <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-    <td>${p.categoria||''}</td>
-  </tr>`).join('');
+  // User table (adjusted data) — hidden for admin
+  const userWrap = document.getElementById('user-table-wrap');
+  if(isAdmin){
+    userWrap.style.display = 'none';
+  } else {
+    userWrap.style.display = 'block';
+    const tbody = document.getElementById('ver-ins-tbody');
+    const empty = document.getElementById('ver-ins-empty');
+    if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    tbody.innerHTML = filtrados.map((p, idx) => `<tr>
+      <td>${String(idx+1).padStart(4,'0')}</td>
+      <td>${descripcionAjustada(p.descripcion,p.id)}</td>
+      <td>${p.unidad}</td>
+      <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
+      <td>${p.categoria||''}</td>
+    </tr>`).join('');
+  }
 }
 function filtrarVer(){ renderVer(); }
 // ─── Usuarios ───────────────────────────────────────────

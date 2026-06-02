@@ -46,6 +46,7 @@
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
 - 4.6. Tabla Insumos para admin: columnas ID, DESCRIPCION, UNIDAD, VALOR, CATEGORIA
+- 4.6.1. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
 - 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA
 - 4.8. Columna VALOR. para usuario: precio original reducido aleatoriamente 0.02%-0.04% (entero, sin decimales)
 - 4.9. Columna DESCRIPCION. para usuario: descripción con sufijo aleatorio para diferir del original
