@@ -171,7 +171,7 @@ def _upsert_producto(db: Session, producto, origen: str = "manual") -> dict:
 
 # ─── Auth endpoints ───────────────────────────────────────────
 
-@app.post("/api/auth/register", response_model=RegisterResponse)
+@app.post("/api/auth/register", response_model=LoginResponse)
 def register(req: LoginRequest, db: Session = Depends(get_db)):
     existente = db.query(Usuario).filter(Usuario.email == req.email).first()
     if existente:
