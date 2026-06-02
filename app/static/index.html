@@ -177,7 +177,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="table-wrap">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">USUARIOS</h3>
         <table>
-          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th style="width:80px">Acci&oacute;n</th></tr></thead>
+          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th style="width:160px">Acci&oacute;n</th></tr></thead>
           <tbody id="usr-tbody"></tbody>
         </table>
         <div class="empty" id="usr-empty">No hay usuarios.</div>
@@ -407,7 +407,9 @@ async function cargarUsuarios(){
       <td>${u.id}</td><td>${u.email}</td><td>${u.token}</td>
       <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
       <td><div class="actions">
+        <button class="btn btn-sm btn-outline" onclick="editarUsuario(${u.id},'${u.email.replace(/'/g,"\\'")}','${u.tipo}',${u.activo})" title="Editar">&#9998;</button>
         <button class="btn btn-sm ${u.activo?'btn-red':'btn-green'}" onclick="toggleActivo(${u.id},${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button>
+        <button class="btn btn-sm btn-red" onclick="eliminarUsuario(${u.id})" title="Eliminar">X</button>
       </div></td>
     </tr>`).join('');
   } catch(e){}
