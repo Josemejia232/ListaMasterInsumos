@@ -36,6 +36,7 @@ def upsert_producto(db, producto, origen="sheet", categoria=None):
         .first()
     )
     if existente:
+        existente.origen = existente.origen or origen
         if categoria and existente.categoria != categoria:
             existente.categoria = categoria
         if abs(existente.valor - producto.valor) < 0.01:

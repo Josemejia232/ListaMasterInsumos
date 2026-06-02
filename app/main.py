@@ -176,6 +176,7 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
         .first()
     )
     if existente:
+        existente.origen = existente.origen or origen
         if categoria and existente.categoria != categoria:
             existente.categoria = categoria
         if abs(existente.valor - producto.valor) < 0.01:
