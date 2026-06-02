@@ -60,6 +60,12 @@ function syncPrices() {
     sheet.getRange(1, fechaCol + 1).setValue('ÚLTIMA ACTUALIZACIÓN');
   }
 
+  // Detectar columna CATEGORIA
+  var catCol = -1;
+  for (var ch = 0; ch < headers.length; ch++) {
+    if (headers[ch].indexOf('categ') !== -1) { catCol = ch; break; }
+  }
+
   // ① Clasificar filas: nuevas vs existentes
   var nuevas = [];      // filas sin ÚLTIMO PRECIO
   var existentes = [];  // filas con ÚLTIMO PRECIO → comparar
@@ -81,8 +87,11 @@ function syncPrices() {
     for (var n = 0; n < nuevas.length; n++) {
       var rowIdx = nuevas[n];
       var rowUrl = data[rowIdx][urlCol].toString().trim();
+      var cat = catCol !== -1 ? (data[rowIdx][catCol] || '').toString().trim() : '';
+      var qs = '/scrape/sync?url=' + encodeURIComponent(rowUrl);
+      if (cat) qs += '&categoria=' + encodeURIComponent(cat);
       try {
-        var scrapeResp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/sync?url=' + encodeURIComponent(rowUrl), {
+        var scrapeResp = UrlFetchApp.fetch(cfg.apiUrl + qs, {
           method: 'get',
           headers: { 'Authorization': 'Bearer ' + cfg.token },
           muteHttpExceptions: true,
