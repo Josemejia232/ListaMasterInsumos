@@ -375,32 +375,6 @@ function renderVer(){
     }
   }
 }
-  } else {
-    totalCount.style.display = 'none';
-    adminWrap.style.display = 'none';
-  }
-
-  // User table (adjusted data) — hidden for admin
-  const userWrap = document.getElementById('user-table-wrap');
-  if(isAdmin){
-    userWrap.style.display = 'none';
-  } else {
-    userWrap.style.display = 'block';
-    totalCount.style.display = 'block';
-    totalCount.textContent = 'Total: ' + _verProds.length + ' insumos';
-    const tbody = document.getElementById('ver-ins-tbody');
-    const empty = document.getElementById('ver-ins-empty');
-    if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
-    empty.style.display='none';
-    tbody.innerHTML = filtrados.map((p, idx) => `<tr>
-      <td>${String(idx+1).padStart(4,'0')}</td>
-      <td>${descripcionAjustada(p.descripcion,p.id)}</td>
-      <td>${p.unidad}</td>
-      <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-      <td>${p.categoria||''}</td>
-    </tr>`).join('');
-  }
-}
 function filtrarVer(){ renderVer(); }
 // ─── Usuarios ───────────────────────────────────────────
 async function cargarUsuarios(){
