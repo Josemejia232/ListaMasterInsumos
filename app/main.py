@@ -98,9 +98,7 @@ class LoginResponse(BaseModel):
     id: int
     email: str
     tipo: str
-
-class RegisterResponse(LoginResponse):
-    token: str
+    token: str = ""
 
 class UsuarioRequest(BaseModel):
     email: str
@@ -184,7 +182,7 @@ def register(req: LoginRequest, db: Session = Depends(get_db)):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return RegisterResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
@@ -195,11 +193,11 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     ).first()
     if not user:
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
 
 @app.get("/api/auth/me", response_model=LoginResponse)
 def auth_me(user: Usuario = Depends(get_current_user)):
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
 
 @app.get("/api/usuarios", response_model=list[UsuarioResponse])
 def listar_usuarios(_admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
