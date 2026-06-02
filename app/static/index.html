@@ -223,10 +223,13 @@ function toggleSidebar(){
 function buildSidebar(){
   const isAdmin = _user && _user.tipo === 'admin';
   const items = [];
-  items.push({label:'Admin', header:true});
-  const label = isAdmin ? 'Productos' : 'Insumos';
-  items.push({id:'ver-insumos', icon:'&#9632;', text:label});
-  if(isAdmin){ items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'}); }
+  if(isAdmin){
+    items.push({label:'ADMIN', header:true});
+    items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
+    items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
+  }
+  items.push({label:'LISTA INSUMOS', header:true});
+  if(!isAdmin) items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -241,7 +244,8 @@ function irA(section, el){
   if(el) el.classList.add('active');
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos':'Insumos','productos':'Agregar Producto','usuarios':'Usuarios'};
+  const isAdmin = _user && _user.tipo === 'admin';
+  const titles = {'ver-insumos': isAdmin ? 'Productos' : 'Insumos', 'usuarios':'Usuarios'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
