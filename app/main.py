@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from app.database import engine, get_db, SessionLocal, Base
-from app.models import Producto
+from app.models import Producto, Insumo
 from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
 
@@ -70,6 +70,19 @@ class ProductoResponse(BaseModel):
     url_origen: str
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class InsumoRequest(BaseModel):
+    descripcion: str
+    un: str = "Unidad"
+    valor: float = 0.0
+
+
+class InsumoResponse(InsumoRequest):
+    id: int
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -266,6 +279,45 @@ def scrape_forward(url: str, db: Session = Depends(get_db)):
         "created_at": str(existente.created_at or ""),
         "updated_at": str(existente.updated_at or ""),
     }
+
+
+# ─── Insumos CRUD ─────────────────────────────────────────────
+
+@app.get("/api/insumos", response_model=list[InsumoResponse])
+def listar_insumos(db: Session = Depends(get_db)):
+    return db.query(Insumo).order_by(Insumo.descripcion).all()
+
+
+@app.post("/api/insumos", response_model=InsumoResponse)
+def crear_insumo(req: InsumoRequest, db: Session = Depends(get_db)):
+    item = Insumo(descripcion=req.descripcion, un=req.un, valor=req.valor)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.put("/api/insumos/{insumo_id}", response_model=InsumoResponse)
+def actualizar_insumo(insumo_id: int, req: InsumoRequest, db: Session = Depends(get_db)):
+    item = db.query(Insumo).filter(Insumo.id == insumo_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Insumo no encontrado")
+    item.descripcion = req.descripcion
+    item.un = req.un
+    item.valor = req.valor
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@app.delete("/api/insumos/{insumo_id}")
+def eliminar_insumo(insumo_id: int, db: Session = Depends(get_db)):
+    item = db.query(Insumo).filter(Insumo.id == insumo_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Insumo no encontrado")
+    db.delete(item)
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/stats")

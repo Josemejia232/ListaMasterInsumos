@@ -17,3 +17,13 @@ class Producto(Base):
     url_origen = Column(String(1000), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class Insumo(Base):
+    __tablename__ = "insumos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    descripcion = Column(String(500), nullable=False)
+    un = Column(String(50), nullable=False, default="Unidad")
+    valor = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, server_default=func.now())
