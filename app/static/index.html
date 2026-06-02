@@ -192,6 +192,7 @@ const API = '';
 let _user = null;
 let _editUsrId = null;
 let _verProds = [];
+let _viewMode = 'adjusted';
 
 // ─── Auth ───────────────────────────────────────────────
 function cambiarLogin(modo, el){
@@ -226,15 +227,16 @@ function buildSidebar(){
   const items = [];
   if(isAdmin){
     items.push({label:'ADMIN', header:true});
-    items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
+    items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos', mode:'raw'});
     items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
   }
   items.push({label:'LISTA INSUMOS', header:true});
-  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos'});
+  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
-    return '<div class="menu-item" data-section="'+i.id+'" onclick="irA(\''+i.id+'\',this)"><span class="ico">'+i.icon+'</span> '+i.text+'</div>';
+    var mode = i.mode ? ' data-mode="'+i.mode+'"' : '';
+    return '<div class="menu-item" data-section="'+i.id+'"'+mode+' onclick="irA(\''+i.id+'\',this)"><span class="ico">'+i.icon+'</span> '+i.text+'</div>';
   }).join('');
 }
 
@@ -243,15 +245,15 @@ function irA(section, el){
   document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active'));
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   if(el) el.classList.add('active');
+  if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
   const isAdmin = _user && _user.tipo === 'admin';
-  const titles = {'ver-insumos': isAdmin ? 'Productos' : 'Insumos', 'usuarios':'Usuarios'};
+  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
   if(section==='usuarios') cargarUsuarios();
-  if(section==='productos') document.getElementById('url-input')?.focus();
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
@@ -270,7 +272,8 @@ function initApp(){
   buildSidebar();
   if(_user.tipo === 'admin') cargarUsuarios();
   cargarVerInsumos();
-  irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
+  var firstItem = document.querySelectorAll('[data-section="ver-insumos"]');
+  irA('ver-insumos', firstItem[firstItem.length - 1]);
 }
 (function(){
   const saved = localStorage.getItem('user');
@@ -316,13 +319,17 @@ function renderVer(){
     (p.categoria||'').toLowerCase().includes(q)
   );
 
-  // Admin table (raw data)
+  // Table
   const totalCount = document.getElementById('total-count');
   const adminWrap = document.getElementById('admin-table-wrap');
-  if(isAdmin){
-    totalCount.style.display = 'block';
-    totalCount.textContent = 'Total: ' + _verProds.length + ' insumos';
+  const userWrap = document.getElementById('user-table-wrap');
+
+  totalCount.style.display = 'block';
+  totalCount.textContent = 'Total: ' + _verProds.length + ' insumos';
+
+  if(isAdmin && _viewMode === 'raw'){
     adminWrap.style.display = 'block';
+    userWrap.style.display = 'none';
     const tbody = document.getElementById('admin-ins-tbody');
     const empty = document.getElementById('admin-ins-empty');
     if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; }
@@ -331,13 +338,29 @@ function renderVer(){
       tbody.innerHTML = filtrados.map((p, idx) => `<tr>
         <td>${String(idx+1).padStart(4,'0')}</td>
         <td>${p.descripcion}</td>
+        <td>${p.unidad}</td>
+        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
+        <td>${p.categoria||''}</td>
+      </tr>`).join('');
+    }
+  } else {
+    adminWrap.style.display = 'none';
+    userWrap.style.display = 'block';
+    const tbody = document.getElementById('ver-ins-tbody');
+    const empty = document.getElementById('ver-ins-empty');
+    if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; }
+    else {
+      empty.style.display='none';
+      tbody.innerHTML = filtrados.map((p, idx) => `<tr>
+        <td>${String(idx+1).padStart(4,'0')}</td>
         <td>${descripcionAjustada(p.descripcion,p.id)}</td>
         <td>${p.unidad}</td>
-        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
         <td>${p.categoria||''}</td>
       </tr>`).join('');
     }
+  }
+}
   } else {
     totalCount.style.display = 'none';
     adminWrap.style.display = 'none';
