@@ -59,8 +59,8 @@ td{padding:.5rem .75rem;border-bottom:1px solid var(--border)}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
 td:nth-child(3){max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-td:nth-child(7){max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-td:nth-child(7) a{color:var(--accent);text-decoration:none;font-size:.75rem}
+td:nth-child(8){max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td:nth-child(8) a{color:var(--accent);text-decoration:none;font-size:.75rem}
 td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
 #result-box{margin-top:1rem}
@@ -115,7 +115,7 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
     <div class="cards" id="dash-stats"></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>ID</th><th>C&oacute;digo</th><th>Descripci&oacute;n</th><th>Unidad</th><th>Valor</th><th>Tienda</th><th>URL</th><th>Fecha</th></tr></thead>
+        <thead><tr><th>ID</th><th>C&oacute;digo</th><th>Descripci&oacute;n</th><th>Unidad</th><th>Valor</th><th>Valor.</th><th>Tienda</th><th>URL</th><th>Fecha</th></tr></thead>
         <tbody id="dash-body"></tbody>
       </table>
       <div class="empty" id="dash-empty">No hay productos scrapeados.</div>
@@ -159,7 +159,7 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
     <p style="color:var(--muted);font-size:.85rem;margin-bottom:1rem">Consulta de insumos disponibles.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>ID</th><th>Descripci&oacute;n</th><th>Unidad</th><th>Valor</th></tr></thead>
+        <thead><tr><th>ID</th><th>Descripci&oacute;n</th><th>Unidad</th><th>Valor</th><th>Valor.</th></tr></thead>
         <tbody id="ver-ins-tbody"></tbody>
       </table>
       <div class="empty" id="ver-ins-empty">No hay insumos registrados.</div>
@@ -170,6 +170,12 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
 <script>
 const API = '';
 let editandoId = null;
+
+function precioAjustado(valor, id){
+  const seed = ((id * 9301 + 49297) % 233280) / 233280;
+  const factor = 0.98 + seed * 0.01;
+  return valor * factor;
+}
 
 function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('collapsed');
@@ -207,6 +213,7 @@ async function cargarDashboard(){
     tbody.innerHTML = prods.map(p => `<tr>
       <td>${p.id}</td><td>${p.codigo}</td><td title="${p.descripcion}">${p.descripcion}</td>
       <td>${p.unidad}</td><td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
+      <td>$${Number(precioAjustado(p.valor,p.id)).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
       <td>${p.tienda}</td>
       <td><a href="${p.url_origen}" target="_blank">${p.url_origen}</a></td>
       <td>${new Date(p.created_at).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
@@ -296,6 +303,7 @@ async function cargarVerInsumos(){
   tbody.innerHTML = items.map(i => `<tr>
     <td>${i.id}</td><td>${i.descripcion}</td><td>${i.un}</td>
     <td>$${Number(i.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
+    <td>$${Number(precioAjustado(i.valor,i.id)).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
   </tr>`).join('');
 }
 
