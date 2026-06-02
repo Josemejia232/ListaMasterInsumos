@@ -60,11 +60,13 @@
   - VALOR = precio original sin ajustes
 - 4.6.1. Tabla Insumos para admin (módulo LISTA INSUMOS, modo "Insumos"): columnas ID, DESCRIPCION., UNIDAD, VALOR., CATEGORIA
   - Oculta las columnas DESCRIPCION y VALOR (solo muestra las ajustadas)
-- 4.6.1. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
-- 4.6.2. La vista admin debe mostrar el número total de insumos (ej: "Total: X insumos") sobre la tabla
+  - Los insumos se agrupan por CATEGORIA con encabezados colapsables
+  - Botones "Expandir todo" y "Contraer todo" para controlar la vista
+- 4.6.2. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
+- 4.6.3. La vista muestra el número total de insumos (ej: "Total: X insumos") sobre la tabla
 - 4.7. Tabla Insumos para usuario (datos ajustados): columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA
-  - DESCRIPCION. = descripción homologada, NO es la misma descripción original (ver 4.9)
-  - VALOR. = precio con reducción % aplicada (ver 4.8)
+  - Los insumos se agrupan por CATEGORIA con encabezados colapsables
+  - Botones "Expandir todo" y "Contraer todo" para controlar la vista
 - 4.8. Columna VALOR. para usuario: precio original reducido aleatoriamente 0.02%-0.04% (entero, sin decimales)
 - 4.9. Columna DESCRIPCION. para usuario: descripción homologada con sufijo aleatorio para diferir de la original
 - 4.10. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje

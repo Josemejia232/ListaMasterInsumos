@@ -73,6 +73,13 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
 td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
+.cat-header{cursor:pointer;background:var(--bg);transition:background .15s}
+.cat-header:hover{background:rgba(59,130,246,.08)}
+.cat-header td{padding:.5rem .75rem;font-weight:700;color:var(--accent);font-size:.82rem;border-bottom:2px solid var(--border)!important}
+.cat-header .arrow{display:inline-block;width:14px;transition:transform .2s;font-size:.7rem}
+.cat-header .arrow.collapsed{transform:rotate(-90deg)}
+.cat-body.collapsed{display:none}
+.cat-group:not(.collapsed) .cat-header .arrow{transform:rotate(0deg)}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
@@ -146,6 +153,8 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <h2>Lista de Insumos</h2>
       <div class="form-row">
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVerDebounced()">
+        <button class="btn btn-sm btn-outline" onclick="expandirTodo()" style="white-space:nowrap">Expandir todo</button>
+        <button class="btn btn-sm btn-outline" onclick="contraerTodo()" style="white-space:nowrap">Contraer todo</button>
       </div>
       <div id="total-count" style="padding:.5rem 0;font-size:.85rem;color:var(--muted)"></div>
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem;display:none">
@@ -158,7 +167,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       </div>
       <div id="user-table-wrap" class="table-wrap" style="display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Usuario &mdash; datos ajustados</h3>
-        <table>
+        <table id="ver-ins-table">
           <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
           <tbody id="ver-ins-tbody"></tbody>
         </table>
@@ -406,22 +415,55 @@ function renderVer(){
   } else {
     adminWrap.style.display = 'none';
     userWrap.style.display = 'block';
-    const tbody = document.getElementById('ver-ins-tbody');
-    const empty = document.getElementById('ver-ins-empty');
-    if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; }
+    var table = document.getElementById('ver-ins-table');
+    var empty = document.getElementById('ver-ins-empty');
+    if(!filtrados.length){ table.innerHTML=''; empty.style.display='block'; }
     else {
       empty.style.display='none';
-      tbody.innerHTML = filtrados.map((p, idx) => `<tr>
-        <td>${String(idx+1).padStart(4,'0')}</td>
-        <td>${descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)}</td>
-        <td>${p.unidad}</td>
-        <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-        <td>${p.categoria||''}</td>
-      </tr>`).join('');
+      var grupos = {};
+      for(var i=0;i<filtrados.length;i++){
+        var cat = filtrados[i].categoria || 'Sin categoría';
+        if(!grupos[cat]) grupos[cat] = [];
+        grupos[cat].push(filtrados[i]);
+      }
+      var thead = table.querySelector('thead');
+      var html = thead ? thead.outerHTML : '';
+      var idx = 0;
+      var cats = Object.keys(grupos).sort();
+      for(var c=0;c<cats.length;c++){
+        var items = grupos[cats[c]];
+        html += '<tbody class="cat-group"><tr class="cat-header" onclick="toggleGrupo(this,'+c+')"><td colspan="5"><span class="arrow">&#9660;</span> '+cats[c]+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr></tbody>';
+        html += '<tbody class="cat-body" id="cat-body-'+c+'">';
+        for(var j=0;j<items.length;j++){
+          var p=items[j]; idx++;
+          html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td>'+descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)+'</td><td>'+p.unidad+'</td><td>$'+precioAjustado(p.valor,p.id).toLocaleString('es-CO')+diffHtml(p)+'</td><td>'+(p.categoria||'')+'</td></tr>';
+        }
+        html += '</tbody>';
+      }
+      table.innerHTML = html;
     }
   }
 }
 function filtrarVer(){ renderVer(); }
+function toggleGrupo(el, idx){
+  var body = document.getElementById('cat-body-'+idx);
+  if(!body) return;
+  body.classList.toggle('collapsed');
+  var arrow = el.querySelector('.arrow');
+  if(arrow) arrow.classList.toggle('collapsed', body.classList.contains('collapsed'));
+}
+function expandirTodo(){
+  var bodies = document.querySelectorAll('.cat-body');
+  var arrows = document.querySelectorAll('.cat-header .arrow');
+  for(var i=0;i<bodies.length;i++) bodies[i].classList.remove('collapsed');
+  for(var i=0;i<arrows.length;i++) arrows[i].classList.remove('collapsed');
+}
+function contraerTodo(){
+  var bodies = document.querySelectorAll('.cat-body');
+  var arrows = document.querySelectorAll('.cat-header .arrow');
+  for(var i=0;i<bodies.length;i++) bodies[i].classList.add('collapsed');
+  for(var i=0;i<arrows.length;i++) arrows[i].classList.add('collapsed');
+}
 // ─── Usuarios ───────────────────────────────────────────
 async function cargarUsuarios(){
   var sec = document.getElementById('section-usuarios');
