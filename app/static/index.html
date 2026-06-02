@@ -229,7 +229,8 @@ function buildSidebar(){
   const isAdmin = _user && _user.tipo === 'admin';
   const items = [];
   items.push({label:'Admin', header:true});
-  items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
+  const label = isAdmin ? 'Productos' : 'Insumos';
+  items.push({id:'ver-insumos', icon:'&#9632;', text:label});
   if(isAdmin){ items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'}); }
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
@@ -249,6 +250,7 @@ function irA(section, el){
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos' && !_verProds.length) cargarVerInsumos();
+  if(section==='usuarios') cargarUsuarios();
   if(section==='productos') document.getElementById('url-input')?.focus();
 }
 document.addEventListener('click', function(e){
