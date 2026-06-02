@@ -5,174 +5,64 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ListaMasterInsumos</title>
 <style>
-:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--sidebar:220px}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
-
-/* ─── Sidebar ──────────────────────────────────────────── */
-.sidebar{width:var(--sidebar);background:var(--card);border-right:1px solid var(--border);padding:0;display:flex;flex-direction:column;transition:width .25s,margin-left .25s;overflow:hidden;flex-shrink:0;min-height:100vh}
-.sidebar.collapsed{width:0;margin-left:calc(var(--sidebar)*-1)}
-.sidebar-header{padding:1rem 1rem .5rem;font-weight:700;font-size:1.1rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--border);margin-bottom:.5rem}
-.sidebar-header .logo{width:24px;height:24px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
-.menu-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:.75rem 1rem .35rem}
-.menu-item{display:flex;align-items:center;gap:.65rem;padding:.5rem 1rem;cursor:pointer;font-size:.85rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
-.menu-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
-.menu-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(59,130,246,.08)}
-.menu-item .ico{width:18px;text-align:center;flex-shrink:0;font-size:.9rem}
-.sidebar-footer{margin-top:auto;padding:.75rem 1rem;border-top:1px solid var(--border)}
-.btn-toggle{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--muted);cursor:pointer;padding:.25rem .5rem;font-size:.8rem;width:100%;text-align:center}
-.btn-toggle:hover{color:var(--text);border-color:var(--accent)}
-
-/* ─── Content ──────────────────────────────────────────── */
-.content{flex:1;padding:1.5rem;min-width:0;transition:margin-left .25s}
-.topbar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem}
-.topbar h1{font-size:1.3rem;font-weight:700}
-.topbar .sub{color:var(--muted);font-size:.8rem;margin-top:2px}
-.btn-menu{background:var(--card);border:1px solid var(--border);border-radius:.375rem;color:var(--text);cursor:pointer;padding:.35rem .55rem;font-size:1rem;line-height:1}
-.btn-menu:hover{border-color:var(--accent)}
-
-/* ─── Sections ─────────────────────────────────────────── */
-.section{display:none}
-.section.active{display:block}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-bottom:1.5rem}
-.card{background:var(--card);border:1px solid var(--border);border-radius:.5rem;padding:1rem}
-.card-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:.25rem}
-.card-value{font-size:1.5rem;font-weight:700}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:1.5rem}
+.topbar{margin-bottom:1.5rem}
+.topbar h1{font-size:1.3rem;font-weight:700;margin-bottom:.2rem}
+.topbar .sub{color:var(--muted);font-size:.8rem}
 .form-row{display:flex;gap:.5rem;margin-bottom:1rem}
 .form-row input,.form-row select{flex:1;background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.5rem .75rem;color:var(--text);font-size:.875rem}
 .form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent)}
-.form-inline{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
-.form-inline input{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.375rem .5rem;color:var(--text);font-size:.8125rem;min-width:80px}
-.form-inline input:focus{outline:none;border-color:var(--accent)}
 .btn{background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .btn:hover{opacity:.85}
-.btn-green{background:var(--green)}
-.btn-red{background:var(--red);color:#fff}
-.btn-sm{padding:.25rem .5rem;font-size:.75rem}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
-.toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:.5rem;overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:.8125rem}
 th{text-align:left;padding:.625rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:.5rem .75rem;border-bottom:1px solid var(--border);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
-td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
-#result-box{margin-top:1rem}
-#result-box pre{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.75rem;overflow-x:auto;max-height:200px;overflow-y:auto}
+#url-result-box pre{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.75rem;overflow-x:auto;max-height:200px;overflow-y:auto;margin-bottom:1rem}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
-
-/* ─── Responsive ───────────────────────────────────────── */
 @media(max-width:768px){
-  .sidebar{position:fixed;z-index:100;left:0;top:0;height:100%}
-  .sidebar.collapsed{left:calc(var(--sidebar)*-1)}
-  .content{padding:1rem}
-  .topbar h1{font-size:1.1rem}
-  .topbar .sub{display:none}
-  .cards{grid-template-columns:repeat(2,1fr)}
-  .cards .card{padding:.75rem}
-  .card-value{font-size:1.1rem}
+  body{padding:1rem}
   .table-wrap{overflow-x:auto}
   table{font-size:.75rem}
   th,td{padding:.4rem .5rem}
-  h2{font-size:1rem}
 }
 @media(max-width:480px){
-  .content{padding:.75rem}
   .form-row{flex-direction:column}
   .form-row input{width:100%}
-  .cards{grid-template-columns:1fr}
   table{font-size:.7rem}
   th,td{padding:.3rem .35rem}
 }
 </style>
 </head>
 <body>
-
-<!-- ─── Sidebar ─────────────────────────────────────────── -->
-<div class="sidebar collapsed" id="sidebar">
-  <div class="sidebar-header">
-    <span class="logo">L</span>
-    <span>ListaMaster</span>
-  </div>
-  <div class="menu-label">Admin</div>
-  <div class="menu-item active" data-section="dashboard" onclick="irA('dashboard',this)">
-    <span class="ico">&#9632;</span> Dashboard
-  </div>
-  <div class="menu-item" data-section="scraping" onclick="irA('scraping',this)">
-    <span class="ico">&#8595;</span> Scraping
-  </div>
-
-  <div class="menu-label">Usuario</div>
-  <div class="menu-item" data-section="ver-insumos" onclick="irA('ver-insumos',this)">
-    <span class="ico">&#128196;</span> Lista Insumos
-  </div>
-  <div class="sidebar-footer">
-    <div class="btn-toggle" onclick="toggleSidebar()">&larr; Cerrar</div>
-  </div>
+<div class="topbar">
+  <h1>Lista de Insumos</h1>
+  <div class="sub">Productos scrapeados</div>
 </div>
-
-<!-- ─── Content ─────────────────────────────────────────── -->
-<div class="content">
-  <div class="topbar">
-    <button class="btn-menu" onclick="toggleSidebar()" title="Men&uacute;">&#9776;</button>
-    <div>
-      <h1 id="page-title">Dashboard</h1>
-      <div class="sub" id="page-sub">Panel de control</div>
-    </div>
-  </div>
-
-  <!-- Dashboard -->
-  <div class="section active" id="section-dashboard">
-    <div class="cards" id="dash-stats"></div>
-    <div class="form-row">
-      <input type="text" id="dash-filtro" placeholder="Filtrar por c&oacute;digo, descripci&oacute;n, tienda..." oninput="filtrarDashboard()">
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>ID</th><th>C&oacute;digo</th><th>Descripci&oacute;n</th><th>Unidad</th><th>Valor</th><th>Valor.</th><th>Descripcion.</th><th>Tienda</th><th>URL</th><th>Fecha</th></tr></thead>
-        <tbody id="dash-body"></tbody>
-      </table>
-      <div class="empty" id="dash-empty">No hay productos scrapeados.</div>
-    </div>
-  </div>
-
-  <!-- Scraping -->
-  <div class="section" id="section-scraping">
-    <h2>Scraping de productos</h2>
-    <div class="form-row">
-      <button class="btn btn-green" onclick="scrapeDaily()">Scrape Sheet Diario</button>
-    </div>
-    <div id="result-box"></div>
-  </div>
-
-  <!-- Lista Insumos (Usuario) -->
-  <div class="section" id="section-ver-insumos">
-    <h2>Lista de Insumos</h2>
-    <div class="form-row">
-      <input type="url" id="url-input" placeholder="URL de producto (Homecenter, Sodimac, Promart...)" />
-      <button class="btn" onclick="agregarUrl()">Agregar</button>
-    </div>
-    <div id="url-result-box"></div>
-    <div class="form-row">
-      <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
-        <tbody id="ver-ins-tbody"></tbody>
-      </table>
-      <div class="empty" id="ver-ins-empty">No hay productos.</div>
-    </div>
-  </div>
+<div class="form-row">
+  <input type="url" id="url-input" placeholder="URL de producto (Homecenter, Sodimac, Promart...)" />
+  <button class="btn" onclick="agregarUrl()">Agregar</button>
 </div>
-
+<div id="url-result-box"></div>
+<div class="form-row">
+  <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
+</div>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
+    <tbody id="ver-ins-tbody"></tbody>
+  </table>
+  <div class="empty" id="ver-ins-empty">No hay productos.</div>
+</div>
 <script>
 const API = '';
-let _dashProds = [];
 let _verProds = [];
 
 function precioAjustado(valor, id){
@@ -185,81 +75,6 @@ function descripcionAjustada(desc, id){
   const idx = ((id * 7919 + 12345) % 233280) % sufijos.length;
   return desc + sufijos[idx];
 }
-
-function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('collapsed');
-}
-document.addEventListener('click', function(e){
-  const s = document.getElementById('sidebar');
-  if(window.innerWidth<=768 && !s.contains(e.target) && !e.target.closest('.btn-menu')){
-    s.classList.add('collapsed');
-  }
-});
-
-function irA(section, el){
-  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  if(el) el.classList.add('active');
-  document.getElementById('section-'+section).classList.add('active');
-  const subs = {dashboard:'Panel de control', scraping:'Scraping diario', 'ver-insumos':'Lista de insumos'};
-  document.getElementById('page-title').textContent = section==='ver-insumos'?'Lista de Insumos':section==='scraping'?'Scraping':'Dashboard';
-  document.getElementById('page-sub').innerHTML = subs[section]||'';
-  if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
-  if(section==='dashboard'){ if(!_dashProds.length) cargarDashboard(); renderDash(); }
-  if(section==='ver-insumos'){ if(!_verProds.length) cargarVerInsumos(); renderVer(); }
-}
-
-// ─── Dashboard ──────────────────────────────────────────
-async function cargarDashboard(){
-  const [sr, pr] = await Promise.all([
-    fetch(API+'/api/stats'),
-    fetch(API+'/productos?limit=500')
-  ]);
-  const s = await sr.json();
-  document.getElementById('dash-stats').innerHTML = `
-    <div class="card"><div class="card-label">Productos</div><div class="card-value">${s.total}</div></div>
-    <div class="card"><div class="card-label">Valor Total</div><div class="card-value">$${Number(s.total_valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</div></div>
-    <div class="card"><div class="card-label">Hoy</div><div class="card-value">${s.scrapeados_hoy}</div></div>
-  `;
-  _dashProds = await pr.json();
-  renderDash();
-}
-function renderDash(){
-  const q = (document.getElementById('dash-filtro').value||'').toLowerCase().trim();
-  const filtrados = !q ? _dashProds : _dashProds.filter(p =>
-    (p.codigo||'').toLowerCase().includes(q) ||
-    (p.descripcion||'').toLowerCase().includes(q) ||
-    (p.tienda||'').toLowerCase().includes(q)
-  );
-  const tbody = document.getElementById('dash-body');
-  const empty = document.getElementById('dash-empty');
-  if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  tbody.innerHTML = filtrados.map(p => `<tr>
-    <td>${p.id}</td><td>${p.codigo}</td><td title="${p.descripcion}">${p.descripcion}</td>
-    <td>${p.unidad}</td><td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
-    <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}</td>
-    <td>${descripcionAjustada(p.descripcion,p.id)}</td>
-    <td>${p.tienda}</td>
-    <td><a href="${p.url_origen}" target="_blank">${p.url_origen}</a></td>
-    <td>${new Date(p.created_at).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
-  </tr>`).join('');
-}
-function filtrarDashboard(){ renderDash(); }
-
-// ─── Scraping ───────────────────────────────────────────
-async function scrapeDaily(){
-  const box = document.getElementById('result-box');
-  box.innerHTML = '<pre><span class="spinner"></span>Procesando sheet...</pre>';
-  try {
-    const r = await fetch(API+'/scrape/daily');
-    const ct = r.headers.get('content-type')||'';
-    if(ct.includes('json')){ const d=await r.json(); box.innerHTML='<pre>'+JSON.stringify(d,null,2)+'</pre>'; }
-    else { const t=await r.text(); box.innerHTML='<pre style="color:var(--red)">'+t+'</pre>'; }
-  } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
-}
-
-// ─── Agregar URL desde Lista Insumos ────────────────────
 async function agregarUrl(){
   const url = document.getElementById('url-input').value.trim();
   if(!url) return;
@@ -274,8 +89,6 @@ async function agregarUrl(){
     await cargarVerInsumos();
   } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
 }
-
-// ─── Ver Insumos (Usuario) ──────────────────────────────
 async function cargarVerInsumos(){
   const r = await fetch(API+'/productos?limit=500');
   _verProds = await r.json();
@@ -299,9 +112,7 @@ function renderVer(){
   </tr>`).join('');
 }
 function filtrarVer(){ renderVer(); }
-
-// ─── Init ───────────────────────────────────────────────
-cargarDashboard();
+cargarVerInsumos();
 </script>
 </body>
 </html>
