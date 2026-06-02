@@ -1,4 +1,6 @@
 import re
+import csv
+import io
 import httpx
 
 
@@ -18,20 +20,22 @@ async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
         resp.raise_for_status()
         text = resp.text
 
-    lines = text.splitlines()
-    if not lines:
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    if not rows:
         return []
 
-    headers = [h.strip().lower() for h in next(iter(lines), "").split(",")]
+    headers = [h.strip().lower() for h in rows[0]]
     url_col = next((i for i, h in enumerate(headers) if h in ("url", "insumo")), None)
     cat_col = next((i for i, h in enumerate(headers) if "categ" in h), None)
 
     results = []
-    for line in lines[1:]:
-        cols = [c.strip().strip('"') for c in line.split(",")]
-        if url_col is not None and url_col < len(cols) and cols[url_col].startswith("http"):
-            entry = {"url": cols[url_col]}
-            if cat_col is not None and cat_col < len(cols) and cols[cat_col]:
-                entry["categoria"] = cols[cat_col]
+    for row in rows[1:]:
+        if url_col is not None and url_col < len(row) and row[url_col].strip().startswith("http"):
+            entry = {"url": row[url_col].strip()}
+            if cat_col is not None and cat_col < len(row):
+                entry["categoria"] = row[cat_col].strip()
+            else:
+                entry["categoria"] = ""
             results.append(entry)
     return results

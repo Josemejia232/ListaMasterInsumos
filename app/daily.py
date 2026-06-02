@@ -39,6 +39,8 @@ def upsert_producto(db, producto, origen="sheet", categoria=None):
         existente.origen = existente.origen or origen
         if categoria and existente.categoria != categoria:
             existente.categoria = categoria
+        elif categoria and not existente.categoria:
+            existente.categoria = categoria
         if abs(existente.valor - producto.valor) < 0.01:
             return "sin_cambio"
         existente.valor_anterior = existente.valor
@@ -118,7 +120,7 @@ async def main():
             fallidos += 1
             print(f"  [{i}/{len(entries)}] FALLIDO: {url[:80]} — {e}")
             continue
-        await asyncio.sleep(random.uniform(1.0, 2.5))
+        await asyncio.sleep(random.uniform(0.5, 1.5))
 
     db.commit()
     db.close()

@@ -21,42 +21,6 @@ from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
 
 load_dotenv()
-Base.metadata.create_all(bind=engine)
-
-# Migraciones
-with engine.connect() as conn:
-    try:
-        conn.execute(text(
-            "DO $$ BEGIN "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='updated_at') THEN "
-            "ALTER TABLE productos ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='valor_anterior') THEN "
-            "ALTER TABLE productos ADD COLUMN valor_anterior FLOAT; "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='origen') THEN "
-            "ALTER TABLE productos ADD COLUMN origen VARCHAR(20); "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='categoria') THEN "
-            "ALTER TABLE productos ADD COLUMN categoria VARCHAR(200); "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
-            "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='insumos' AND column_name='categoria') THEN "
-            "ALTER TABLE insumos ADD COLUMN categoria VARCHAR(200); "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='descripcion_ajustada') THEN "
-            "ALTER TABLE productos ADD COLUMN descripcion_ajustada VARCHAR(500); "
-            "END IF; "
-            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='fecha_pago') THEN "
-            "ALTER TABLE usuarios ADD COLUMN fecha_pago TIMESTAMP; "
-            "END IF; "
-            "END $$;"
-        ))
-        conn.commit()
-    except Exception:
-        conn.rollback()
 
 app = FastAPI(
     title="ListaMasterInsumos",
@@ -179,6 +143,8 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
     if existente:
         existente.origen = existente.origen or origen
         if categoria and existente.categoria != categoria:
+            existente.categoria = categoria
+        elif categoria and not existente.categoria:
             existente.categoria = categoria
         if abs(existente.valor - producto.valor) < 0.01:
             return "sin_cambio"
@@ -324,7 +290,7 @@ def _procesar_urls_bg(entries: list[dict]):
             except Exception:
                 bg_db.rollback()
                 continue
-            time.sleep(random.uniform(1.0, 2.5))
+            time.sleep(random.uniform(0.5, 1.5))
     finally:
         bg_db.close()
 
@@ -359,7 +325,7 @@ async def scrape_daily(db: Session = Depends(get_db)):
             db.rollback()
             fallidos += 1
             continue
-        await asyncio.sleep(random.uniform(1.0, 2.5))
+        await asyncio.sleep(random.uniform(0.5, 1.5))
     db.commit()
     global _cache_time
     _cache_time = 0  # invalidate cache
@@ -380,9 +346,9 @@ async def sync_categories(db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
     actualizados = 0
     for entry in entries:
-        url = entry["url"] if isinstance(entry, dict) else entry
-        cat = entry.get("categoria") if isinstance(entry, dict) else None
-        if not cat:
+        url = entry.get("url", "")
+        cat = entry.get("categoria", "")
+        if not url or not cat:
             continue
         prod = db.query(Producto).filter(Producto.url_origen == url).first()
         if prod:
@@ -390,9 +356,6 @@ async def sync_categories(db: Session = Depends(get_db)):
             if prod.categoria != cat:
                 prod.categoria = cat
                 actualizados += 1
-        else:
-            # Producto no existe aún — crear con URL y categoría pendiente de scrape
-            pass
     db.commit()
     global _cache_time
     _cache_time = 0
@@ -518,24 +481,53 @@ def eliminar_insumo(insumo_id: int, db: Session = Depends(get_db)):
 
 # ─── Root ─────────────────────────────────────────────────────
 
-@app.get("/favicon.ico")
-def favicon():
-    from fastapi.responses import Response
-    return Response(status_code=204)
-
-@app.get("/")
-def root():
-    index = static_dir / "index.html"
-    if index.exists():
-        from fastapi.responses import FileResponse
-        return FileResponse(str(index))
-    return {"app": "ListaMasterInsumos", "status": "ok"}
-
-
-# ─── Seed admin ───────────────────────────────────────────────
+_index_html = None
+_index_mtime = 0
 
 @app.on_event("startup")
-def seed_admin():
+def startup():
+    Base.metadata.create_all(bind=engine)
+
+    with engine.connect() as conn:
+        try:
+            conn.execute(text(
+                "DO $$ BEGIN "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='updated_at') THEN "
+                "ALTER TABLE productos ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='valor_anterior') THEN "
+                "ALTER TABLE productos ADD COLUMN valor_anterior FLOAT; "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='origen') THEN "
+                "ALTER TABLE productos ADD COLUMN origen VARCHAR(20); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='categoria') THEN "
+                "ALTER TABLE productos ADD COLUMN categoria VARCHAR(200); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
+                "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='insumos' AND column_name='categoria') THEN "
+                "ALTER TABLE insumos ADD COLUMN categoria VARCHAR(200); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='descripcion_ajustada') THEN "
+                "ALTER TABLE productos ADD COLUMN descripcion_ajustada VARCHAR(500); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='fecha_pago') THEN "
+                "ALTER TABLE usuarios ADD COLUMN fecha_pago TIMESTAMP; "
+                "END IF; "
+                "END $$;"
+            ))
+            conn.commit()
+        except Exception:
+            conn.rollback()
+
+    global _index_html, _index_mtime
+    index_path = static_dir / "index.html"
+    if index_path.exists():
+        _index_html = index_path.read_text(encoding="utf-8")
+        _index_mtime = index_path.stat().st_mtime
+
     db = SessionLocal()
     try:
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
@@ -550,3 +542,19 @@ def seed_admin():
         print(f"Seed admin skipped: {e}")
     finally:
         db.close()
+
+@app.get("/favicon.ico")
+def favicon():
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
+@app.get("/")
+def root():
+    if _index_html:
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=_index_html)
+    index = static_dir / "index.html"
+    if index.exists():
+        from fastapi.responses import FileResponse
+        return FileResponse(str(index))
+    return {"app": "ListaMasterInsumos", "status": "ok"}
