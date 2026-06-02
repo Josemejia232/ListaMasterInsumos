@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import asyncio
+import random
 from app.database import SessionLocal
 from app.models import Producto
 from app.sheets import read_urls_from_sheet
@@ -116,6 +117,7 @@ async def main():
             fallidos += 1
             print(f"  [{i}/{len(entries)}] FALLIDO: {url[:80]} — {e}")
             continue
+        await asyncio.sleep(random.uniform(1.0, 2.5))
 
     db.commit()
     db.close()

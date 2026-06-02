@@ -2,6 +2,7 @@ import asyncio
 import os
 import json
 import time
+import random
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header, Request
@@ -308,7 +309,7 @@ async def scrape_from_sheet(
 def _procesar_urls_bg(entries: list[dict]):
     bg_db = SessionLocal()
     try:
-        for entry in entries:
+        for i, entry in enumerate(entries):
             url = entry["url"] if isinstance(entry, dict) else entry
             scraper = get_scraper(url)
             if not scraper:
@@ -321,6 +322,7 @@ def _procesar_urls_bg(entries: list[dict]):
             except Exception:
                 bg_db.rollback()
                 continue
+            time.sleep(random.uniform(1.0, 2.5))
     finally:
         bg_db.close()
 
@@ -355,6 +357,7 @@ async def scrape_daily(db: Session = Depends(get_db)):
             db.rollback()
             fallidos += 1
             continue
+        await asyncio.sleep(random.uniform(1.0, 2.5))
     db.commit()
     global _cache_time
     _cache_time = 0  # invalidate cache
