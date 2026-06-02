@@ -215,6 +215,11 @@ async function cargarDashboard(){
 }
 
 // ─── Scraping ───────────────────────────────────────────
+function mostrarRespuesta(box, r){
+  const ct = r.headers.get('content-type')||'';
+  if(ct.includes('json')){ return r.json().then(d => box.innerHTML = '<pre>'+JSON.stringify(d,null,2)+'</pre>'); }
+  return r.text().then(t => box.innerHTML = '<pre style="color:var(--red)">'+t+'</pre>');
+}
 async function scrapeUrl(){
   const url = document.getElementById('url-input').value;
   if(!url) return;
@@ -222,7 +227,7 @@ async function scrapeUrl(){
   box.innerHTML = '<pre><span class="spinner"></span>Scrapeando...</pre>';
   try {
     const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url));
-    box.innerHTML = '<pre>'+JSON.stringify(await r.json(),null,2)+'</pre>';
+    await mostrarRespuesta(box, r);
   } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
 }
 async function scrapeDaily(){
@@ -230,7 +235,7 @@ async function scrapeDaily(){
   box.innerHTML = '<pre><span class="spinner"></span>Procesando sheet...</pre>';
   try {
     const r = await fetch(API+'/scrape/daily');
-    box.innerHTML = '<pre>'+JSON.stringify(await r.json(),null,2)+'</pre>';
+    await mostrarRespuesta(box, r);
   } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
 }
 
