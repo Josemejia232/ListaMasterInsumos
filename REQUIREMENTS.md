@@ -1,22 +1,29 @@
 # ListaMasterInsumos — Requisitos
 
 ## 1. Autenticación y roles
-- 1.1. Login con email + token (API key, no JWT)
-- 1.2. Registro gratuito: genera token automáticamente
+- 1.1. Login con email + token (el administrador proporciona el token)
+- 1.2. Registro gratuito: solo ingresa si esta interesado debe comunicarse con el admin para obtener uno. 
 - 1.3. Login con token pre-asignado
 - 1.4. Dos roles: **admin** y **usuario**
 - 1.5. Admin seed automático al iniciar: `admin@example.com` / `admin123`
 - 1.6. Admin puede CRUD de usuarios (email, token, activo, tipo)
 - 1.7. Bearer token en header `Authorization` para endpoints protegidos
+- 1.8. El usuario no ve el contenido del admin
+
+
+
 
 ## 2. Base de datos
 - 2.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
 - 2.2. Tabla `productos`: id, codigo, descripcion, unidad, valor, valor_anterior, origen, categoria, tienda, url_origen, created_at, updated_at
-- 2.3. Tabla `insumos`: id, descripcion, un, valor, created_at (legacy)
+- 2.3. Tabla `insumos`: id, descripcion, un, valor, categoria, created_at (legacy)
 - 2.4. Tabla `usuarios`: id, email, token, activo, tipo, created_at
 - 2.5. Unique constraint `(codigo, tienda)` en productos
 - 2.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
 - 2.7. `DATABASE_URL` desde variable de entorno (`.env` en local, env var en Render)
+- 2.8. La base de datos debe identificar automáticamente si ingreso un nuevo insumo desde google sheets, se copia el insumo en la bd
+- 2.9. El google sheets se debe actualizar si nota un cambio de precios desde la url
+
 
 ## 3. Scraping
 - 3.1. Leer URLs desde Google Sheets (export CSV vía HTTP, sin gspread)

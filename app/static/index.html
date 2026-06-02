@@ -105,8 +105,10 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="login-tab" data-login="token" onclick="cambiarLogin('token',this)">Con token</div>
     </div>
     <div id="login-registro">
-      <input type="email" id="reg-email" placeholder="Tu email" autocomplete="email">
-      <button class="btn" onclick="registrarse()">Crear cuenta gratis</button>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.85rem;color:var(--muted);line-height:1.5">
+        El registro es por invitación.<br>
+        Contacta al administrador para obtener un token de acceso.
+      </div>
     </div>
     <div id="login-token-section" style="display:none">
       <input type="email" id="login-email" placeholder="Email" autocomplete="email">
@@ -197,22 +199,6 @@ function cambiarLogin(modo, el){
   document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
   document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
   document.getElementById('login-error').textContent = '';
-  document.getElementById('token-creado')?.remove();
-}
-function registrarse(){
-  const email = document.getElementById('reg-email').value.trim();
-  if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
-  document.getElementById('login-error').textContent='';
-  fetch(API+'/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token:''})})
-  .then(r=>{ if(!r.ok) return r.json().then(e=>{ throw new Error(e.detail||'Error'); }); return r.json(); })
-  .then(u=>{
-    _user = u; localStorage.setItem('user', JSON.stringify(u));
-    const old = document.getElementById('token-creado'); if(old) old.remove();
-    const div = document.createElement('div'); div.id='token-creado'; div.className='token-creado';
-    div.innerHTML = 'Cuenta creada. Tu token es:<br><strong>'+u.token+'</strong><br><span style="color:var(--muted);font-size:.75rem">Guárdalo para iniciar sesión después.</span>';
-    document.querySelector('.login-box').appendChild(div);
-    initApp();
-  }).catch(e=>{ document.getElementById('login-error').textContent=e.message; });
 }
 function login(){
   const email = document.getElementById('login-email').value.trim();
@@ -312,7 +298,7 @@ const $auth = () => _user ? 'Bearer '+_user.token : '';
 // ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
   try {
-    const r = await fetch(API+'/productos?limit=500');
+    const r = await fetch(API+'/productos?limit=500', {headers:{'Authorization':$auth()}});
     _verProds = await r.json();
     renderVer();
   } catch(e){}

@@ -29,6 +29,7 @@ class Insumo(Base):
     descripcion = Column(String(500), nullable=False)
     un = Column(String(50), nullable=False, default="Unidad")
     valor = Column(Float, nullable=False, default=0.0)
+    categoria = Column(String(200), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 

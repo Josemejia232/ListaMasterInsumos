@@ -38,6 +38,9 @@ with engine.connect() as conn:
             "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
             "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
             "END IF; "
+            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='insumos' AND column_name='categoria') THEN "
+            "ALTER TABLE insumos ADD COLUMN categoria VARCHAR(200); "
+            "END IF; "
             "END $$;"
         ))
         conn.commit()
@@ -178,18 +181,12 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
 
 # ─── Auth endpoints ───────────────────────────────────────────
 
-@app.post("/api/auth/register", response_model=LoginResponse)
+@app.post("/api/auth/register")
 def register(req: LoginRequest, db: Session = Depends(get_db)):
-    existente = db.query(Usuario).filter(Usuario.email == req.email).first()
+    existente = db.query(Usuario).filter(Usuario.email == req.email, Usuario.token == req.token, Usuario.activo == True).first()
     if existente:
-        raise HTTPException(status_code=400, detail="Email ya registrado")
-    import secrets
-    token = secrets.token_hex(16)
-    user = Usuario(email=req.email, token=token, activo=True, tipo="usuario")
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
+        return LoginResponse(id=existente.id, email=existente.email, tipo=existente.tipo, token=existente.token)
+    raise HTTPException(status_code=400, detail="El registro es por invitación. Contacta al administrador para obtener un token de acceso.")
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
@@ -334,6 +331,7 @@ def listar_productos(
     skip: int = 0,
     limit: int = 500,
     db: Session = Depends(get_db),
+    _user: Usuario = Depends(get_current_user),
 ):
     query = db.query(Producto)
     if tienda:
@@ -341,7 +339,7 @@ def listar_productos(
     return query.order_by(Producto.created_at.desc()).offset(skip).limit(limit).all()
 
 @app.get("/productos/{producto_id}", response_model=ProductoResponse)
-def obtener_producto(producto_id: int, db: Session = Depends(get_db)):
+def obtener_producto(producto_id: int, db: Session = Depends(get_db), _user: Usuario = Depends(get_current_user)):
     prod = db.query(Producto).filter(Producto.id == producto_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
