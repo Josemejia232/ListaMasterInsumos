@@ -407,17 +407,19 @@ async function cargarUsuarios(){
       <td>${u.id}</td><td>${u.email}</td><td>${u.token}</td>
       <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
       <td><div class="actions">
-        <button class="btn btn-sm btn-outline" onclick="editarUsuario(${u.id},'${u.email.replace(/'/g,"\\'")}','${u.tipo}',${u.activo})" title="Editar">&#9998;</button>
+        <button class="btn btn-sm btn-outline" data-edit-id="${u.id}" data-edit-email="${u.email}" data-edit-tipo="${u.tipo}" data-edit-activo="${u.activo}" onclick="editarUsuarioBtn(this)" title="Editar">Editar</button>
         <button class="btn btn-sm ${u.activo?'btn-red':'btn-green'}" onclick="toggleActivo(${u.id},${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button>
         <button class="btn btn-sm btn-red" onclick="eliminarUsuario(${u.id})" title="Eliminar">X</button>
       </div></td>
     </tr>`).join('');
   } catch(e){}
 }
-function editarUsuario(id,email,tipo,activo){
-  _editUsrId=id; document.getElementById('usr-email').value=email;
-  document.getElementById('usr-token').value=''; document.getElementById('usr-tipo').value=tipo;
-  document.querySelector('#section-usuarios .btn-green').textContent='Guardar';
+function editarUsuarioBtn(el){
+  _editUsrId = parseInt(el.dataset.editId);
+  document.getElementById('usr-email').value = el.dataset.editEmail;
+  document.getElementById('usr-token').value = '';
+  document.getElementById('usr-tipo').value = el.dataset.editTipo;
+  document.querySelector('#section-usuarios .btn-green').textContent = 'Guardar';
 }
 async function guardarUsuario(){
   const email = document.getElementById('usr-email').value.trim();
