@@ -123,6 +123,7 @@ class UsuarioRequest(BaseModel):
 class UsuarioResponse(BaseModel):
     id: int
     email: str
+    token: str
     activo: bool
     tipo: str
     created_at: datetime | None = None
