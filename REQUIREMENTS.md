@@ -48,8 +48,9 @@
   - **Usuario**: módulo **LISTA INSUMOS** (Insumos) con contador total
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
-- 4.6. Tabla Productos para admin (módulo ADMIN, modo "Productos"): columnas ID, DESCRIPCION, DESCRIPCION., UNIDAD, VALOR, VALOR., CATEGORIA
+- 4.6. Tabla Productos para admin (módulo ADMIN, modo "Productos"): columnas ID, DESCRIPCION, DESCRIPCION. (editable), UNIDAD, VALOR, VALOR., CATEGORIA
   - DESCRIPCION = descripción original del scraper
+  - DESCRIPCION. = descripción homologada editable por el admin (se guarda en BD como `descripcion_ajustada`)
   - VALOR = precio original sin ajustes
 - 4.6.1. Tabla Insumos para admin (módulo LISTA INSUMOS, modo "Insumos"): columnas ID, DESCRIPCION., UNIDAD, VALOR., CATEGORIA
   - Oculta las columnas DESCRIPCION y VALOR (solo muestra las ajustadas)

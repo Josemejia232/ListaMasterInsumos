@@ -310,12 +310,28 @@ function diffHtml(p){
   if(cambio < 0) return `<span style="color:var(--green)"> ↓ ${Math.abs(pct).toFixed(2)}%</span>`;
   return '';
 }
-function descripcionAjustada(desc, id){
+function descripcionAjustada(desc, id, ajustada){
+  if(ajustada) return ajustada;
   const sufijos = [" - A", " *", " +", " /", " v2", ""];
   const idx = ((id * 7919 + 12345) % 233280) % sufijos.length;
   return desc + sufijos[idx];
 }
 const $auth = () => _user ? 'Bearer '+_user.token : '';
+
+async function guardarAjustada(id, texto){
+  var original = _verProds.find(p => p.id === id);
+  if(!original) return;
+  texto = (texto||'').trim();
+  if(!texto) texto = null;
+  try {
+    await fetch(API+'/productos/'+id+'/ajustada', {
+      method:'PUT', headers:{'Content-Type':'application/json','Authorization':$auth()},
+      body:JSON.stringify({descripcion_ajustada:texto})
+    });
+    original.descripcion_ajustada = texto;
+    renderVer();
+  } catch(e){}
+}
 
 // ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
@@ -352,7 +368,7 @@ function renderVer(){
       tbody.innerHTML = filtrados.map((p, idx) => `<tr>
         <td>${String(idx+1).padStart(4,'0')}</td>
         <td>${p.descripcion}</td>
-        <td>${descripcionAjustada(p.descripcion,p.id)}</td>
+        <td contenteditable="true" onblur="guardarAjustada(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)}</td>
         <td>${p.unidad}</td>
         <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
@@ -369,7 +385,7 @@ function renderVer(){
       empty.style.display='none';
       tbody.innerHTML = filtrados.map((p, idx) => `<tr>
         <td>${String(idx+1).padStart(4,'0')}</td>
-        <td>${descripcionAjustada(p.descripcion,p.id)}</td>
+        <td>${descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)}</td>
         <td>${p.unidad}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
         <td>${p.categoria||''}</td>

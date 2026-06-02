@@ -41,6 +41,9 @@ with engine.connect() as conn:
             "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='insumos' AND column_name='categoria') THEN "
             "ALTER TABLE insumos ADD COLUMN categoria VARCHAR(200); "
             "END IF; "
+            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='descripcion_ajustada') THEN "
+            "ALTER TABLE productos ADD COLUMN descripcion_ajustada VARCHAR(500); "
+            "END IF; "
             "END $$;"
         ))
         conn.commit()
@@ -76,6 +79,7 @@ class ProductoResponse(BaseModel):
     id: int
     codigo: str
     descripcion: str
+    descripcion_ajustada: str | None = None
     unidad: str
     valor: float
     valor_anterior: float | None = None
@@ -106,6 +110,9 @@ class LoginResponse(BaseModel):
     email: str
     tipo: str
     token: str = ""
+
+class UpdateAjustadaRequest(BaseModel):
+    descripcion_ajustada: str | None = None
 
 class UsuarioRequest(BaseModel):
     email: str
@@ -349,6 +356,16 @@ def obtener_producto(producto_id: int, db: Session = Depends(get_db), _user: Usu
     prod = db.query(Producto).filter(Producto.id == producto_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return prod
+
+@app.put("/productos/{producto_id}/ajustada", response_model=ProductoResponse)
+def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    prod = db.query(Producto).filter(Producto.id == producto_id).first()
+    if not prod:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    prod.descripcion_ajustada = req.descripcion_ajustada
+    db.commit()
+    db.refresh(prod)
     return prod
 
 @app.get("/scrape/sync", response_model=ProductoResponse)
