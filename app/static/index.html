@@ -146,6 +146,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="form-row">
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
       </div>
+      <div id="total-count" style="padding:.5rem 0;font-size:.85rem;color:var(--muted)"></div>
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
         <table>
@@ -227,10 +228,9 @@ function buildSidebar(){
     items.push({label:'ADMIN', header:true});
     items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
     items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
-  } else {
-    items.push({label:'LISTA INSUMOS', header:true});
-    items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos'});
   }
+  items.push({label:'LISTA INSUMOS', header:true});
+  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -317,8 +317,11 @@ function renderVer(){
   );
 
   // Admin table (raw data)
+  const totalCount = document.getElementById('total-count');
   const adminWrap = document.getElementById('admin-table-wrap');
   if(isAdmin){
+    totalCount.style.display = 'block';
+    totalCount.textContent = 'Total: ' + _verProds.length + ' insumos';
     adminWrap.style.display = 'block';
     const tbody = document.getElementById('admin-ins-tbody');
     const empty = document.getElementById('admin-ins-empty');
@@ -334,6 +337,7 @@ function renderVer(){
       </tr>`).join('');
     }
   } else {
+    totalCount.style.display = 'none';
     adminWrap.style.display = 'none';
   }
 
@@ -343,6 +347,8 @@ function renderVer(){
     userWrap.style.display = 'none';
   } else {
     userWrap.style.display = 'block';
+    totalCount.style.display = 'block';
+    totalCount.textContent = 'Total: ' + _verProds.length + ' insumos';
     const tbody = document.getElementById('ver-ins-tbody');
     const empty = document.getElementById('ver-ins-empty');
     if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; return; }

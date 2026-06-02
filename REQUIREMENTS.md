@@ -43,10 +43,14 @@
 - 4.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estático
 - 4.2. Página de login con dos tabs: "Registrarse gratis" (información de contacto) e "Ingresar" (email + token para usuarios ya registrados)
 - 4.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
+- 4.3.1. El menú tiene dos módulos según el rol:
+  - **Admin**: módulo **ADMIN** (Productos, Usuarios) + módulo **LISTA INSUMOS** (Insumos) con contador total
+  - **Usuario**: módulo **LISTA INSUMOS** (Insumos) con contador total
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
 - 4.6. Tabla Insumos para admin: columnas ID, DESCRIPCION, UNIDAD, VALOR, CATEGORIA
 - 4.6.1. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
+- 4.6.2. La vista admin debe mostrar el número total de insumos (ej: "Total: X insumos") sobre la tabla
 - 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA
 - 4.8. Columna VALOR. para usuario: precio original reducido aleatoriamente 0.02%-0.04% (entero, sin decimales)
 - 4.9. Columna DESCRIPCION. para usuario: descripción con sufijo aleatorio para diferir del original
