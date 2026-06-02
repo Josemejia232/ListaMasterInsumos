@@ -73,7 +73,6 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
 td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
-#url-result-box pre{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.75rem;overflow-x:auto;max-height:200px;overflow-y:auto;margin-bottom:1rem}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
@@ -153,15 +152,6 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
         <div class="empty" id="ver-ins-empty">No hay productos.</div>
       </div>
     </div>
-    <!-- Agregar Productos -->
-    <div class="section" id="section-productos">
-      <h2>Agregar Producto</h2>
-      <div class="form-row">
-        <input type="url" id="url-input" placeholder="URL de producto..." />
-        <button class="btn" onclick="agregarUrl()">Scrapear</button>
-      </div>
-      <div id="url-result-box"></div>
-    </div>
     <!-- Usuarios -->
     <div class="section" id="section-usuarios">
       <h2>Administrar Usuarios</h2>
@@ -190,7 +180,6 @@ const API = '';
 let _user = null;
 let _editUsrId = null;
 let _verProds = [];
-let _sections = [];
 
 // ─── Auth ───────────────────────────────────────────────
 function cambiarLogin(modo, el){
@@ -241,7 +230,6 @@ function buildSidebar(){
   const items = [];
   items.push({label:'Admin', header:true});
   items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
-  if(isAdmin){ items.push({id:'productos', icon:'&#8595;', text:'Agregar'}); }
   if(isAdmin){ items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'}); }
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
@@ -341,20 +329,6 @@ function renderVer(){
   }).join('');
 }
 function filtrarVer(){ renderVer(); }
-async function agregarUrl(){
-  const url = document.getElementById('url-input').value.trim();
-  if(!url) return;
-  const box = document.getElementById('url-result-box');
-  box.innerHTML = '<pre><span class="spinner"></span>Scrapeando...</pre>';
-  try {
-    const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url), {headers:{'Authorization':$auth()}});
-    if(!r.ok){ const t=await r.text(); box.innerHTML='<pre style="color:var(--red)">'+t+'</pre>'; return; }
-    document.getElementById('url-input').value='';
-    box.innerHTML = '<pre style="color:var(--green)">Producto agregado correctamente.</pre>';
-    _verProds = []; await cargarVerInsumos();
-  } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
-}
-
 // ─── Usuarios ───────────────────────────────────────────
 async function cargarUsuarios(){
   try {
