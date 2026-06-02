@@ -1,5 +1,8 @@
 # ListaMasterInsumos — Requisitos
-1
+
+> Este documento describe exactamente la estructura de la base de datos y el comportamiento de la aplicación.
+> Cualquier cambio en la BD debe reflejarse aquí y viceversa.
+
 ## 1. Autenticación y roles
 - 1.1. Login con email + token (el administrador proporciona el token)
 - 1.2. Registro gratuito: solo ingresa si esta interesado debe comunicarse con el admin para obtener uno. 
@@ -15,9 +18,9 @@
 
 ## 2. Base de datos
 - 2.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
-- 2.2. Tabla `productos`: id, codigo, descripcion, unidad, valor, valor_anterior, origen, categoria, tienda, url_origen, created_at, updated_at
-- 2.3. Tabla `insumos`: id, descripcion, un, valor, categoria, created_at (legacy)
-- 2.4. Tabla `usuarios`: id, email, token, activo, tipo, created_at
+- 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, tienda, url_origen, created_at, updated_at
+- 2.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
+- 2.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), created_at
 - 2.5. Unique constraint `(codigo, tienda)` en productos
 - 2.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
 - 2.7. `DATABASE_URL` desde variable de entorno (`.env` en local, env var en Render)
@@ -38,7 +41,7 @@
 
 ## 4. Frontend
 - 4.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estático
-- 4.2. Página de login con dos tabs: "Registrarse gratis" y "Con token"
+- 4.2. Página de login con dos tabs: "Registrarse gratis" (información de contacto) e "Ingresar" (email + token para usuarios ya registrados)
 - 4.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
