@@ -40,6 +40,9 @@
 - 4.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estático
 - 4.2. Página de login con dos tabs: "Registrarse gratis" y "Con token"
 - 4.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
+- 4.3.1. El menú tiene dos módulos según el rol del usuario:
+  - **Admin**: módulo **ADMIN** con las opciones Productos y Usuarios
+  - **Usuario**: módulo **LISTA INSUMOS** con la opción Insumos
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
 - 4.6. Tabla Insumos para admin: columnas ID, DESCRIPCION, UNIDAD, VALOR, CATEGORIA
