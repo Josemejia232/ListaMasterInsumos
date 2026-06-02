@@ -442,6 +442,11 @@ def eliminar_insumo(insumo_id: int, db: Session = Depends(get_db)):
 
 # ─── Root ─────────────────────────────────────────────────────
 
+@app.get("/favicon.ico")
+def favicon():
+    from fastapi.responses import Response
+    return Response(status_code=204)
+
 @app.get("/")
 def root():
     index = static_dir / "index.html"
