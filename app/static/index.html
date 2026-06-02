@@ -5,10 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ListaMasterInsumos</title>
 <style>
-:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#eab308}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444;--sidebar:230px}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
+
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;width:100%}
 .login-box{background:var(--card);border:1px solid var(--border);border-radius:.75rem;padding:2rem;width:100%;max-width:380px}
 .login-box h1{font-size:1.3rem;margin-bottom:.25rem}
 .login-box .sub{color:var(--muted);font-size:.85rem;margin-bottom:1.5rem}
@@ -16,27 +18,41 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .login-box input:focus{outline:none;border-color:var(--accent)}
 .login-box .btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.6rem;font-size:.875rem;cursor:pointer}
 .login-box .btn:hover{opacity:.85}
-.login-box .btn-green{background:var(--green);margin-top:.5rem}
-.login-tab{padding:.5rem .75rem;cursor:pointer;font-size:.8rem;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.login-tab{padding:.5rem .75rem;cursor:pointer;font-size:.8rem;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;display:inline-block}
 .login-tab:hover{color:var(--text)}
 .login-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .login-box .token-creado{background:var(--card);border:1px solid var(--green);border-radius:.375rem;padding:.75rem;margin-top:.75rem;font-size:.8rem;word-break:break-all}
 .login-box .token-creado strong{color:var(--green)}
 .error{color:var(--red);font-size:.8rem;margin-top:.5rem}
-.app-wrap{display:none}
-.app-wrap.visible{display:block}
-.topbar{display:flex;align-items:center;gap:1rem;padding:1rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border)}
-.topbar h1{font-size:1.1rem;font-weight:700;flex:1}
-.topbar .email{color:var(--muted);font-size:.8rem}
-.topbar .logout{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--muted);cursor:pointer;padding:.35rem .65rem;font-size:.75rem}
-.topbar .logout:hover{color:var(--text);border-color:var(--accent)}
-.content{padding:1.5rem}
-.tabs{display:flex;gap:.25rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0}
-.tab{padding:.5rem 1rem;cursor:pointer;font-size:.85rem;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:margin-left .3s;overflow:hidden;flex-shrink:0;min-height:100vh}
+.sidebar.collapsed{margin-left:calc(var(--sidebar)*-1)}
+.sidebar-header{padding:1rem;font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--border)}
+.sidebar-header .logo{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.menu-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:.75rem 1rem .35rem}
+.menu-item{display:flex;align-items:center;gap:.65rem;padding:.55rem 1rem;cursor:pointer;font-size:.85rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
+.menu-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.menu-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(59,130,246,.08)}
+.menu-item .ico{width:18px;text-align:center;flex-shrink:0;font-size:.9rem}
+.sidebar-footer{margin-top:auto;padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.4rem}
+.sidebar-footer .email{font-size:.75rem;color:var(--muted)}
+.sidebar-footer .logout{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--muted);cursor:pointer;padding:.3rem .5rem;font-size:.75rem;text-align:center}
+.sidebar-footer .logout:hover{color:var(--text);border-color:var(--accent)}
+.sidebar-footer .btn-close{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--muted);cursor:pointer;padding:.3rem .5rem;font-size:.75rem;text-align:center}
+.sidebar-footer .btn-close:hover{color:var(--text);border-color:var(--accent)}
+
+/* Content */
+.content{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:.75rem;padding:.75rem 1.25rem;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:1.05rem;font-weight:700;flex:1}
+.btn-menu{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--text);cursor:pointer;padding:.3rem .5rem;font-size:1rem;line-height:1}
+.btn-menu:hover{border-color:var(--accent)}
+.page-wrap{padding:1.25rem;flex:1}
 .section{display:none}
 .section.active{display:block}
+
+/* Components */
 .form-row{display:flex;gap:.5rem;margin-bottom:1rem}
 .form-row input,.form-row select{flex:1;background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.5rem .75rem;color:var(--text);font-size:.875rem}
 .form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent)}
@@ -46,7 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn{background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .btn:hover{opacity:.85}
 .btn-green{background:var(--green)}
-.btn-red{background:var(--red);color:#fff}
+.btn-red{background:var(--red)}
 .btn-sm{padding:.25rem .5rem;font-size:.75rem}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:.5rem;overflow-x:auto}
@@ -60,10 +76,12 @@ td .actions{display:flex;gap:.25rem}
 #url-result-box pre{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.75rem;overflow-x:auto;max-height:200px;overflow-y:auto;margin-bottom:1rem}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
-h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
+h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
+
+/* Responsive */
 @media(max-width:768px){
-  .content{padding:1rem}
-  .topbar{padding:.75rem 1rem}
+  .sidebar{position:fixed;z-index:100;left:0;top:0;height:100%}
+  .page-wrap{padding:1rem}
   .table-wrap{overflow-x:auto}
   table{font-size:.75rem}
   th,td{padding:.4rem .5rem}
@@ -100,20 +118,27 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
   </div>
 </div>
 
-<!-- App -->
-<div class="app-wrap" id="app-wrap">
-  <div class="topbar">
-    <h1 id="app-title">Lista de Insumos</h1>
-    <span class="email" id="user-email"></span>
-    <button class="logout" onclick="logout()">Salir</button>
+<!-- Sidebar -->
+<div class="sidebar collapsed" id="sidebar" style="display:none">
+  <div class="sidebar-header">
+    <span class="logo">L</span>
+    <span>ListaMaster</span>
   </div>
-  <div class="content">
-    <div class="tabs" id="admin-tabs">
-      <div class="tab active" data-section="ver-insumos" onclick="irA('ver-insumos',this)">Insumos</div>
-      <div class="tab" data-section="productos" onclick="irA('productos',this)">Agregar</div>
-      <div class="tab" data-section="usuarios" onclick="irA('usuarios',this)">Usuarios</div>
-    </div>
+  <div id="sidebar-menu"></div>
+  <div class="sidebar-footer">
+    <span class="email" id="side-email"></span>
+    <button class="logout" onclick="logout()">Cerrar sesi&oacute;n</button>
+    <button class="btn-close" onclick="toggleSidebar()">&larr; Cerrar men&uacute;</button>
+  </div>
+</div>
 
+<!-- Content -->
+<div class="content" style="display:none">
+  <div class="topbar">
+    <button class="btn-menu" onclick="toggleSidebar()">&#9776;</button>
+    <h1 id="page-title">Insumos</h1>
+  </div>
+  <div class="page-wrap">
     <!-- Lista Insumos -->
     <div class="section active" id="section-ver-insumos">
       <h2 id="insumos-title">Lista de Insumos</h2>
@@ -121,30 +146,28 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
       </div>
       <div class="table-wrap">
-        <table id="insumos-table">
+        <table>
           <thead id="insumos-thead"><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
           <tbody id="ver-ins-tbody"></tbody>
         </table>
         <div class="empty" id="ver-ins-empty">No hay productos.</div>
       </div>
     </div>
-
-    <!-- Agregar Productos (admin) -->
+    <!-- Agregar Productos -->
     <div class="section" id="section-productos">
       <h2>Agregar Producto</h2>
       <div class="form-row">
-        <input type="url" id="url-input" placeholder="URL de producto (Homecenter, Sodimac, Promart...)" />
+        <input type="url" id="url-input" placeholder="URL de producto..." />
         <button class="btn" onclick="agregarUrl()">Scrapear</button>
       </div>
       <div id="url-result-box"></div>
     </div>
-
-    <!-- Usuarios (admin) -->
+    <!-- Usuarios -->
     <div class="section" id="section-usuarios">
       <h2>Administrar Usuarios</h2>
       <div class="form-inline">
         <input type="email" id="usr-email" placeholder="Email" style="flex:2">
-        <input type="text" id="usr-token" placeholder="Token (vac&iacute;o = aleatorio)" style="flex:1">
+        <input type="text" id="usr-token" placeholder="Token" style="flex:1">
         <select id="usr-tipo" style="flex:0 0 100px">
           <option value="usuario">Usuario</option>
           <option value="admin">Admin</option>
@@ -167,6 +190,7 @@ const API = '';
 let _user = null;
 let _editUsrId = null;
 let _verProds = [];
+let _sections = [];
 
 // ─── Auth ───────────────────────────────────────────────
 function cambiarLogin(modo, el){
@@ -181,20 +205,12 @@ function registrarse(){
   const email = document.getElementById('reg-email').value.trim();
   if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
   document.getElementById('login-error').textContent='';
-  fetch(API+'/api/auth/register', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email,token:''})
-  }).then(r=>{
-    if(!r.ok) return r.json().then(e=>{ throw new Error(e.detail||'Error'); });
-    return r.json();
-  }).then(u=>{
-    _user = u;
-    localStorage.setItem('user', JSON.stringify(u));
-    const old = document.getElementById('token-creado');
-    if(old) old.remove();
-    const div = document.createElement('div');
-    div.id = 'token-creado';
-    div.className = 'token-creado';
+  fetch(API+'/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token:''})})
+  .then(r=>{ if(!r.ok) return r.json().then(e=>{ throw new Error(e.detail||'Error'); }); return r.json(); })
+  .then(u=>{
+    _user = u; localStorage.setItem('user', JSON.stringify(u));
+    const old = document.getElementById('token-creado'); if(old) old.remove();
+    const div = document.createElement('div'); div.id='token-creado'; div.className='token-creado';
     div.innerHTML = 'Cuenta creada. Tu token es:<br><strong>'+u.token+'</strong><br><span style="color:var(--muted);font-size:.75rem">Guárdalo para iniciar sesión después.</span>';
     document.querySelector('.login-box').appendChild(div);
     initApp();
@@ -204,56 +220,77 @@ function login(){
   const email = document.getElementById('login-email').value.trim();
   const token = document.getElementById('login-token').value.trim();
   if(!email || !token){ document.getElementById('login-error').textContent='Completa todos los campos'; return; }
-  fetch(API+'/api/auth/login', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email,token})
-  }).then(r=>{
-    if(!r.ok){ document.getElementById('login-error').textContent='Credenciales inválidas'; throw new Error('fail'); }
-    return r.json();
-  }).then(u=>{
-    _user = u;
-    localStorage.setItem('user', JSON.stringify(u));
-    initApp();
-  }).catch(()=>{});
+  fetch(API+'/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token})})
+  .then(r=>{ if(!r.ok){ document.getElementById('login-error').textContent='Credenciales inválidas'; throw new Error('fail'); } return r.json(); })
+  .then(u=>{ _user=u; localStorage.setItem('user', JSON.stringify(u)); initApp(); })
+  .catch(()=>{});
 }
 function logout(){
   _user = null; localStorage.removeItem('user');
   document.getElementById('login-wrap').style.display='flex';
-  document.getElementById('app-wrap').classList.remove('visible');
+  document.getElementById('sidebar').style.display='none';
+  document.querySelector('.content').style.display='none';
 }
+
+// ─── Sidebar ────────────────────────────────────────────
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('collapsed');
+}
+function buildSidebar(){
+  const isAdmin = _user && _user.tipo === 'admin';
+  const items = [];
+  items.push({label:'Admin', header:true});
+  items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos'});
+  if(isAdmin){ items.push({id:'productos', icon:'&#8595;', text:'Agregar'}); }
+  if(isAdmin){ items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'}); }
+  const menu = document.getElementById('sidebar-menu');
+  menu.innerHTML = items.map(i => {
+    if(i.header) return '<div class="menu-label">'+i.label+'</div>';
+    return '<div class="menu-item" data-section="'+i.id+'" onclick="irA(\''+i.id+'\',this)"><span class="ico">'+i.icon+'</span> '+i.text+'</div>';
+  }).join('');
+}
+
+// ─── Navigation ─────────────────────────────────────────
+function irA(section, el){
+  document.querySelectorAll('.menu-item').forEach(m=>m.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const sec = document.getElementById('section-'+section);
+  if(sec) sec.classList.add('active');
+  const titles = {'ver-insumos':'Insumos','productos':'Agregar Producto','usuarios':'Usuarios'};
+  document.getElementById('page-title').textContent = titles[section]||'Insumos';
+  if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
+  if(section==='ver-insumos' && !_verProds.length) cargarVerInsumos();
+  if(section==='productos') document.getElementById('url-input')?.focus();
+}
+document.addEventListener('click', function(e){
+  const s = document.getElementById('sidebar');
+  if(window.innerWidth<=768 && s && !s.contains(e.target) && !e.target.closest('.btn-menu')){
+    s.classList.add('collapsed');
+  }
+});
+
+// ─── Init App ───────────────────────────────────────────
 function initApp(){
   if(!_user) return;
   document.getElementById('login-wrap').style.display='none';
-  document.getElementById('app-wrap').classList.add('visible');
-  document.getElementById('user-email').textContent = _user.email;
-  if(_user.tipo === 'admin'){
-    document.getElementById('admin-tabs').style.display='flex';
-    cargarUsuarios(); cargarVerInsumos();
-    irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
-  } else {
-    document.getElementById('admin-tabs').style.display='none';
-    document.getElementById('section-ver-insumos').classList.add('active');
-    cargarVerInsumos();
-  }
+  document.getElementById('sidebar').style.display='flex';
+  document.querySelector('.content').style.display='flex';
+  document.getElementById('side-email').textContent = _user.email;
+  buildSidebar();
+  if(_user.tipo === 'admin') cargarUsuarios();
+  cargarVerInsumos();
+  irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
 }
 (function(){
   const saved = localStorage.getItem('user');
   if(saved){ try{ _user=JSON.parse(saved); initApp(); }catch(e){} }
 })();
 
-function irA(section, el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  if(el) el.classList.add('active');
-  const sec = document.getElementById('section-'+section);
-  if(sec) sec.classList.add('active');
-}
-
-// ─── Product helpers ───────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────
 function precioAjustado(valor, id){
   const seed = ((id * 9301 + 49297) % 233280) / 233280;
-  const factor = 0.9996 + seed * 0.0002;
-  return Math.round(valor * factor);
+  return Math.round(valor * (0.9996 + seed * 0.0002));
 }
 function diffHtml(p){
   if(p.valor_anterior == null) return '';
@@ -268,8 +305,9 @@ function descripcionAjustada(desc, id){
   const idx = ((id * 7919 + 12345) % 233280) % sufijos.length;
   return desc + sufijos[idx];
 }
+const $auth = () => _user ? 'Bearer '+_user.token : '';
 
-// ─── Lista Insumos ─────────────────────────────────────
+// ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
   try {
     const r = await fetch(API+'/productos?limit=500');
@@ -281,15 +319,14 @@ function renderVer(){
   const q = (document.getElementById('ver-filtro').value||'').toLowerCase().trim();
   const isAdmin = _user && _user.tipo === 'admin';
   const filtrados = !q ? _verProds : _verProds.filter(p =>
-    descripcionAjustada(p.descripcion,p.id).toLowerCase().includes(q) ||
-    (p.descripcion||'').toLowerCase().includes(q) ||
+    p.descripcion.toLowerCase().includes(q) ||
     (p.categoria||'').toLowerCase().includes(q)
   );
   const thead = document.getElementById('insumos-thead');
   const tbody = document.getElementById('ver-ins-tbody');
   const empty = document.getElementById('ver-ins-empty');
   if(isAdmin){
-    document.getElementById('insumos-title').textContent = 'Productos';
+    document.getElementById('insumos-title').textContent = 'Todos los Productos';
     thead.innerHTML = '<tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th></tr>';
   } else {
     document.getElementById('insumos-title').textContent = 'Lista de Insumos';
@@ -299,49 +336,29 @@ function renderVer(){
   empty.style.display='none';
   tbody.innerHTML = filtrados.map((p, idx) => {
     const id = String(idx+1).padStart(4,'0');
-    if(isAdmin){
-      return `<tr>
-        <td>${id}</td>
-        <td>${p.descripcion}</td>
-        <td>${p.unidad}</td>
-        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
-        <td>${p.categoria||''}</td>
-      </tr>`;
-    }
-    return `<tr>
-      <td>${id}</td>
-      <td>${descripcionAjustada(p.descripcion,p.id)}</td>
-      <td>${p.unidad}</td>
-      <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-    </tr>`;
+    if(isAdmin) return `<tr><td>${id}</td><td>${p.descripcion}</td><td>${p.unidad}</td><td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td><td>${p.categoria||''}</td></tr>`;
+    return `<tr><td>${id}</td><td>${descripcionAjustada(p.descripcion,p.id)}</td><td>${p.unidad}</td><td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td></tr>`;
   }).join('');
 }
 function filtrarVer(){ renderVer(); }
-
-// ─── Agregar URL (admin) ───────────────────────────────
-const $auth = () => _user ? 'Bearer '+_user.token : '';
-
 async function agregarUrl(){
   const url = document.getElementById('url-input').value.trim();
   if(!url) return;
   const box = document.getElementById('url-result-box');
   box.innerHTML = '<pre><span class="spinner"></span>Scrapeando...</pre>';
   try {
-    const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url), {
-      headers:{'Authorization': $auth()}
-    });
+    const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url), {headers:{'Authorization':$auth()}});
     if(!r.ok){ const t=await r.text(); box.innerHTML='<pre style="color:var(--red)">'+t+'</pre>'; return; }
     document.getElementById('url-input').value='';
     box.innerHTML = '<pre style="color:var(--green)">Producto agregado correctamente.</pre>';
-    _verProds = [];
-    await cargarVerInsumos();
+    _verProds = []; await cargarVerInsumos();
   } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
 }
 
-// ─── Usuarios CRUD (admin) ─────────────────────────────
+// ─── Usuarios ───────────────────────────────────────────
 async function cargarUsuarios(){
   try {
-    const r = await fetch(API+'/api/usuarios', {headers:{'Authorization': $auth()}});
+    const r = await fetch(API+'/api/usuarios', {headers:{'Authorization':$auth()}});
     if(!r.ok) return;
     const items = await r.json();
     const tbody = document.getElementById('usr-tbody');
@@ -359,10 +376,8 @@ async function cargarUsuarios(){
   } catch(e){}
 }
 function editarUsuario(id,email,tipo,activo){
-  _editUsrId=id;
-  document.getElementById('usr-email').value=email;
-  document.getElementById('usr-token').value='';
-  document.getElementById('usr-tipo').value=tipo;
+  _editUsrId=id; document.getElementById('usr-email').value=email;
+  document.getElementById('usr-token').value=''; document.getElementById('usr-tipo').value=tipo;
   document.querySelector('#section-usuarios .btn-green').textContent='Guardar';
 }
 async function guardarUsuario(){
@@ -373,10 +388,10 @@ async function guardarUsuario(){
   const body = {email, token, tipo, activo: true};
   try {
     if(_editUsrId){
-      await fetch(API+'/api/usuarios/'+_editUsrId, {method:'PUT', headers:{'Content-Type':'application/json','Authorization': $auth()}, body:JSON.stringify(body)});
+      await fetch(API+'/api/usuarios/'+_editUsrId, {method:'PUT', headers:{'Content-Type':'application/json','Authorization':$auth()}, body:JSON.stringify(body)});
       _editUsrId=null; document.querySelector('#section-usuarios .btn-green').textContent='Agregar';
     } else {
-      await fetch(API+'/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json','Authorization': $auth()}, body:JSON.stringify(body)});
+      await fetch(API+'/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json','Authorization':$auth()}, body:JSON.stringify(body)});
     }
     document.getElementById('usr-email').value=''; document.getElementById('usr-token').value='';
     document.getElementById('usr-tipo').value='usuario';
@@ -385,7 +400,7 @@ async function guardarUsuario(){
 }
 async function eliminarUsuario(id){
   if(!confirm('Eliminar este usuario?')) return;
-  await fetch(API+'/api/usuarios/'+id, {method:'DELETE', headers:{'Authorization': $auth()}});
+  await fetch(API+'/api/usuarios/'+id, {method:'DELETE', headers:{'Authorization':$auth()}});
   await cargarUsuarios();
 }
 </script>
