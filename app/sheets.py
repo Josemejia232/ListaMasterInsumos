@@ -13,7 +13,7 @@ async def read_urls_from_sheet(sheet_url: str) -> list[str]:
         raise ValueError("No se pudo extraer el ID de la hoja de cálculo")
 
     csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         resp = await client.get(csv_url)
         resp.raise_for_status()
         text = resp.text

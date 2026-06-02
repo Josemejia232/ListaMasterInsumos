@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ListaMasterInsumos</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444;--yellow:#eab308;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.container{max-width:1400px;margin:0 auto;padding:1.5rem}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:.25rem}
+.subtitle{color:var(--muted);font-size:.875rem;margin-bottom:1.5rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:.5rem;padding:1rem}
+.card-label{font-size:.75rem;color:var(--muted);text-transform:uppercase;margin-bottom:.25rem}
+.card-value{font-size:1.5rem;font-weight:700}
+.form-row{display:flex;gap:.5rem;margin-bottom:1rem}
+.form-row input,.form-row select{flex:1;background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.5rem .75rem;color:var(--text);font-size:.875rem}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent)}
+.btn{background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap}
+.btn:hover{opacity:.9}
+.btn-green{background:var(--green)}
+.btn-sm{padding:.25rem .5rem;font-size:.75rem}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.toolbar{display:flex;gap:.5rem;margin-bottom:1rem;align-items:center;flex-wrap:wrap}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:.5rem;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.8125rem}
+th{text-align:left;padding:.625rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border)}
+td{padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+td:nth-child(3){max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td:nth-child(7){max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td:nth-child(7) a{color:var(--accent);text-decoration:none;font-size:.75rem}
+.empty{text-align:center;padding:3rem;color:var(--muted)}
+#result-box{margin-top:1rem}
+#result-box pre{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.75rem;overflow-x:auto;max-height:200px;overflow-y:auto}
+.loading{opacity:.5;pointer-events:none}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>&bull; ListaMasterInsumos</h1>
+  <p class="subtitle">Insumos de construccion &mdash; Scraping desde Google Sheets a PostgreSQL</p>
+
+  <div class="form-row">
+    <input type="url" id="url-input" placeholder="URL de producto (Homecenter, Sodimac, Promart...)" />
+    <button class="btn" onclick="scrapeUrl()">Scrape</button>
+  </div>
+
+  <div class="form-row">
+    <button class="btn btn-green" onclick="scrapeDaily()">Scrape Sheet Diario</button>
+  </div>
+
+  <div id="result-box"></div>
+
+  <div class="cards" id="stats"></div>
+
+  <div class="toolbar">
+    <select id="filtro-tienda" onchange="cargarProductos()">
+      <option value="">Todas las tiendas</option>
+    </select>
+    <button class="btn btn-sm btn-outline" onclick="cargarProductos()">Recargar</button>
+    <span id="tabla-indicator" class="loading" style="font-size:.75rem;color:var(--muted)"></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Codigo</th><th>Descripcion</th><th>Unidad</th><th>Valor</th><th>Tienda</th><th>URL</th><th>Fecha</th>
+      </tr></thead>
+      <tbody id="tabla-body"></tbody>
+    </table>
+    <div class="empty" id="empty-msg">Cargando...</div>
+  </div>
+</div>
+
+<script>
+const API = '';
+
+async function load(){
+  await Promise.all([cargarStats(), cargarProductos()]);
+}
+
+async function cargarStats(){
+  const r = await fetch(API+'/api/stats');
+  if(!r.ok) return;
+  const s = await r.json();
+  document.getElementById('stats').innerHTML = `
+    <div class="card"><div class="card-label">Total Insumos</div><div class="card-value">${s.total}</div></div>
+    <div class="card"><div class="card-label">Valor Total</div><div class="card-value">$${Number(s.total_valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</div></div>
+    <div class="card"><div class="card-label">Scrapeados Hoy</div><div class="card-value">${s.scrapeados_hoy}</div></div>
+    <div class="card"><div class="card-label">Tiendas</div><div class="card-value">${s.tiendas.length}</div></div>
+  `;
+  const sel = document.getElementById('filtro-tienda');
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Todas las tiendas</option>' + s.tiendas.map(t => `<option value="${t}"${t===actual?' selected':''}>${t}</option>`).join('');
+}
+
+async function cargarProductos(){
+  const tienda = document.getElementById('filtro-tienda').value;
+  const ind = document.getElementById('tabla-indicator');
+  ind.innerHTML = '<span class="spinner"></span>Cargando...';
+  const r = await fetch(API+'/productos'+(tienda?'?tienda='+encodeURIComponent(tienda):''));
+  if(!r.ok) return;
+  const prods = await r.json();
+  const tbody = document.getElementById('tabla-body');
+  const empty = document.getElementById('empty-msg');
+  if(!prods.length){
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    empty.textContent = 'No hay productos scrapeados. Usa los formularios para empezar.';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = prods.map(p => `
+      <tr>
+        <td>${p.id}</td>
+        <td>${p.codigo}</td>
+        <td title="${p.descripcion}">${p.descripcion}</td>
+        <td>${p.unidad}</td>
+        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}</td>
+        <td>${p.tienda}</td>
+        <td><a href="${p.url_origen}" target="_blank">${p.url_origen}</a></td>
+        <td>${new Date(p.created_at).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'})}</td>
+      </tr>
+    `).join('');
+  }
+  ind.innerHTML = '';
+}
+
+async function scrapeUrl(){
+  const url = document.getElementById('url-input').value;
+  if(!url) return;
+  const box = document.getElementById('result-box');
+  box.innerHTML = '<pre><span class="spinner"></span>Scrapeando...</pre>';
+  try {
+    const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url));
+    const d = await r.json();
+    box.innerHTML = '<pre>'+JSON.stringify(d,null,2)+'</pre>';
+    await Promise.all([cargarStats(), cargarProductos()]);
+  } catch(e){
+    box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>';
+  }
+}
+
+async function scrapeDaily(){
+  const box = document.getElementById('result-box');
+  box.innerHTML = '<pre><span class="spinner"></span>Procesando sheet diario...</pre>';
+  try {
+    const r = await fetch(API+'/scrape/daily');
+    const d = await r.json();
+    box.innerHTML = '<pre>'+JSON.stringify(d,null,2)+'</pre>';
+    await Promise.all([cargarStats(), cargarProductos()]);
+  } catch(e){
+    box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>';
+  }
+}
+
+load();
+</script>
+</body>
+</html>

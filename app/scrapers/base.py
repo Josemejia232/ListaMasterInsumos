@@ -64,26 +64,30 @@ class GenericScraper:
 
         product = self._empty_result()
 
-        # Estrategia 1: JSON-LD Structured Data (Product schema)
-        product = self._merge(product, self._try_jsonld())
-
-        # Estrategia 2: Embedded JS state (window.__STATE__, __NEXT_DATA__, etc.)
-        product = self._merge(product, self._try_embedded_state())
-
-        # Estrategia 3: Meta tags
-        product = self._merge(product, self._try_meta_tags())
-
-        # Estrategia 4: Microdata (itemprop)
-        product = self._merge(product, self._try_microdata())
-
-        # Estrategia 5: HTML patterns
+        # Estrategia 1: HTML patterns (fallback, menos confiable)
         product = self._merge(product, self._try_html_patterns())
 
-        # Estrategia 6: Extraer ID de la URL
+        # Estrategia 2: Meta tags
+        product = self._merge(product, self._try_meta_tags())
+
+        # Estrategia 3: Microdata (itemprop)
+        product = self._merge(product, self._try_microdata())
+
+        # Estrategia 4: Embedded JS state (SPA state objects)
+        product = self._merge(product, self._try_embedded_state())
+
+        # Estrategia 5: Extraer ID de la URL
         product = self._merge(product, self._try_url_id())
 
-        # Unidad desde el nombre del producto
-        if product.descripcion and product.unidad == "Unidad":
+        # Estrategia 6: JSON-LD Structured Data (más confiable, aplica al final)
+        jsonld = self._try_jsonld()
+        if jsonld.codigo or jsonld.valor or jsonld.descripcion:
+            product = jsonld
+        else:
+            product = self._merge(product, jsonld)
+
+        # Unidad desde el nombre (solo si no hay datos estructurados)
+        if product.descripcion and product.unidad == "Unidad" and not product.codigo:
             product.unidad = self._extract_unit_from_name(product.descripcion)
 
         return product
@@ -128,15 +132,19 @@ class GenericScraper:
                 data = json.loads(script.string or "")
                 if isinstance(data, list):
                     data = data[0] if data else {}
-                if isinstance(data, dict) and data.get("@type") == "Product":
-                    result.codigo = str(data.get("sku", ""))
-                    result.descripcion = str(data.get("name", ""))
-                    offers = data.get("offers", {})
-                    if isinstance(offers, dict):
-                        price = offers.get("price", "")
-                        if price:
-                            result.valor = float(price)
-                    return result
+                if isinstance(data, dict):
+                    type_val = data.get("@type", "")
+                    if type_val and type_val.lower() == "product":
+                        result.codigo = str(data.get("sku", "") or data.get("productID", ""))
+                        result.descripcion = str(data.get("name", ""))
+                        offers = data.get("offers", {})
+                        if isinstance(offers, list) and len(offers) > 0:
+                            offers = offers[0]
+                        if isinstance(offers, dict):
+                            price = offers.get("price", "")
+                            if price:
+                                result.valor = float(price)
+                        return result
             except (json.JSONDecodeError, ValueError, TypeError):
                 continue
         return result

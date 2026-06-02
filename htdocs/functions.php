@@ -36,24 +36,65 @@ function leerUrlsDeSheet(string $sheetUrl): array {
     return $urls;
 }
 
+function upsertProducto(PDO $db, string $codigo, string $descripcion, string $unidad, float $valor, string $tienda, string $url): string {
+    // Retorna: 'nuevo', 'actualizado', 'sin_cambio'
+    if (empty($codigo)) {
+        return 'sin_cambio';
+    }
+
+    $stmt = $db->prepare("SELECT id, valor FROM productos WHERE codigo = :codigo AND tienda = :tienda LIMIT 1");
+    $stmt->execute([':codigo' => $codigo, ':tienda' => $tienda]);
+    $existente = $stmt->fetch();
+
+    if ($existente) {
+        if (abs((float)$existente['valor'] - $valor) < 0.01) {
+            return 'sin_cambio';
+        }
+        $stmt = $db->prepare("
+            UPDATE productos
+            SET descripcion = :desc, unidad = :unidad, valor = :valor, url_origen = :url, updated_at = NOW()
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':desc'   => $descripcion,
+            ':unidad' => $unidad,
+            ':valor'  => $valor,
+            ':url'    => $url,
+            ':id'     => $existente['id'],
+        ]);
+        return 'actualizado';
+    }
+
+    $stmt = $db->prepare("
+        INSERT INTO productos (codigo, descripcion, unidad, valor, tienda, url_origen)
+        VALUES (:codigo, :desc, :unidad, :valor, :tienda, :url)
+    ");
+    $stmt->execute([
+        ':codigo' => $codigo,
+        ':desc'   => $descripcion,
+        ':unidad' => $unidad,
+        ':valor'  => $valor,
+        ':tienda' => $tienda,
+        ':url'    => $url,
+    ]);
+    return 'nuevo';
+}
+
 function procesarUrl(string $url, PDO $db): array {
     $scraper = new Scraper($url);
     $data = $scraper->scrape();
 
     if ($data['codigo'] || $data['descripcion'] || $data['valor'] > 0) {
-        $stmt = $db->prepare("
-            INSERT INTO productos (codigo, descripcion, unidad, valor, tienda, url_origen)
-            VALUES (:codigo, :desc, :unidad, :valor, :tienda, :url)
-        ");
-        $stmt->execute([
-            ':codigo' => $data['codigo'],
-            ':desc'   => $data['descripcion'],
-            ':unidad' => $data['unidad'],
-            ':valor'  => $data['valor'],
-            ':tienda' => $data['tienda'],
-            ':url'    => $data['url'],
-        ]);
-        return ['ok' => true, 'id' => $db->lastInsertId(), 'data' => $data];
+        $resultado = upsertProducto(
+            $db,
+            $data['codigo'],
+            $data['descripcion'],
+            $data['unidad'],
+            $data['valor'],
+            $data['tienda'],
+            $data['url']
+        );
+        return ['ok' => true, 'accion' => $resultado, 'data' => $data];
     }
     return ['ok' => false, 'error' => 'No se pudo extraer información', 'url' => $url];
 }

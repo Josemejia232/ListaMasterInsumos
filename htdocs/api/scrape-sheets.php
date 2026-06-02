@@ -33,17 +33,32 @@ if (empty($urls)) {
 }
 
 $db = conectar_bd();
-$exitosos = 0;
+$nuevos = 0;
+$actualizados = 0;
+$sin_cambio = 0;
 $fallidos = 0;
 
-foreach ($urls as $url) {
-    $r = procesarUrl($url, $db);
-    if ($r['ok']) $exitosos++; else $fallidos++;
+foreach (array_unique($urls) as $url) {
+    $scraper = new Scraper($url);
+    $data = $scraper->scrape();
+    if ($data['codigo'] || $data['descripcion'] || $data['valor'] > 0) {
+        $resultado = upsertProducto(
+            $db, $data['codigo'], $data['descripcion'], $data['unidad'],
+            $data['valor'], $data['tienda'], $data['url']
+        );
+        if ($resultado === 'nuevo') $nuevos++;
+        elseif ($resultado === 'actualizado') $actualizados++;
+        else $sin_cambio++;
+    } else {
+        $fallidos++;
+    }
 }
 
 echo json_encode([
     'total' => count($urls),
-    'exitosos' => $exitosos,
+    'nuevos' => $nuevos,
+    'actualizados' => $actualizados,
+    'sin_cambio' => $sin_cambio,
     'fallidos' => $fallidos,
-    'mensaje' => "Procesadas " . count($urls) . " URLs: {$exitosos} OK, {$fallidos} fallaron",
+    'mensaje' => "Nuevos: {$nuevos} | Actualizados: {$actualizados} | Sin cambio: {$sin_cambio} | Fallidos: {$fallidos}",
 ]);

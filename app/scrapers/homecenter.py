@@ -32,17 +32,14 @@ class HomecenterScraper(GenericScraper):
     def scrape(self) -> ProductoScraped:
         nombre, _ = self.DOMAINS.get(self._dominio, ("Homecenter", ""))
         self.tienda = nombre
+        # Primero intentar API directa (más confiable que el scraper genérico)
+        api_data = self._try_api()
+        if api_data:
+            return api_data
+        # Fallback al scraper genérico
         product = super().scrape()
         if not product.tienda or product.tienda == "Homecenter":
             product.tienda = nombre
-        if not product.codigo or not product.valor:
-            api_data = self._try_api()
-            if api_data:
-                product.codigo = api_data.codigo or product.codigo
-                product.descripcion = api_data.descripcion or product.descripcion
-                product.valor = api_data.valor or product.valor
-                if api_data.unidad != "Unidad":
-                    product.unidad = api_data.unidad
         return product
 
     def _try_api(self) -> ProductoScraped | None:

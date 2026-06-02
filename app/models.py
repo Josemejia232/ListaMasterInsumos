@@ -1,9 +1,12 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, func
+from sqlalchemy import Column, Integer, String, Float, DateTime, func, UniqueConstraint
 from app.database import Base
 
 
 class Producto(Base):
     __tablename__ = "productos"
+    __table_args__ = (
+        UniqueConstraint("codigo", "tienda", name="uq_producto_codigo_tienda"),
+    )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     codigo = Column(String(100), nullable=False, index=True)
@@ -13,3 +16,4 @@ class Producto(Base):
     tienda = Column(String(200), nullable=False)
     url_origen = Column(String(1000), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
