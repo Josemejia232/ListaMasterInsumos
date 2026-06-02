@@ -346,7 +346,6 @@ def listar_productos(
     skip: int = 0,
     limit: int = 500,
     db: Session = Depends(get_db),
-    _user: Usuario = Depends(get_current_user),
 ):
     query = db.query(Producto)
     if tienda:
@@ -354,7 +353,7 @@ def listar_productos(
     return query.order_by(Producto.created_at.desc()).offset(skip).limit(limit).all()
 
 @app.get("/productos/{producto_id}", response_model=ProductoResponse)
-def obtener_producto(producto_id: int, db: Session = Depends(get_db), _user: Usuario = Depends(get_current_user)):
+def obtener_producto(producto_id: int, db: Session = Depends(get_db)):
     prod = db.query(Producto).filter(Producto.id == producto_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado")

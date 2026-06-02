@@ -105,8 +105,11 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="login-tab" data-login="token" onclick="cambiarLogin('token',this)">Ingresar con token</div>
     </div>
     <div id="login-registro">
-      <input type="email" id="reg-email" placeholder="Tu email" autocomplete="email">
-      <button class="btn" onclick="registrarse()">Crear cuenta gratis</button>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.85rem;color:var(--muted);line-height:1.5;margin-bottom:.75rem">
+        Modo prueba gratuita. Acceso limitado a la lista de insumos.<br>
+        Para acceso completo, contacta al administrador.
+      </div>
+      <button class="btn" onclick="entrarInvitado()">Probar gratis</button>
     </div>
     <div id="login-token-section" style="display:none">
       <input type="email" id="login-email" placeholder="Email" autocomplete="email">
@@ -191,7 +194,7 @@ const API = '';
 let _user = null;
 let _editUsrId = null;
 let _verProds = [];
-let _viewMode = 'adjusted';
+let _viewMode = null;
 
 // ─── Auth ───────────────────────────────────────────────
 function cambiarLogin(modo, el){
@@ -200,22 +203,16 @@ function cambiarLogin(modo, el){
   document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
   document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
   document.getElementById('login-error').textContent = '';
-  var old = document.getElementById('token-creado'); if(old) old.remove();
 }
-function registrarse(){
-  const email = document.getElementById('reg-email').value.trim();
-  if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
-  document.getElementById('login-error').textContent='';
-  fetch(API+'/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token:''})})
-  .then(r=>{ if(!r.ok) return r.json().then(e=>{ throw new Error(e.detail||'Error'); }); return r.json(); })
-  .then(u=>{
-    _user = u; localStorage.setItem('user', JSON.stringify(u));
-    var old = document.getElementById('token-creado'); if(old) old.remove();
-    var div = document.createElement('div'); div.id='token-creado'; div.className='token-creado';
-    div.innerHTML = 'Cuenta creada. Tu token es:<br><strong>'+u.token+'</strong><br><span style="color:var(--muted);font-size:.75rem">Guardalo para iniciar sesion despues.</span>';
-    document.querySelector('.login-box').appendChild(div);
-    initApp();
-  }).catch(e=>{ document.getElementById('login-error').textContent=e.message; });
+function entrarInvitado(){
+  _user = null; _viewMode = 'adjusted';
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('sidebar').style.display='flex';
+  document.querySelector('.content').style.display='flex';
+  document.getElementById('side-email').textContent = 'Invitado';
+  buildSidebar();
+  cargarVerInsumos();
+  irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
 }
 function login(){
   const email = document.getElementById('login-email').value.trim();
@@ -227,7 +224,7 @@ function login(){
   .catch(()=>{});
 }
 function logout(){
-  _user = null; localStorage.removeItem('user');
+  _user = null; _viewMode = null; localStorage.removeItem('user');
   document.getElementById('login-wrap').style.display='flex';
   document.getElementById('sidebar').style.display='none';
   document.querySelector('.content').style.display='none';
@@ -299,7 +296,7 @@ function initApp(){
     }
   }
   setInterval(() => {
-    if(_user){ cargarVerInsumos(); if(_user.tipo==='admin') cargarUsuarios(); }
+    if(_viewMode){ cargarVerInsumos(); if(_user && _user.tipo==='admin') cargarUsuarios(); }
   }, 30000);
 })();
 
@@ -327,9 +324,9 @@ const $auth = () => _user ? 'Bearer '+_user.token : '';
 async function apiFetch(url, opts){
   opts = opts || {};
   opts.headers = opts.headers || {};
-  opts.headers['Authorization'] = $auth();
+  if(_user) opts.headers['Authorization'] = $auth();
   var r = await fetch(API+url, opts);
-  if(r.status === 401){ logout(); throw new Error('Sesión expirada'); }
+  if(_user && r.status === 401){ logout(); throw new Error('Sesión expirada'); }
   return r;
 }
 
