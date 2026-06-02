@@ -128,6 +128,7 @@ class LoginResponse(BaseModel):
 
 class UpdateAjustadaRequest(BaseModel):
     descripcion_ajustada: str | None = None
+    categoria: str | None = None
 
 class UsuarioRequest(BaseModel):
     email: str
@@ -405,13 +406,16 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
     prod = db.query(Producto).filter(Producto.id == producto_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado")
-    prod.descripcion_ajustada = req.descripcion_ajustada
+    if req.descripcion_ajustada is not None:
+        prod.descripcion_ajustada = req.descripcion_ajustada
+    if req.categoria is not None:
+        prod.categoria = req.categoria
     db.commit()
     db.refresh(prod)
     return prod
 
 @app.get("/scrape/sync", response_model=ProductoResponse)
-def scrape_sync(url: str, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+def scrape_sync(url: str, categoria: str | None = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     scraper = get_scraper(url)
     if not scraper:
         raise HTTPException(status_code=400, detail="URL no soportada")
@@ -419,7 +423,7 @@ def scrape_sync(url: str, _admin: Usuario = Depends(require_admin), db: Session 
         producto = scraper.scrape()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    _upsert_producto(db, producto)
+    _upsert_producto(db, producto, origen="sheet", categoria=categoria)
     db.commit()
     existente = (
         db.query(Producto)
