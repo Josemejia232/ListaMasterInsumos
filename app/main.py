@@ -48,6 +48,9 @@ with engine.connect() as conn:
             "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='descripcion_ajustada') THEN "
             "ALTER TABLE productos ADD COLUMN descripcion_ajustada VARCHAR(500); "
             "END IF; "
+            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='fecha_pago') THEN "
+            "ALTER TABLE usuarios ADD COLUMN fecha_pago TIMESTAMP; "
+            "END IF; "
             "END $$;"
         ))
         conn.commit()
@@ -137,6 +140,7 @@ class UsuarioResponse(BaseModel):
     token: str
     activo: bool
     tipo: str
+    fecha_pago: datetime | None = None
     created_at: datetime | None = None
     model_config = {"from_attributes": True}
 
@@ -269,6 +273,16 @@ def eliminar_usuario(usuario_id: int, _admin: Usuario = Depends(require_admin), 
     db.delete(item)
     db.commit()
     return {"ok": True}
+
+@app.post("/api/usuarios/{usuario_id}/pago", response_model=UsuarioResponse)
+def renovar_pago(usuario_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    item = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    item.fecha_pago = func.now()
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 # ─── Scraping ─────────────────────────────────────────────────

@@ -42,4 +42,5 @@ class Usuario(Base):
     token = Column(String(200), nullable=False)
     activo = Column(Boolean, default=True, nullable=False)
     tipo = Column(String(20), default="usuario", nullable=False)  # admin | usuario
+    fecha_pago = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())

@@ -10,9 +10,12 @@
 - 1.4. Dos roles: **admin** y **usuario**
 - 1.5. Admin seed automático al iniciar: `admin@example.com` / `admin123`
 - 1.6. Admin puede CRUD de usuarios (email, token, activo, tipo)
-- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Token (visible), Activo, Tipo, Acción
+- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Token (visible), Activo, Tipo, FechaPago, Días, Acción
   - Columna Token visible para el admin
-  - Columna Acción: botón Activar/Bloquear para cambiar estado activo/inactivo
+  - FechaPago: fecha del último pago del usuario (columna `fecha_pago` en BD)
+  - Días: días restantes desde FechaPago hasta completar 30 días. Si ≤ 0 → rojo (vencido), ≤ 5 → amarillo, > 5 → verde
+  - Acción: botón $ (Pagar) que actualiza FechaPago a la fecha actual, reiniciando el ciclo de 30 días
+  - Acción: botón Editar, Activar/Bloquear, Eliminar
 - 1.7. Bearer token en header `Authorization` para endpoints protegidos
 - 1.8. El usuario no ve el contenido del admin
 
@@ -23,7 +26,7 @@
 - 2.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
 - 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, tienda, url_origen, created_at, updated_at
 - 2.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
-- 2.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), created_at
+- 2.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), fecha_pago, created_at
 - 2.5. Unique constraint `(codigo, tienda)` en productos
 - 2.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
 - 2.7. `DATABASE_URL` desde variable de entorno (`.env` en local, env var en Render)

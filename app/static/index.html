@@ -180,7 +180,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="table-wrap">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">USUARIOS</h3>
         <table>
-          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th style="width:160px">Acci&oacute;n</th></tr></thead>
+          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th>FechaPago</th><th>Dias</th><th style="width:190px">Acci&oacute;n</th></tr></thead>
           <tbody id="usr-tbody"></tbody>
         </table>
         <div class="empty" id="usr-empty">No hay usuarios.</div>
@@ -434,15 +434,22 @@ async function cargarUsuarios(){
     const empty = document.getElementById('usr-empty');
     if(!items.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
     empty.style.display='none';
-    tbody.innerHTML = items.map(u => `<tr>
+    tbody.innerHTML = items.map(u => {
+      var fp = u.fecha_pago ? new Date(u.fecha_pago) : null;
+      var dias = fp ? Math.ceil(30 - (Date.now() - fp.getTime()) / (1000*60*60*24)) : null;
+      var colorDias = dias != null ? (dias <= 0 ? 'var(--red)' : dias <= 5 ? '#eab308' : 'var(--green)') : 'var(--muted)';
+      return `<tr>
       <td>${u.id}</td><td>${u.email}</td><td>${u.token}</td>
       <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
+      <td>${fp ? fp.toLocaleDateString('es-CO') : '-'}</td>
+      <td style="color:${colorDias};font-weight:600">${dias != null ? dias : '-'}</td>
       <td><div class="actions">
         <button class="btn btn-sm btn-outline" data-edit-id="${u.id}" data-edit-email="${u.email}" data-edit-tipo="${u.tipo}" data-edit-activo="${u.activo}" onclick="editarUsuarioBtn(this)" title="Editar">Editar</button>
         <button class="btn btn-sm ${u.activo?'btn-red':'btn-green'}" onclick="toggleActivo(${u.id},${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button>
+        <button class="btn btn-sm btn-green" onclick="renovarPago(${u.id})" title="Pagar">$</button>
         <button class="btn btn-sm btn-red" onclick="eliminarUsuario(${u.id})" title="Eliminar">X</button>
       </div></td>
-    </tr>`).join('');
+    </tr>`}).join('');
   } catch(e){}
 }
 function editarUsuarioBtn(el){
@@ -480,6 +487,12 @@ async function eliminarUsuario(id){
   if(!confirm('Eliminar este usuario?')) return;
   await apiFetch('/api/usuarios/'+id, {method:'DELETE'});
   await cargarUsuarios();
+}
+async function renovarPago(id){
+  try {
+    await apiFetch('/api/usuarios/'+id+'/pago', {method:'POST'});
+    await cargarUsuarios();
+  } catch(e){}
 }
 </script>
 </body>
