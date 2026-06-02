@@ -3,17 +3,19 @@ import httpx
 from app.scrapers.base import GenericScraper, ProductoScraped
 
 
-class PromartScraper(GenericScraper):
+class EasyScraper(GenericScraper):
     API_CANDIDATES = [
-        "https://www.promart.pe/api/catalog_system/pub/products/search?fq=skuId:{sku}",
-        "https://www.promart.pe/api/catalog_system/pub/products/search?fq=productId:{sku}",
+        "https://www.easy.com.co/api/catalog_system/pub/products/search?fq=skuId:{sku}",
+        "https://www.easy.com.co/api/catalog_system/pub/products/search?fq=productId:{sku}",
+        "https://www.easy.com.co/api/catalog_system/pub/products/search?fq=sku:{sku}",
+        "https://www.easy.com.ar/api/catalog_system/pub/products/search?fq=skuId:{sku}",
     ]
 
     def __init__(self, url: str):
-        super().__init__(url, tienda="Promart")
+        super().__init__(url, tienda="Easy")
 
     def detect(self) -> bool:
-        return "promart" in self.url.lower()
+        return "easy.com" in self.url.lower()
 
     def scrape(self) -> ProductoScraped:
         product = super().scrape()
@@ -60,7 +62,7 @@ class PromartScraper(GenericScraper):
             price = co.get("Price") or co.get("spotPrice") or 0.0
             return ProductoScraped(
                 codigo=str(sku), descripcion=str(name), unidad="Unidad",
-                valor=float(price), tienda="Promart", url=self.url,
+                valor=float(price), tienda="Easy", url=self.url,
             )
         except Exception:
             return None

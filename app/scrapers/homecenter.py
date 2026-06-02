@@ -1,66 +1,92 @@
 import re
 import httpx
-from bs4 import BeautifulSoup
-from app.scrapers.base import BaseScraper, ProductoScraped
+from app.scrapers.base import GenericScraper, ProductoScraped
 
 
-class HomecenterScraper(BaseScraper):
+class HomecenterScraper(GenericScraper):
+    DOMAINS = {
+        "com.co": ("Homecenter", "https://www.homecenter.com.co/api/catalog_system/pub/products/search?fq=skuId:{sku}"),
+        "com.pe": ("Homecenter Perú", "https://www.homecenter.com.pe/api/catalog_system/pub/products/search?fq=skuId:{sku}"),
+    }
+
+    API_FALLBACKS = [
+        "https://www.homecenter.com.co/api/catalog_system/pub/products/search?fq=skuId:{sku}",
+        "https://www.homecenter.com.co/api/catalog_system/pub/products/search?fq=productId:{sku}",
+        "https://www.homecenter.com.pe/api/catalog_system/pub/products/search?fq=skuId:{sku}",
+        "https://www.homecenter.com.pe/api/catalog_system/pub/products/search?fq=productId:{sku}",
+    ]
+
+    def __init__(self, url: str):
+        super().__init__(url, tienda="Homecenter")
+        self._dominio = self._detectar_dominio()
+
     def detect(self) -> bool:
-        return "homecenter.com" in self.url.lower() or "homecenter" in self.url.lower()
+        return "homecenter" in self.url.lower()
+
+    def _detectar_dominio(self) -> str:
+        for dom in self.DOMAINS:
+            if dom in self.url.lower():
+                return dom
+        return "com.co"
 
     def scrape(self) -> ProductoScraped:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
+        nombre, _ = self.DOMAINS.get(self._dominio, ("Homecenter", ""))
+        self.tienda = nombre
+        product = super().scrape()
+        if not product.tienda or product.tienda == "Homecenter":
+            product.tienda = nombre
+        if not product.codigo or not product.valor:
+            api_data = self._try_api()
+            if api_data:
+                product.codigo = api_data.codigo or product.codigo
+                product.descripcion = api_data.descripcion or product.descripcion
+                product.valor = api_data.valor or product.valor
+                if api_data.unidad != "Unidad":
+                    product.unidad = api_data.unidad
+        return product
+
+    def _try_api(self) -> ProductoScraped | None:
+        sku = self._extract_sku()
+        if not sku:
+            return None
+        for url_template in self.API_FALLBACKS:
+            try:
+                resp = httpx.get(
+                    url_template.format(sku=sku),
+                    headers={**self.HEADERS, "Accept": "application/json"},
+                    timeout=15,
+                )
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                items = data if isinstance(data, list) else data.get("products", [data])
+                for item in items if isinstance(items, list) else [items]:
+                    parsed = self._parse_item(item, sku)
+                    if parsed:
+                        return parsed
+            except Exception:
+                continue
+        return None
+
+    def _parse_item(self, item: dict, sku: str) -> ProductoScraped | None:
+        try:
+            name = item.get("productName") or item.get("name") or item.get("displayName") or ""
+            inner = (item.get("items") or [item])[0]
+            sellers = inner.get("sellers") or []
+            seller = sellers[0] if sellers else {}
+            co = seller.get("commertialOffer", {}) if seller else {}
+            price = co.get("Price") or co.get("spotPrice") or co.get("price") or 0.0
+            return ProductoScraped(
+                codigo=str(sku), descripcion=str(name), unidad="Unidad",
+                valor=float(price), tienda=self.tienda, url=self.url,
             )
-        }
-        resp = httpx.get(self.url, headers=headers, timeout=30, follow_redirects=True)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
+        except Exception:
+            return None
 
-        codigo = ""
-        match = re.search(r'"productId"\s*:\s*["\']?(\d+)["\']?', resp.text)
-        if match:
-            codigo = match.group(1)
-        if not codigo:
-            sku_el = soup.find("span", class_=re.compile(r"sku|codigo|id", re.I))
-            if sku_el:
-                codigo = sku_el.get_text(strip=True)
-
-        descripcion = ""
-        h1 = soup.find("h1", class_=re.compile(r"product.*name|title", re.I))
-        if h1:
-            descripcion = h1.get_text(strip=True)
-        if not descripcion:
-            meta = soup.find("meta", {"name": "description"})
-            if meta:
-                descripcion = meta.get("content", "")
-
-        unidad = "Unidad"
-        unit_el = soup.find("span", class_=re.compile(r"unit|presentacion", re.I))
-        if unit_el:
-            unidad = unit_el.get_text(strip=True)
-
-        valor = 0.0
-        match_price = re.search(r'"price"\s*:\s*([\d.]+)', resp.text)
-        if match_price:
-            valor = float(match_price.group(1))
-        else:
-            price_el = soup.find("span", class_=re.compile(r"price|precio", re.I))
-            if price_el:
-                texto = price_el.get_text(strip=True).replace("$", "").replace(".", "").replace(",", ".")
-                try:
-                    valor = float(texto)
-                except ValueError:
-                    valor = 0.0
-
-        return ProductoScraped(
-            codigo=codigo,
-            descripcion=descripcion,
-            unidad=unidad,
-            valor=valor,
-            tienda="Homecenter",
-            url=self.url,
-        )
+    def _extract_sku(self) -> str | None:
+        for pat in [r"/p/(\d+)", r"(\d+)/?p/?$", r"-(\d+)/?$", r"/product/(\d+)"]:
+            m = re.search(pat, self.url)
+            if m:
+                return m.group(1)
+        nums = re.findall(r"/(\d{4,})", self.url)
+        return nums[-1] if nums else None

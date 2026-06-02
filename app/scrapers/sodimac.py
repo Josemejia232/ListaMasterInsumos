@@ -1,66 +1,90 @@
 import re
 import httpx
-from bs4 import BeautifulSoup
-from app.scrapers.base import BaseScraper, ProductoScraped
+from app.scrapers.base import GenericScraper, ProductoScraped
 
 
-class SodimacScraper(BaseScraper):
+class SodimacScraper(GenericScraper):
+    DOMAINS = {
+        "com.pe": ("Sodimac Perú", "https://www.falabella.com.pe/rest/model/falabella/rest/browse/BrowseActor/product-details?productId={sku}"),
+        "com.co": ("Sodimac Colombia", "https://www.homecenter.com.co/rest/model/falabella/rest/browse/BrowseActor/product-details?productId={sku}"),
+        "com.cl": ("Sodimac Chile", "https://www.falabella.com/rest/model/falabella/rest/browse/BrowseActor/product-details?productId={sku}"),
+    }
+
+    API_FALLBACKS = [
+        "https://www.falabella.com.pe/rest/model/falabella/rest/browse/BrowseActor/product-details?productId={sku}",
+        "https://www.sodimac.com.pe/api/catalog_system/pub/products/search?fq=skuId:{sku}",
+        "https://www.sodimac.com.co/api/catalog_system/pub/products/search?fq=skuId:{sku}",
+    ]
+
+    def __init__(self, url: str):
+        super().__init__(url, tienda="Sodimac")
+        self._dominio = self._detectar_dominio()
+
     def detect(self) -> bool:
         return "sodimac.com" in self.url.lower()
 
+    def _detectar_dominio(self) -> str:
+        for dom in self.DOMAINS:
+            if dom in self.url.lower():
+                return dom
+        return "com.pe"
+
     def scrape(self) -> ProductoScraped:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
+        nombre, _ = self.DOMAINS.get(self._dominio, ("Sodimac", ""))
+        self.tienda = nombre
+        product = super().scrape()
+        if not product.tienda or product.tienda == "Sodimac":
+            product.tienda = nombre
+        if not product.codigo or not product.valor:
+            api_data = self._try_api()
+            if api_data:
+                product.codigo = api_data.codigo or product.codigo
+                product.descripcion = api_data.descripcion or product.descripcion
+                product.valor = api_data.valor or product.valor
+                if api_data.unidad != "Unidad":
+                    product.unidad = api_data.unidad
+        return product
+
+    def _try_api(self) -> ProductoScraped | None:
+        sku = self._extract_sku()
+        if not sku:
+            return None
+        for api_url_template in self.API_FALLBACKS:
+            try:
+                resp = httpx.get(
+                    api_url_template.format(sku=sku),
+                    headers={**self.HEADERS, "Accept": "application/json"},
+                    timeout=15,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    return self._parse_response(data, sku)
+            except Exception:
+                continue
+        return None
+
+    def _parse_response(self, data, sku: str) -> ProductoScraped | None:
+        try:
+            product = data.get("product", data)
+            if isinstance(product, list):
+                product = product[0] if product else {}
+            name = product.get("displayName") or product.get("name") or product.get("productName") or ""
+            items = product.get("items") or [product]
+            item = items[0] if isinstance(items, list) else items
+            sellers = item.get("sellers") or [item]
+            seller = sellers[0] if sellers else {}
+            price = seller.get("salePrice") or seller.get("commertialOffer", {}).get("Price") or 0.0
+            return ProductoScraped(
+                codigo=str(sku), descripcion=str(name), unidad="Unidad",
+                valor=float(price), tienda=self.tienda, url=self.url,
             )
-        }
-        resp = httpx.get(self.url, headers=headers, timeout=30, follow_redirects=True)
-        resp.raise_for_status()
-        soup = BeautifulSoup(resp.text, "lxml")
+        except Exception:
+            return None
 
-        codigo = ""
-        id_input = soup.find("input", {"name": "productId"})
-        if id_input:
-            codigo = id_input.get("value", "")
-        if not codigo:
-            match = re.search(r'"skuId"\s*:\s*"(\d+)"', resp.text)
-            if match:
-                codigo = match.group(1)
-
-        descripcion = ""
-        h1 = soup.find("h1", class_=re.compile(r"product.*name|title|js_product_name", re.I))
-        if h1:
-            descripcion = h1.get_text(strip=True)
-        if not descripcion:
-            meta = soup.find("meta", {"name": "description"})
-            if meta:
-                descripcion = meta.get("content", "")
-
-        unidad = "Unidad"
-        unit_el = soup.find("span", class_=re.compile(r"unit|js_unit", re.I))
-        if unit_el:
-            unidad = unit_el.get_text(strip=True)
-
-        valor = 0.0
-        price_match = re.search(r'"price"\s*:\s*([\d.]+)', resp.text)
-        if price_match:
-            valor = float(price_match.group(1))
-        else:
-            price_el = soup.find("span", class_=re.compile(r"price|js_price", re.I))
-            if price_el:
-                texto = price_el.get_text(strip=True).replace("$", "").replace(".", "").replace(",", ".")
-                try:
-                    valor = float(texto)
-                except ValueError:
-                    valor = 0.0
-
-        return ProductoScraped(
-            codigo=codigo,
-            descripcion=descripcion,
-            unidad=unidad,
-            valor=valor,
-            tienda="Sodimac",
-            url=self.url,
-        )
+    def _extract_sku(self) -> str | None:
+        for pat in [r"/product/(\d+)", r"/producto/(\d+)", r"skuId[=:](\d+)", r"productId[=:](\d+)"]:
+            m = re.search(pat, self.url)
+            if m:
+                return m.group(1)
+        nums = re.findall(r"/(\d{4,})", self.url)
+        return nums[-1] if nums else None
