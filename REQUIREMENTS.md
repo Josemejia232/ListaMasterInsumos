@@ -10,6 +10,9 @@
 - 1.4. Dos roles: **admin** y **usuario**
 - 1.5. Admin seed automático al iniciar: `admin@example.com` / `admin123`
 - 1.6. Admin puede CRUD de usuarios (email, token, activo, tipo)
+- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Token (visible), Activo, Tipo, Acción
+  - Columna Token visible para el admin
+  - Columna Acción: botón Activar/Bloquear para cambiar estado activo/inactivo
 - 1.7. Bearer token en header `Authorization` para endpoints protegidos
 - 1.8. El usuario no ve el contenido del admin
 

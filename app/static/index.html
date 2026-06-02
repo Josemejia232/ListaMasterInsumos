@@ -175,8 +175,9 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
         <button class="btn btn-green" onclick="guardarUsuario()">Agregar</button>
       </div>
       <div class="table-wrap">
+        <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">USUARIOS</h3>
         <table>
-          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th style="width:120px">Acci&oacute;n</th></tr></thead>
+          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th style="width:80px">Acci&oacute;n</th></tr></thead>
           <tbody id="usr-tbody"></tbody>
         </table>
         <div class="empty" id="usr-empty">No hay usuarios.</div>
@@ -405,11 +406,10 @@ async function cargarUsuarios(){
     if(!items.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
     empty.style.display='none';
     tbody.innerHTML = items.map(u => `<tr>
-      <td>${u.id}</td><td>${u.email}</td><td>****</td>
-      <td>${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
+      <td>${u.id}</td><td>${u.email}</td><td>${u.token}</td>
+      <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
       <td><div class="actions">
-        <button class="btn btn-sm btn-outline" onclick="editarUsuario(${u.id},'${u.email.replace(/'/g,"\\'")}','${u.tipo}',${u.activo})">Editar</button>
-        <button class="btn btn-sm btn-red" onclick="eliminarUsuario(${u.id})">X</button>
+        <button class="btn btn-sm ${u.activo?'btn-red':'btn-green'}" onclick="toggleActivo(${u.id},${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button>
       </div></td>
     </tr>`).join('');
   } catch(e){}
@@ -436,6 +436,12 @@ async function guardarUsuario(){
     document.getElementById('usr-tipo').value='usuario';
     await cargarUsuarios();
   } catch(e){ alert('Error: '+e.message); }
+}
+async function toggleActivo(id, activo){
+  try {
+    await fetch(API+'/api/usuarios/'+id, {method:'PUT', headers:{'Content-Type':'application/json','Authorization':$auth()}, body:JSON.stringify({email:'', activo:activo})});
+    await cargarUsuarios();
+  } catch(e){}
 }
 async function eliminarUsuario(id){
   if(!confirm('Eliminar este usuario?')) return;

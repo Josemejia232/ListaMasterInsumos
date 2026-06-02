@@ -239,7 +239,8 @@ def actualizar_usuario(usuario_id: int, req: UsuarioRequest, _admin: Usuario = D
     item = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    item.email = req.email
+    if req.email:
+        item.email = req.email
     if req.token:
         item.token = req.token
     item.activo = req.activo
