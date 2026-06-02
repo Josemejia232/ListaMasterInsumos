@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, func, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, func, UniqueConstraint
 from app.database import Base
 
 
@@ -26,4 +26,15 @@ class Insumo(Base):
     descripcion = Column(String(500), nullable=False)
     un = Column(String(50), nullable=False, default="Unidad")
     valor = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(200), unique=True, nullable=False, index=True)
+    token = Column(String(200), nullable=False)
+    activo = Column(Boolean, default=True, nullable=False)
+    tipo = Column(String(20), default="usuario", nullable=False)  # admin | usuario
     created_at = Column(DateTime, server_default=func.now())

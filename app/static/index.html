@@ -5,36 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ListaMasterInsumos</title>
 <style>
-:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e}
+:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:1.5rem}
-.topbar{margin-bottom:1.5rem}
-.topbar h1{font-size:1.3rem;font-weight:700;margin-bottom:.2rem}
-.topbar .sub{color:var(--muted);font-size:.8rem}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:.75rem;padding:2rem;width:100%;max-width:380px}
+.login-box h1{font-size:1.3rem;margin-bottom:.25rem}
+.login-box .sub{color:var(--muted);font-size:.85rem;margin-bottom:1.5rem}
+.login-box input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:.375rem;padding:.6rem .75rem;color:var(--text);font-size:.875rem;margin-bottom:.75rem}
+.login-box input:focus{outline:none;border-color:var(--accent)}
+.login-box .btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.6rem;font-size:.875rem;cursor:pointer}
+.login-box .btn:hover{opacity:.85}
+.error{color:var(--red);font-size:.8rem;margin-top:.5rem}
+.app-wrap{display:none}
+.app-wrap.visible{display:block}
+.topbar{display:flex;align-items:center;gap:1rem;padding:1rem 1.5rem;background:var(--card);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:1.1rem;font-weight:700;flex:1}
+.topbar .email{color:var(--muted);font-size:.8rem}
+.topbar .logout{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--muted);cursor:pointer;padding:.35rem .65rem;font-size:.75rem}
+.topbar .logout:hover{color:var(--text);border-color:var(--accent)}
+.content{padding:1.5rem}
+.tabs{display:flex;gap:.25rem;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{padding:.5rem 1rem;cursor:pointer;font-size:.85rem;color:var(--muted);border-bottom:2px solid transparent;transition:all .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.section{display:none}
+.section.active{display:block}
 .form-row{display:flex;gap:.5rem;margin-bottom:1rem}
 .form-row input,.form-row select{flex:1;background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.5rem .75rem;color:var(--text);font-size:.875rem}
 .form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent)}
+.form-inline{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+.form-inline input{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.375rem .5rem;color:var(--text);font-size:.8125rem}
+.form-inline input:focus{outline:none;border-color:var(--accent)}
 .btn{background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .btn:hover{opacity:.85}
+.btn-green{background:var(--green)}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{padding:.25rem .5rem;font-size:.75rem}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:.5rem;overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:.8125rem}
 th{text-align:left;padding:.625rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:.5rem .75rem;border-bottom:1px solid var(--border);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
+td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
 #url-result-box pre{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.75rem;overflow-x:auto;max-height:200px;overflow-y:auto;margin-bottom:1rem}
 .spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
 @media(max-width:768px){
-  body{padding:1rem}
+  .content{padding:1rem}
+  .topbar{padding:.75rem 1rem}
   .table-wrap{overflow-x:auto}
   table{font-size:.75rem}
   th,td{padding:.4rem .5rem}
 }
 @media(max-width:480px){
-  .form-row{flex-direction:column}
+  .form-row,.form-inline{flex-direction:column}
   .form-row input{width:100%}
   table{font-size:.7rem}
   th,td{padding:.3rem .35rem}
@@ -42,29 +71,138 @@ h2{font-size:1.1rem;margin-bottom:1rem;color:var(--text)}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <h1>Lista de Insumos</h1>
-  <div class="sub">Productos scrapeados</div>
+
+<!-- Login -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-box">
+    <h1>ListaMaster</h1>
+    <div class="sub">Inicia sesi&oacute;n</div>
+    <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+    <input type="password" id="login-token" placeholder="Token" autocomplete="off">
+    <button class="btn" onclick="login()">Ingresar</button>
+    <div class="error" id="login-error"></div>
+  </div>
 </div>
-<div class="form-row">
-  <input type="url" id="url-input" placeholder="URL de producto (Homecenter, Sodimac, Promart...)" />
-  <button class="btn" onclick="agregarUrl()">Agregar</button>
+
+<!-- App -->
+<div class="app-wrap" id="app-wrap">
+  <div class="topbar">
+    <h1 id="app-title">Lista de Insumos</h1>
+    <span class="email" id="user-email"></span>
+    <button class="logout" onclick="logout()">Salir</button>
+  </div>
+  <div class="content">
+    <div class="tabs" id="admin-tabs">
+      <div class="tab active" data-section="ver-insumos" onclick="irA('ver-insumos',this)">Insumos</div>
+      <div class="tab" data-section="productos" onclick="irA('productos',this)">Agregar</div>
+      <div class="tab" data-section="usuarios" onclick="irA('usuarios',this)">Usuarios</div>
+    </div>
+
+    <!-- Lista Insumos -->
+    <div class="section active" id="section-ver-insumos">
+      <h2>Lista de Insumos</h2>
+      <div class="form-row">
+        <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
+          <tbody id="ver-ins-tbody"></tbody>
+        </table>
+        <div class="empty" id="ver-ins-empty">No hay productos.</div>
+      </div>
+    </div>
+
+    <!-- Agregar Productos (admin) -->
+    <div class="section" id="section-productos">
+      <h2>Agregar Producto</h2>
+      <div class="form-row">
+        <input type="url" id="url-input" placeholder="URL de producto (Homecenter, Sodimac, Promart...)" />
+        <button class="btn" onclick="agregarUrl()">Scrapear</button>
+      </div>
+      <div id="url-result-box"></div>
+    </div>
+
+    <!-- Usuarios (admin) -->
+    <div class="section" id="section-usuarios">
+      <h2>Administrar Usuarios</h2>
+      <div class="form-inline">
+        <input type="email" id="usr-email" placeholder="Email" style="flex:2">
+        <input type="text" id="usr-token" placeholder="Token (vac&iacute;o = aleatorio)" style="flex:1">
+        <select id="usr-tipo" style="flex:0 0 100px">
+          <option value="usuario">Usuario</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button class="btn btn-green" onclick="guardarUsuario()">Agregar</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th style="width:120px">Acci&oacute;n</th></tr></thead>
+          <tbody id="usr-tbody"></tbody>
+        </table>
+        <div class="empty" id="usr-empty">No hay usuarios.</div>
+      </div>
+    </div>
+  </div>
 </div>
-<div id="url-result-box"></div>
-<div class="form-row">
-  <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVer()">
-</div>
-<div class="table-wrap">
-  <table>
-    <thead><tr><th>ID</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR.</th></tr></thead>
-    <tbody id="ver-ins-tbody"></tbody>
-  </table>
-  <div class="empty" id="ver-ins-empty">No hay productos.</div>
-</div>
+
 <script>
 const API = '';
+let _user = null;
+let _editUsrId = null;
 let _verProds = [];
 
+// ─── Auth ───────────────────────────────────────────────
+function login(){
+  const email = document.getElementById('login-email').value.trim();
+  const token = document.getElementById('login-token').value.trim();
+  if(!email || !token){ document.getElementById('login-error').textContent='Completa todos los campos'; return; }
+  fetch(API+'/api/auth/login', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,token})
+  }).then(r=>{
+    if(!r.ok){ document.getElementById('login-error').textContent='Credenciales inválidas'; throw new Error('fail'); }
+    return r.json();
+  }).then(u=>{
+    _user = u;
+    localStorage.setItem('user', JSON.stringify(u));
+    initApp();
+  }).catch(()=>{});
+}
+function logout(){
+  _user = null; localStorage.removeItem('user');
+  document.getElementById('login-wrap').style.display='flex';
+  document.getElementById('app-wrap').classList.remove('visible');
+}
+function initApp(){
+  if(!_user) return;
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('app-wrap').classList.add('visible');
+  document.getElementById('user-email').textContent = _user.email;
+  if(_user.tipo === 'admin'){
+    document.getElementById('admin-tabs').style.display='flex';
+    cargarUsuarios(); cargarVerInsumos();
+    irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
+  } else {
+    document.getElementById('admin-tabs').style.display='none';
+    document.getElementById('section-ver-insumos').classList.add('active');
+    cargarVerInsumos();
+  }
+}
+(function(){
+  const saved = localStorage.getItem('user');
+  if(saved){ try{ _user=JSON.parse(saved); initApp(); }catch(e){} }
+})();
+
+function irA(section, el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const sec = document.getElementById('section-'+section);
+  if(sec) sec.classList.add('active');
+}
+
+// ─── Product helpers ───────────────────────────────────
 function precioAjustado(valor, id){
   const seed = ((id * 9301 + 49297) % 233280) / 233280;
   const factor = 0.98 + seed * 0.01;
@@ -75,24 +213,14 @@ function descripcionAjustada(desc, id){
   const idx = ((id * 7919 + 12345) % 233280) % sufijos.length;
   return desc + sufijos[idx];
 }
-async function agregarUrl(){
-  const url = document.getElementById('url-input').value.trim();
-  if(!url) return;
-  const box = document.getElementById('url-result-box');
-  box.innerHTML = '<pre><span class="spinner"></span>Scrapeando...</pre>';
-  try {
-    const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url));
-    if(!r.ok){ const t=await r.text(); box.innerHTML='<pre style="color:var(--red)">'+t+'</pre>'; return; }
-    document.getElementById('url-input').value='';
-    box.innerHTML = '<pre style="color:var(--green)">Producto agregado correctamente.</pre>';
-    _verProds = [];
-    await cargarVerInsumos();
-  } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
-}
+
+// ─── Lista Insumos ─────────────────────────────────────
 async function cargarVerInsumos(){
-  const r = await fetch(API+'/productos?limit=500');
-  _verProds = await r.json();
-  renderVer();
+  try {
+    const r = await fetch(API+'/productos?limit=500');
+    _verProds = await r.json();
+    renderVer();
+  } catch(e){}
 }
 function renderVer(){
   const q = (document.getElementById('ver-filtro').value||'').toLowerCase().trim();
@@ -112,7 +240,77 @@ function renderVer(){
   </tr>`).join('');
 }
 function filtrarVer(){ renderVer(); }
-cargarVerInsumos();
+
+// ─── Agregar URL (admin) ───────────────────────────────
+const $auth = () => _user ? 'Bearer '+_user.token : '';
+
+async function agregarUrl(){
+  const url = document.getElementById('url-input').value.trim();
+  if(!url) return;
+  const box = document.getElementById('url-result-box');
+  box.innerHTML = '<pre><span class="spinner"></span>Scrapeando...</pre>';
+  try {
+    const r = await fetch(API+'/scrape/sync?url='+encodeURIComponent(url), {
+      headers:{'Authorization': $auth()}
+    });
+    if(!r.ok){ const t=await r.text(); box.innerHTML='<pre style="color:var(--red)">'+t+'</pre>'; return; }
+    document.getElementById('url-input').value='';
+    box.innerHTML = '<pre style="color:var(--green)">Producto agregado correctamente.</pre>';
+    _verProds = [];
+    await cargarVerInsumos();
+  } catch(e){ box.innerHTML = '<pre style="color:var(--red)">Error: '+e.message+'</pre>'; }
+}
+
+// ─── Usuarios CRUD (admin) ─────────────────────────────
+async function cargarUsuarios(){
+  try {
+    const r = await fetch(API+'/api/usuarios', {headers:{'Authorization': $auth()}});
+    if(!r.ok) return;
+    const items = await r.json();
+    const tbody = document.getElementById('usr-tbody');
+    const empty = document.getElementById('usr-empty');
+    if(!items.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    tbody.innerHTML = items.map(u => `<tr>
+      <td>${u.id}</td><td>${u.email}</td><td>****</td>
+      <td>${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
+      <td><div class="actions">
+        <button class="btn btn-sm btn-outline" onclick="editarUsuario(${u.id},'${u.email.replace(/'/g,"\\'")}','${u.tipo}',${u.activo})">Editar</button>
+        <button class="btn btn-sm btn-red" onclick="eliminarUsuario(${u.id})">X</button>
+      </div></td>
+    </tr>`).join('');
+  } catch(e){}
+}
+function editarUsuario(id,email,tipo,activo){
+  _editUsrId=id;
+  document.getElementById('usr-email').value=email;
+  document.getElementById('usr-token').value='';
+  document.getElementById('usr-tipo').value=tipo;
+  document.querySelector('#section-usuarios .btn-green').textContent='Guardar';
+}
+async function guardarUsuario(){
+  const email = document.getElementById('usr-email').value.trim();
+  const token = document.getElementById('usr-token').value.trim();
+  const tipo = document.getElementById('usr-tipo').value;
+  if(!email) return;
+  const body = {email, token, tipo, activo: true};
+  try {
+    if(_editUsrId){
+      await fetch(API+'/api/usuarios/'+_editUsrId, {method:'PUT', headers:{'Content-Type':'application/json','Authorization': $auth()}, body:JSON.stringify(body)});
+      _editUsrId=null; document.querySelector('#section-usuarios .btn-green').textContent='Agregar';
+    } else {
+      await fetch(API+'/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json','Authorization': $auth()}, body:JSON.stringify(body)});
+    }
+    document.getElementById('usr-email').value=''; document.getElementById('usr-token').value='';
+    document.getElementById('usr-tipo').value='usuario';
+    await cargarUsuarios();
+  } catch(e){ alert('Error: '+e.message); }
+}
+async function eliminarUsuario(id){
+  if(!confirm('Eliminar este usuario?')) return;
+  await fetch(API+'/api/usuarios/'+id, {method:'DELETE', headers:{'Authorization': $auth()}});
+  await cargarUsuarios();
+}
 </script>
 </body>
 </html>
