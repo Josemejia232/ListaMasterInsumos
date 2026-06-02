@@ -249,7 +249,7 @@ function irA(section, el){
   const titles = {'ver-insumos':'Insumos','productos':'Agregar Producto','usuarios':'Usuarios'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
-  if(section==='ver-insumos' && !_verProds.length) cargarVerInsumos();
+  if(section==='ver-insumos') cargarVerInsumos();
   if(section==='usuarios') cargarUsuarios();
   if(section==='productos') document.getElementById('url-input')?.focus();
 }
@@ -275,6 +275,9 @@ function initApp(){
 (function(){
   const saved = localStorage.getItem('user');
   if(saved){ try{ _user=JSON.parse(saved); initApp(); }catch(e){} }
+  setInterval(() => {
+    if(_user){ cargarVerInsumos(); if(_user.tipo==='admin') cargarUsuarios(); }
+  }, 30000);
 })();
 
 // ─── Helpers ────────────────────────────────────────────
