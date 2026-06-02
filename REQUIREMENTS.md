@@ -4,9 +4,9 @@
 > Cualquier cambio en la BD debe reflejarse aquí y viceversa.
 
 ## 1. Autenticación y roles
-- 1.1. Login con email + token (el administrador proporciona el token)
-- 1.2. Registro gratuito: solo ingresa si esta interesado debe comunicarse con el admin para obtener uno. 
-- 1.3. Login con token pre-asignado
+- 1.1. Login con email + token (token pre-asignado por admin o auto-generado en registro)
+- 1.2. Registro gratis: usuario ingresa solo email → se auto-genera token y se guarda en localStorage del navegador
+- 1.3. Login con token pre-asignado: usuario ingresa email + token → se guardan en localStorage
 - 1.4. Dos roles: **admin** y **usuario**
 - 1.5. Admin seed automático al iniciar: `admin@example.com` / `admin123`
 - 1.6. Admin puede CRUD de usuarios (email, token, activo, tipo)
@@ -41,7 +41,7 @@
 
 ## 4. Frontend
 - 4.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estático
-- 4.2. Página de login con dos tabs: "Registrarse gratis" (información de contacto) e "Ingresar" (email + token para usuarios ya registrados)
+- 4.2. Página de login con dos tabs: "Usuario gratis" (registro con solo email, auto-genera token) e "Ingresar con token" (login con email + token para usuarios ya registrados)
 - 4.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
 - 4.3.1. El menú tiene dos módulos según el rol:
   - **Admin**: módulo **ADMIN** (Productos, Usuarios) + módulo **LISTA INSUMOS** (Insumos) con contador total

@@ -181,12 +181,18 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
 
 # ─── Auth endpoints ───────────────────────────────────────────
 
-@app.post("/api/auth/register")
+@app.post("/api/auth/register", response_model=LoginResponse)
 def register(req: LoginRequest, db: Session = Depends(get_db)):
-    existente = db.query(Usuario).filter(Usuario.email == req.email, Usuario.token == req.token, Usuario.activo == True).first()
+    existente = db.query(Usuario).filter(Usuario.email == req.email).first()
     if existente:
         return LoginResponse(id=existente.id, email=existente.email, tipo=existente.tipo, token=existente.token)
-    raise HTTPException(status_code=400, detail="El registro es por invitación. Contacta al administrador para obtener un token de acceso.")
+    import secrets
+    token = secrets.token_hex(16)
+    user = Usuario(email=req.email, token=token, activo=True, tipo="usuario")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
