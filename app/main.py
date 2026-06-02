@@ -32,6 +32,9 @@ with engine.connect() as conn:
             "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='origen') THEN "
             "ALTER TABLE productos ADD COLUMN origen VARCHAR(20); "
             "END IF; "
+            "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='categoria') THEN "
+            "ALTER TABLE productos ADD COLUMN categoria VARCHAR(200); "
+            "END IF; "
             "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
             "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
             "END IF; "
@@ -74,6 +77,7 @@ class ProductoResponse(BaseModel):
     valor: float
     valor_anterior: float | None = None
     origen: str | None = None
+    categoria: str | None = None
     tienda: str
     url_origen: str
     created_at: datetime | None = None
@@ -136,7 +140,7 @@ def require_admin(user: Usuario = Depends(get_current_user)):
 
 # ─── Upsert ───────────────────────────────────────────────────
 
-def _upsert_producto(db: Session, producto, origen: str = "manual") -> dict:
+def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: str | None = None) -> dict:
     if not producto.codigo:
         return "sin_cambio"
     existente = (
@@ -153,6 +157,8 @@ def _upsert_producto(db: Session, producto, origen: str = "manual") -> dict:
         existente.valor = producto.valor
         existente.url_origen = producto.url
         existente.origen = existente.origen or origen
+        if categoria:
+            existente.categoria = categoria
         existente.updated_at = func.now()
         return "actualizado"
     else:
@@ -164,6 +170,7 @@ def _upsert_producto(db: Session, producto, origen: str = "manual") -> dict:
             tienda=producto.tienda,
             url_origen=producto.url,
             origen=origen,
+            categoria=categoria,
         )
         db.add(db_item)
         return "nuevo"
@@ -261,16 +268,18 @@ async def scrape_from_sheet(
         mensaje=f"Procesando {len(urls)} URLs en segundo plano",
     )
 
-def _procesar_urls_bg(urls: list[str]):
+def _procesar_urls_bg(entries: list[dict]):
     bg_db = SessionLocal()
     try:
-        for url in urls:
+        for entry in entries:
+            url = entry["url"] if isinstance(entry, dict) else entry
             scraper = get_scraper(url)
             if not scraper:
                 continue
             try:
                 producto = scraper.scrape()
-                _upsert_producto(bg_db, producto, origen="sheet")
+                cat = entry.get("categoria") if isinstance(entry, dict) else None
+                _upsert_producto(bg_db, producto, origen="sheet", categoria=cat)
                 bg_db.commit()
             except Exception:
                 bg_db.rollback()
@@ -283,20 +292,22 @@ async def scrape_daily(db: Session = Depends(get_db)):
     if not SHEET_URL:
         raise HTTPException(status_code=400, detail="SHEET_URL no configurada en .env")
     try:
-        urls = await read_urls_from_sheet(SHEET_URL)
+        entries = await read_urls_from_sheet(SHEET_URL)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
-    if not urls:
+    if not entries:
         raise HTTPException(status_code=400, detail="No se encontraron URLs en la hoja")
     nuevos = actualizados = sin_cambio = fallidos = 0
-    for url in urls:
+    for entry in entries:
+        url = entry["url"] if isinstance(entry, dict) else entry
         scraper = get_scraper(url)
         if not scraper:
             fallidos += 1
             continue
         try:
             producto = scraper.scrape()
-            resultado = _upsert_producto(db, producto, origen="sheet")
+            cat = entry.get("categoria") if isinstance(entry, dict) else None
+            resultado = _upsert_producto(db, producto, origen="sheet", categoria=cat)
             if resultado == "nuevo":
                 nuevos += 1
             elif resultado == "actualizado":
