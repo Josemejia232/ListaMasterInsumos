@@ -290,7 +290,14 @@ function initApp(){
 }
 (function(){
   const saved = localStorage.getItem('user');
-  if(saved){ try{ _user=JSON.parse(saved); initApp(); }catch(e){} }
+  if(saved){
+    try{ _user = JSON.parse(saved); }catch(e){ _user = null; }
+    if(_user){
+      fetch(API+'/api/auth/me', {headers:{'Authorization':'Bearer '+_user.token}})
+        .then(r => { if(r.ok) return r.json().then(u => { _user = u; initApp(); }); logout(); })
+        .catch(() => logout());
+    }
+  }
   setInterval(() => {
     if(_user){ cargarVerInsumos(); if(_user.tipo==='admin') cargarUsuarios(); }
   }, 30000);
