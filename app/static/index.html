@@ -324,17 +324,17 @@ async function eliminarInsumo(id){
 
 // ─── Ver Insumos (Usuario) ──────────────────────────────
 async function cargarVerInsumos(){
-  const r = await fetch(API+'/api/insumos');
+  const r = await fetch(API+'/productos?limit=500');
   const items = await r.json();
   const tbody = document.getElementById('ver-ins-tbody');
   const empty = document.getElementById('ver-ins-empty');
   if(!items.length){ tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML = items.map((i, idx) => `<tr>
+  tbody.innerHTML = items.map((p, idx) => `<tr>
     <td>${String(idx+1).padStart(4,'0')}</td>
-    <td>${descripcionAjustada(i.descripcion,i.id)}</td>
-    <td>${i.un}</td>
-    <td>$${precioAjustado(i.valor,i.id).toLocaleString('es-CO')}</td>
+    <td>${descripcionAjustada(p.descripcion,p.id)}</td>
+    <td>${p.unidad}</td>
+    <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}</td>
   </tr>`).join('');
 }
 
