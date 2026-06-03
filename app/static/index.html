@@ -113,9 +113,10 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
     </div>
     <div id="login-registro">
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:.375rem;padding:.75rem;font-size:.85rem;color:var(--muted);line-height:1.5;margin-bottom:.75rem">
-        Modo prueba gratuita. Acceso limitado a la lista de insumos.<br>
+        Modo prueba gratuita. Ingresa tu email para ver la lista de insumos.<br>
         Para acceso completo, contacta al administrador.
       </div>
+      <input type="email" id="guest-email" placeholder="Email" autocomplete="email" style="margin-bottom:.75rem">
       <button class="btn" onclick="entrarInvitado()">Probar gratis</button>
     </div>
     <div id="login-token-section" style="display:none">
@@ -221,11 +222,13 @@ function cambiarLogin(modo, el){
   document.getElementById('login-error').textContent = '';
 }
 function entrarInvitado(){
+  var email = document.getElementById('guest-email').value.trim();
+  if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
   _user = null; _viewMode = 'adjusted';
   document.getElementById('login-wrap').style.display='none';
   document.getElementById('sidebar').style.display='flex';
   document.querySelector('.content').style.display='flex';
-  document.getElementById('side-email').textContent = 'Invitado';
+  document.getElementById('side-email').textContent = email;
   buildSidebar();
   cargarVerInsumos();
   irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
