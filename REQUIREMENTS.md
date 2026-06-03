@@ -55,24 +55,17 @@
   - **Usuario**: módulo **LISTA INSUMOS** (Insumos) con contador total
 - 4.4. Vista admin (sidebar): Productos, Usuarios
 - 4.5. Vista usuario (sidebar): Insumos
-- 4.6. Tabla Productos para admin (módulo ADMIN, modo "Productos"): columnas ID, DESCRIPCION, DESCRIPCION. (editable), UNIDAD, VALOR, VALOR., CATEGORIA
-  - DESCRIPCION = descripción original del scraper
-  - DESCRIPCION. = descripción homologada editable por el admin (se guarda en BD como `descripcion_ajustada`)
-  - VALOR = precio original sin ajustes
-- 4.6.1. Tabla Insumos para admin (módulo LISTA INSUMOS, modo "Insumos"): columnas ID, DESCRIPCION., UNIDAD, VALOR., CATEGORIA
-  - Oculta las columnas DESCRIPCION y VALOR (solo muestra las ajustadas)
-  - Los insumos se agrupan por CATEGORIA con encabezados colapsables
-  - Botones "Expandir todo" y "Contraer todo" para controlar la vista
-- 4.6.2. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
-- 4.6.3. La vista muestra el número total de insumos (ej: "Total: X insumos") sobre la tabla
-- 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
+- 4.6. Tabla única para admin y usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
   - Muestra los datos reales del scraper sin ajustes ni variaciones
-  - Los insumos se agrupan jerárquicamente por N01 > N02 > N03 con encabezados colapsables en 3 niveles
-  - Cada nivel muestra contador de productos y es colapsable independientemente
+  - Los insumos se agrupan jerárquicamente por N01 > N02 > N03 con encabezados colapsables
+  - Solo N01 es colapsable (expande/contrae todo su subnivel)
+  - N02 y N03 son headers visuales con padding .05rem
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
-- 4.8. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
-- 4.9. Auto-refresh de productos cada 30 segundos
-- 4.10. La URL de Google Sheets **no** se expone al frontend
+  - Admin adicionalmente tiene panel USUARIOS y columna DESCRIPCION. editable
+  - La vista muestra el número total de insumos (ej: "Total: X insumos") sobre la tabla
+- 4.7. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
+- 4.8. Auto-refresh de productos cada 30 segundos
+- 4.9. La URL de Google Sheets **no** se expone al frontend
 
 ## 5. Despliegue
 - 5.1. Servir con uvicorn via Procfile en Render
