@@ -24,7 +24,7 @@
 
 ## 2. Base de datos
 - 2.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
-- 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, tienda, url_origen, created_at, updated_at
+- 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, proveedor, tienda, url_origen, created_at, updated_at
 - 2.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
 - 2.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), fecha_pago, created_at
 - 2.5. Unique constraint `(codigo, tienda)` en productos
@@ -36,7 +36,7 @@
 
 ## 3. Scraping
 - 3.1. Leer URLs desde Google Sheets (export CSV vía HTTP, sin gspread)
-- 3.2. Columna `URL` obligatoria, columna `CATEGORIA` opcional
+- 3.2. Columna `URL` obligatoria, columnas `CATEGORIA` y `PROVEEDOR` opcionales
 - 3.3. Scrapers por tienda: Sodimac, Homecenter, Promart, Maestro, Easy
 - 3.4. GenericScraper multi-estrategia: JSON-LD (gana), embedded state, meta tags, HTML patterns
 - 3.5. JSON-LD case-insensitive para `@type`, `offers` como array

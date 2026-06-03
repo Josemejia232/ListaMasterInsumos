@@ -28,7 +28,7 @@ from app.scrapers import get_scraper
 from sqlalchemy import func
 
 
-def upsert_producto(db, producto, origen="sheet", categoria=None):
+def upsert_producto(db, producto, origen="sheet", categoria=None, proveedor=None):
     if not producto.codigo:
         return "sin_cambio"
     existente = (
@@ -42,6 +42,10 @@ def upsert_producto(db, producto, origen="sheet", categoria=None):
             existente.categoria = categoria
         elif categoria and not existente.categoria:
             existente.categoria = categoria
+        if proveedor and existente.proveedor != proveedor:
+            existente.proveedor = proveedor
+        elif proveedor and not existente.proveedor:
+            existente.proveedor = proveedor
         if abs(existente.valor - producto.valor) < 0.01:
             return "sin_cambio"
         existente.valor_anterior = existente.valor
@@ -62,6 +66,7 @@ def upsert_producto(db, producto, origen="sheet", categoria=None):
             url_origen=producto.url,
             origen=origen,
             categoria=categoria,
+            proveedor=proveedor,
         )
         db.add(db_item)
         return "nuevo"
@@ -126,20 +131,23 @@ async def main():
     for i, entry in enumerate(entries, 1):
         url = entry["url"] if isinstance(entry, dict) else entry
         cat = entry.get("categoria") if isinstance(entry, dict) else None
+        prov = entry.get("proveedor") if isinstance(entry, dict) else None
         scraper = get_scraper(url)
         if not scraper:
-            if cat:
+            if cat or prov:
                 prod = _find_by_url_or_name(db, url)
                 if prod:
                     prod.origen = prod.origen or "sheet"
-                    if prod.categoria != cat:
+                    if cat and prod.categoria != cat:
                         prod.categoria = cat
                         actualizados += 1
+                    if prov and prod.proveedor != prov:
+                        prod.proveedor = prov
             fallidos += 1
             continue
         try:
             producto = scraper.scrape()
-            resultado = upsert_producto(db, producto, origen="sheet", categoria=cat)
+            resultado = upsert_producto(db, producto, origen="sheet", categoria=cat, proveedor=prov)
             if resultado == "nuevo":
                 nuevos += 1
                 print(f"  [{i}/{len(entries)}] NUEVO: {producto.descripcion[:60]} | ${producto.valor:,.2f}")
@@ -150,13 +158,15 @@ async def main():
                 sin_cambio += 1
         except Exception as e:
             db.rollback()
-            if cat:
+            if cat or prov:
                 prod = _find_by_url_or_name(db, url)
                 if prod:
                     prod.origen = prod.origen or "sheet"
-                    if prod.categoria != cat:
+                    if cat and prod.categoria != cat:
                         prod.categoria = cat
                         actualizados += 1
+                    if prov and prod.proveedor != prov:
+                        prod.proveedor = prov
             fallidos += 1
             print(f"  [{i}/{len(entries)}] FALLIDO: {url[:80]} — {e}")
             continue

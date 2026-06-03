@@ -37,6 +37,7 @@ async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
     headers = [h.strip().lower() for h in rows[0]]
     url_col = next((i for i, h in enumerate(headers) if h in ("url", "insumo")), None)
     cat_col = next((i for i, h in enumerate(headers) if "categ" in h), None)
+    prov_col = next((i for i, h in enumerate(headers) if "proveedor" in h or "prov" in h), None)
 
     results = []
     for row in rows[1:]:
@@ -46,5 +47,9 @@ async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
                 entry["categoria"] = row[cat_col].strip()
             else:
                 entry["categoria"] = ""
+            if prov_col is not None and prov_col < len(row):
+                entry["proveedor"] = row[prov_col].strip()
+            else:
+                entry["proveedor"] = ""
             results.append(entry)
     return results

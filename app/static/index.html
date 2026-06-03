@@ -162,7 +162,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem;display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
         <table>
-          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR</th><th>VALOR.</th><th>CATEGORIA</th></tr></thead>
+          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR</th><th>VALOR.</th><th>CATEGORIA</th><th>PROVEEDOR</th></tr></thead>
           <tbody id="admin-ins-tbody"></tbody>
         </table>
         <div class="empty" id="admin-ins-empty">No hay productos.</div>
@@ -170,7 +170,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div id="user-table-wrap" class="table-wrap" style="display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Usuario &mdash; datos ajustados</h3>
         <table id="ver-ins-table">
-          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th></tr></thead>
+          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>CATEGORIA</th><th>PROVEEDOR</th></tr></thead>
           <tbody id="ver-ins-tbody"></tbody>
         </table>
         <div class="empty" id="ver-ins-empty">No hay productos.</div>
@@ -450,6 +450,7 @@ function renderVer(){
         <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
         <td contenteditable="true" onblur="guardarCategoria(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${p.categoria||''}</td>
+        <td>${p.proveedor||''}</td>
       </tr>`).join('');
     }
   } else {
@@ -472,11 +473,11 @@ function renderVer(){
       var cats = Object.keys(grupos).sort();
       for(var c=0;c<cats.length;c++){
         var items = grupos[cats[c]];
-        html += '<tbody class="cat-group"><tr class="cat-header" onclick="toggleGrupo(this,'+c+')"><td colspan="5"><span class="arrow">&#9660;</span> '+cats[c]+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr></tbody>';
+        html += '<tbody class="cat-group"><tr class="cat-header" onclick="toggleGrupo(this,'+c+')"><td colspan="6"><span class="arrow">&#9660;</span> '+cats[c]+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr></tbody>';
         html += '<tbody class="cat-body" id="cat-body-'+c+'">';
         for(var j=0;j<items.length;j++){
           var p=items[j]; idx++;
-          html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td>'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.categoria||'')+'</td></tr>';
+          html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td>'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.categoria||'')+'</td><td>'+(p.proveedor||'')+'</td></tr>';
         }
         html += '</tbody>';
       }
