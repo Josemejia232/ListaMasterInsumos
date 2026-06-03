@@ -6,13 +6,28 @@
  *   ② Solo scrapea las URLs nuevas → llama a /scrape/sync una por una (con pausa)
  *   ③ Para URLs con precio existente → compara con /productos (cacheado, rápido)
  *   ④ Actualiza solo las celdas que cambiaron (batch al final)
+ *   ⑤ Sincroniza categorías desde el sheet hacia la BD
  *
  * Configuración:
  *   Celda Z1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
  *   Celda Z2 = Token de admin
  *
- * Trigger: Time-driven → cada hora
+ * Uso:
+ *   - Menú "ListaMaster" en la hoja → ejecutar manualmente
+ *   - Trigger: Time-driven → cada hora (syncPrices)
  */
+
+// ─── Menú ─────────────────────────────────────────────────
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('ListaMaster')
+    .addItem('Sincronizar todo (precios + categorías)', 'syncPrices')
+    .addSeparator()
+    .addItem('Sincronizar solo categorías', 'syncCategoriesOnly')
+    .addItem('Forzar scrape de todas las URLs', 'forceFullScrape')
+    .addToUi();
+}
 
 // ─── Config ───────────────────────────────────────────────
 
@@ -203,4 +218,57 @@ function syncPrices() {
   } catch (e) { Logger.log('Sync categorías error: ' + e); }
 
   Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas actualizadas, ' + cambios + ' cambios de precio');
+}
+
+
+// ─── Menú: Solo categorías ─────────────────────────────────
+
+function syncCategoriesOnly() {
+  var cfg = getConfig();
+  try {
+    var resp = UrlFetchApp.fetch(cfg.apiUrl + '/sync/categories', {
+      method: 'post',
+      headers: { 'Authorization': 'Bearer ' + cfg.token },
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() === 200) {
+      var data = JSON.parse(resp.getContentText());
+      SpreadsheetApp.getUi().alert(
+        'Categorías sincronizadas\n\n' +
+        'Actualizados: ' + data.actualizados + '\n' +
+        'Sin cambio: ' + data.sin_cambio + '\n' +
+        'Sin categoría en sheet: ' + data.sin_categoria + '\n' +
+        'No encontrados en BD: ' + data.no_encontrados
+      );
+    } else {
+      SpreadsheetApp.getUi().alert('Error: ' + resp.getResponseCode());
+    }
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Error: ' + e);
+  }
+}
+
+
+// ─── Menú: Forzar scrape completo ──────────────────────────
+
+function forceFullScrape() {
+  var cfg = getConfig();
+  try {
+    var resp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/daily', {
+      method: 'get',
+      headers: { 'Authorization': 'Bearer ' + cfg.token },
+      muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() === 200) {
+      var data = JSON.parse(resp.getContentText());
+      SpreadsheetApp.getUi().alert(
+        'Scrape completo ejecutado\n\n' +
+        data.mensaje
+      );
+    } else {
+      SpreadsheetApp.getUi().alert('Error: ' + resp.getResponseCode());
+    }
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Error: ' + e);
+  }
 }
