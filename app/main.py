@@ -74,6 +74,9 @@ class ProductoResponse(BaseModel):
     valor_anterior: float | None = None
     origen: str | None = None
     categoria: str | None = None
+    n01: str | None = None
+    n02: str | None = None
+    n03: str | None = None
     proveedor: str | None = None
     tienda: str
     url_origen: str
@@ -104,6 +107,9 @@ class LoginResponse(BaseModel):
 class UpdateAjustadaRequest(BaseModel):
     descripcion_ajustada: str | None = None
     categoria: str | None = None
+    n01: str | None = None
+    n02: str | None = None
+    n03: str | None = None
     proveedor: str | None = None
 
 class UsuarioRequest(BaseModel):
@@ -170,7 +176,7 @@ def _find_by_url(db: Session, url: str) -> Producto | None:
     return None
 
 
-def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: str | None = None, proveedor: str | None = None) -> dict:
+def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: str | None = None, n01: str | None = None, n02: str | None = None, n03: str | None = None, proveedor: str | None = None) -> dict:
     if not producto.codigo:
         return "sin_cambio"
     existente = (
@@ -184,6 +190,18 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
             existente.categoria = categoria
         elif categoria and not existente.categoria:
             existente.categoria = categoria
+        if n01 and existente.n01 != n01:
+            existente.n01 = n01
+        elif n01 and not existente.n01:
+            existente.n01 = n01
+        if n02 and existente.n02 != n02:
+            existente.n02 = n02
+        elif n02 and not existente.n02:
+            existente.n02 = n02
+        if n03 and existente.n03 != n03:
+            existente.n03 = n03
+        elif n03 and not existente.n03:
+            existente.n03 = n03
         if proveedor and existente.proveedor != proveedor:
             existente.proveedor = proveedor
         elif proveedor and not existente.proveedor:
@@ -208,6 +226,9 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
             url_origen=producto.url,
             origen=origen,
             categoria=categoria,
+            n01=n01,
+            n02=n02,
+            n03=n03,
             proveedor=proveedor,
         )
         db.add(db_item)
@@ -323,33 +344,38 @@ def _procesar_urls_bg(entries: list[dict]):
         for i, entry in enumerate(entries):
             url = entry["url"] if isinstance(entry, dict) else entry
             cat = entry.get("categoria") if isinstance(entry, dict) else None
+            n01 = entry.get("n01") if isinstance(entry, dict) else None
+            n02 = entry.get("n02") if isinstance(entry, dict) else None
+            n03 = entry.get("n03") if isinstance(entry, dict) else None
             prov = entry.get("proveedor") if isinstance(entry, dict) else None
             scraper = get_scraper(url)
             if not scraper:
-                if cat or prov:
+                if cat or prov or n01 or n02 or n03:
                     prod = _find_by_url(bg_db, url)
                     if prod:
                         prod.origen = prod.origen or "sheet"
-                        if cat and prod.categoria != cat:
-                            prod.categoria = cat
-                        if prov and prod.proveedor != prov:
-                            prod.proveedor = prov
+                        if cat and prod.categoria != cat: prod.categoria = cat
+                        if n01 and prod.n01 != n01: prod.n01 = n01
+                        if n02 and prod.n02 != n02: prod.n02 = n02
+                        if n03 and prod.n03 != n03: prod.n03 = n03
+                        if prov and prod.proveedor != prov: prod.proveedor = prov
                         bg_db.commit()
                 continue
             try:
                 producto = scraper.scrape()
-                _upsert_producto(bg_db, producto, origen="sheet", categoria=cat, proveedor=prov)
+                _upsert_producto(bg_db, producto, origen="sheet", categoria=cat, n01=n01, n02=n02, n03=n03, proveedor=prov)
                 bg_db.commit()
             except Exception:
                 bg_db.rollback()
-                if cat or prov:
+                if cat or prov or n01 or n02 or n03:
                     prod = _find_by_url(bg_db, url)
                     if prod:
                         prod.origen = prod.origen or "sheet"
-                        if cat and prod.categoria != cat:
-                            prod.categoria = cat
-                        if prov and prod.proveedor != prov:
-                            prod.proveedor = prov
+                        if cat and prod.categoria != cat: prod.categoria = cat
+                        if n01 and prod.n01 != n01: prod.n01 = n01
+                        if n02 and prod.n02 != n02: prod.n02 = n02
+                        if n03 and prod.n03 != n03: prod.n03 = n03
+                        if prov and prod.proveedor != prov: prod.proveedor = prov
                         bg_db.commit()
                 continue
             time.sleep(random.uniform(0.5, 1.5))
@@ -370,23 +396,26 @@ async def scrape_daily(db: Session = Depends(get_db)):
     for entry in entries:
         url = entry["url"] if isinstance(entry, dict) else entry
         cat = entry.get("categoria") if isinstance(entry, dict) else None
+        n01 = entry.get("n01") if isinstance(entry, dict) else None
+        n02 = entry.get("n02") if isinstance(entry, dict) else None
+        n03 = entry.get("n03") if isinstance(entry, dict) else None
         prov = entry.get("proveedor") if isinstance(entry, dict) else None
         scraper = get_scraper(url)
         if not scraper:
-            if cat or prov:
+            if cat or prov or n01 or n02 or n03:
                 prod = _find_by_url(db, url)
                 if prod:
                     prod.origen = prod.origen or "sheet"
-                    if cat and prod.categoria != cat:
-                        prod.categoria = cat
-                        actualizados += 1
-                    if prov and prod.proveedor != prov:
-                        prod.proveedor = prov
+                    if cat and prod.categoria != cat: prod.categoria = cat; actualizados += 1
+                    if n01 and prod.n01 != n01: prod.n01 = n01
+                    if n02 and prod.n02 != n02: prod.n02 = n02
+                    if n03 and prod.n03 != n03: prod.n03 = n03
+                    if prov and prod.proveedor != prov: prod.proveedor = prov
             fallidos += 1
             continue
         try:
             producto = scraper.scrape()
-            resultado = _upsert_producto(db, producto, origen="sheet", categoria=cat, proveedor=prov)
+            resultado = _upsert_producto(db, producto, origen="sheet", categoria=cat, n01=n01, n02=n02, n03=n03, proveedor=prov)
             if resultado == "nuevo":
                 nuevos += 1
             elif resultado == "actualizado":
@@ -395,15 +424,15 @@ async def scrape_daily(db: Session = Depends(get_db)):
                 sin_cambio += 1
         except Exception:
             db.rollback()
-            if cat or prov:
+            if cat or prov or n01 or n02 or n03:
                 prod = _find_by_url(db, url)
                 if prod:
                     prod.origen = prod.origen or "sheet"
-                    if cat and prod.categoria != cat:
-                        prod.categoria = cat
-                        actualizados += 1
-                    if prov and prod.proveedor != prov:
-                        prod.proveedor = prov
+                    if cat and prod.categoria != cat: prod.categoria = cat; actualizados += 1
+                    if n01 and prod.n01 != n01: prod.n01 = n01
+                    if n02 and prod.n02 != n02: prod.n02 = n02
+                    if n03 and prod.n03 != n03: prod.n03 = n03
+                    if prov and prod.proveedor != prov: prod.proveedor = prov
             fallidos += 1
             continue
         await asyncio.sleep(random.uniform(0.5, 1.5))
@@ -432,20 +461,23 @@ async def sync_categories(db: Session = Depends(get_db)):
     for entry in entries:
         url = entry.get("url", "")
         cat = entry.get("categoria", "")
+        n01 = entry.get("n01", "")
+        n02 = entry.get("n02", "")
+        n03 = entry.get("n03", "")
         prov = entry.get("proveedor", "")
         if not url:
             continue
-        if not cat and not prov:
+        if not cat and not prov and not n01 and not n02 and not n03:
             sin_categoria += 1
             continue
         prod = _find_by_url(db, url)
         if prod:
             prod.origen = prod.origen or "sheet"
-            if cat and prod.categoria != cat:
-                prod.categoria = cat
-                actualizados += 1
-            if prov and prod.proveedor != prov:
-                prod.proveedor = prov
+            if cat and prod.categoria != cat: prod.categoria = cat; actualizados += 1
+            if n01 and prod.n01 != n01: prod.n01 = n01
+            if n02 and prod.n02 != n02: prod.n02 = n02
+            if n03 and prod.n03 != n03: prod.n03 = n03
+            if prov and prod.proveedor != prov: prod.proveedor = prov
         else:
             no_encontrados += 1
             urls_no_encontradas.append(url)
@@ -501,6 +533,12 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
         prod.descripcion_ajustada = req.descripcion_ajustada
     if req.categoria is not None:
         prod.categoria = req.categoria
+    if req.n01 is not None:
+        prod.n01 = req.n01
+    if req.n02 is not None:
+        prod.n02 = req.n02
+    if req.n03 is not None:
+        prod.n03 = req.n03
     if req.proveedor is not None:
         prod.proveedor = req.proveedor
     db.commit()
@@ -508,7 +546,7 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
     return prod
 
 @app.get("/scrape/sync", response_model=ProductoResponse)
-def scrape_sync(url: str, categoria: str | None = None, proveedor: str | None = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, n02: str | None = None, n03: str | None = None, proveedor: str | None = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     scraper = get_scraper(url)
     if not scraper:
         raise HTTPException(status_code=400, detail="URL no soportada")
@@ -516,7 +554,7 @@ def scrape_sync(url: str, categoria: str | None = None, proveedor: str | None = 
         producto = scraper.scrape()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    _upsert_producto(db, producto, origen="sheet", categoria=categoria, proveedor=proveedor)
+    _upsert_producto(db, producto, origen="sheet", categoria=categoria, n01=n01, n02=n02, n03=n03, proveedor=proveedor)
     db.commit()
     existente = (
         db.query(Producto)
@@ -633,6 +671,15 @@ def startup():
                 "END IF; "
                 "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='proveedor') THEN "
                 "ALTER TABLE productos ADD COLUMN proveedor VARCHAR(200); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n01') THEN "
+                "ALTER TABLE productos ADD COLUMN n01 VARCHAR(200); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n02') THEN "
+                "ALTER TABLE productos ADD COLUMN n02 VARCHAR(200); "
+                "END IF; "
+                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n03') THEN "
+                "ALTER TABLE productos ADD COLUMN n03 VARCHAR(200); "
                 "END IF; "
                 "END $$;"
             ))

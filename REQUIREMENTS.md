@@ -24,19 +24,20 @@
 
 ## 2. Base de datos
 - 2.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
-- 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, proveedor, tienda, url_origen, created_at, updated_at
+- 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, n01, n02, n03, proveedor, tienda, url_origen, created_at, updated_at
 - 2.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
 - 2.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), fecha_pago, created_at
 - 2.5. Unique constraint `(codigo, tienda)` en productos
 - 2.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
 - 2.7. `DATABASE_URL` desde variable de entorno (`.env` en local, env var en Render)
-- 2.8. La BD debe identificar automáticamente si ingresa un nuevo insumo desde Google Sheets y copiarlo en la BD (ver sección 6)
-- 2.9. El Google Sheet debe actualizarse cuando se detecta un cambio de precio (ver sección 6)
+- 2.8. Columnas `n01`, `n02`, `n03`: niveles jerárquicos de agrupación desde Google Sheets (Nivel 1, Nivel 2, Nivel 3)
+- 2.9. La BD debe identificar automáticamente si ingresa un nuevo insumo desde Google Sheets y copiarlo en la BD (ver sección 6)
+- 2.10. El Google Sheet debe actualizarse cuando se detecta un cambio de precio (ver sección 6)
 
 
 ## 3. Scraping
 - 3.1. Leer URLs desde Google Sheets (export CSV vía HTTP, sin gspread)
-- 3.2. Columna `URL` obligatoria, columnas `CATEGORIA` y `PROVEEDOR` opcionales
+- 3.2. Columna `URL` obligatoria, columnas `N01`, `N02`, `N03`, `CATEGORIA` y `PROVEEDOR` opcionales
 - 3.3. Scrapers por tienda: Sodimac, Homecenter, Promart, Maestro, Easy
 - 3.4. GenericScraper multi-estrategia: JSON-LD (gana), embedded state, meta tags, HTML patterns
 - 3.5. JSON-LD case-insensitive para `@type`, `offers` como array
@@ -64,9 +65,10 @@
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
 - 4.6.2. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
 - 4.6.3. La vista muestra el número total de insumos (ej: "Total: X insumos") sobre la tabla
-- 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, CATEGORIA
+- 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
   - Muestra los datos reales del scraper sin ajustes ni variaciones
-  - Los insumos se agrupan por CATEGORIA con encabezados colapsables
+  - Los insumos se agrupan jerárquicamente por N01 > N02 > N03 con encabezados colapsables en 3 niveles
+  - Cada nivel muestra contador de productos y es colapsable independientemente
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
 - 4.8. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
 - 4.9. Auto-refresh de productos cada 30 segundos

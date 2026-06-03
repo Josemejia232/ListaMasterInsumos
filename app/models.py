@@ -16,6 +16,9 @@ class Producto(Base):
     valor_anterior = Column(Float, nullable=True)
     origen = Column(String(20), nullable=True)  # sheet | manual
     categoria = Column(String(200), nullable=True)
+    n01 = Column(String(200), nullable=True)
+    n02 = Column(String(200), nullable=True)
+    n03 = Column(String(200), nullable=True)
     proveedor = Column(String(200), nullable=True)
     descripcion_ajustada = Column(String(500), nullable=True)
     tienda = Column(String(200), nullable=False)

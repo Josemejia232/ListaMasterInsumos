@@ -37,6 +37,9 @@ async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
     headers = [h.strip().lower() for h in rows[0]]
     url_col = next((i for i, h in enumerate(headers) if h in ("url", "insumo")), None)
     cat_col = next((i for i, h in enumerate(headers) if "categ" in h), None)
+    n01_col = next((i for i, h in enumerate(headers) if h in ("n01", "n1", "nivel1")), None)
+    n02_col = next((i for i, h in enumerate(headers) if h in ("n02", "n2", "nivel2")), None)
+    n03_col = next((i for i, h in enumerate(headers) if h in ("n03", "n3", "nivel3")), None)
     prov_col = next((i for i, h in enumerate(headers) if "proveedor" in h or "prov" in h), None)
 
     results = []
@@ -47,6 +50,18 @@ async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
                 entry["categoria"] = row[cat_col].strip()
             else:
                 entry["categoria"] = ""
+            if n01_col is not None and n01_col < len(row):
+                entry["n01"] = row[n01_col].strip()
+            else:
+                entry["n01"] = ""
+            if n02_col is not None and n02_col < len(row):
+                entry["n02"] = row[n02_col].strip()
+            else:
+                entry["n02"] = ""
+            if n03_col is not None and n03_col < len(row):
+                entry["n03"] = row[n03_col].strip()
+            else:
+                entry["n03"] = ""
             if prov_col is not None and prov_col < len(row):
                 entry["proveedor"] = row[prov_col].strip()
             else:

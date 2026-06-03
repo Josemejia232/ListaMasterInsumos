@@ -476,36 +476,71 @@ function renderVer(){
     if(!filtrados.length){ table.innerHTML=''; empty.style.display='block'; }
     else {
       empty.style.display='none';
-      var grupos = {};
+      var tree = {};
       for(var i=0;i<filtrados.length;i++){
-        var cat = filtrados[i].categoria || 'Sin categoría';
-        if(!grupos[cat]) grupos[cat] = [];
-        grupos[cat].push(filtrados[i]);
+        var p = filtrados[i];
+        var n1 = p.n01 || '';
+        var n2 = p.n02 || '';
+        var n3 = p.n03 || '';
+        if(!n1 && !n2 && !n3) n1 = 'Sin clasificar';
+        if(!tree[n1]) tree[n1] = {};
+        if(!tree[n1][n2]) tree[n1][n2] = {};
+        if(!tree[n1][n2][n3]) tree[n1][n2][n3] = [];
+        tree[n1][n2][n3].push(p);
       }
       var thead = table.querySelector('thead');
       var html = thead ? thead.outerHTML : '';
       var idx = 0;
-      var cats = Object.keys(grupos).sort();
-      for(var c=0;c<cats.length;c++){
-        var items = grupos[cats[c]];
-        html += '<tbody class="cat-group"><tr class="cat-header" onclick="toggleGrupo(this,'+c+')"><td colspan="6"><span class="arrow">&#9660;</span> '+cats[c]+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr></tbody>';
-        html += '<tbody class="cat-body" id="cat-body-'+c+'">';
-        for(var j=0;j<items.length;j++){
-          var p=items[j]; idx++;
-          html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td>'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.categoria||'')+'</td><td>'+(p.proveedor||'')+'</td></tr>';
+      var gid = 0;
+      var n1keys = Object.keys(tree).sort();
+      for(var a=0;a<n1keys.length;a++){
+        var n1 = n1keys[a];
+        var n2map = tree[n1];
+        var n2keys = Object.keys(n2map).sort();
+        var n1total = 0;
+        for(var b=0;b<n2keys.length;b++){
+          var n3map = n2map[n2keys[b]];
+          var n3keys = Object.keys(n3map).sort();
+          for(var c=0;c<n3keys.length;c++){ n1total += n3map[n3keys[c]].length; }
         }
-        html += '</tbody>';
+        html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n1+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n1total+')</span></td></tr></tbody>';
+        html += '<tbody class="cat-body" id="cat-body-g'+gid+'">';
+        var gidL1 = gid++;
+        for(var b=0;b<n2keys.length;b++){
+          var n2 = n2keys[b];
+          var n3map = n2map[n2];
+          var n3keys = Object.keys(n3map).sort();
+          var n2total = 0;
+          for(var c=0;c<n3keys.length;c++){ n2total += n3map[n3keys[c]].length; }
+          html += '<tr class="cat-header cat-l2" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6"><span style="padding-left:1.5rem"></span><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
+          html += '</tbody><tbody class="cat-body" id="cat-body-g'+gid+'">';
+          var gidL2 = gid++;
+          for(var c=0;c<n3keys.length;c++){
+            var n3 = n3keys[c];
+            var items = n3map[n3];
+            html += '<tr class="cat-header cat-l3" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6"><span style="padding-left:3rem"></span><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
+            html += '</tbody><tbody class="cat-body" id="cat-body-g'+gid+'">';
+            gid++;
+            for(var d=0;d<items.length;d++){
+              var p = items[d]; idx++;
+              html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td>'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.n03||p.categoria||'')+'</td><td>'+(p.proveedor||'')+'</td></tr>';
+            }
+            html += '</tbody><tbody class="cat-group">';
+          }
+          html += '</tbody><tbody class="cat-group">';
+        }
+        html += '</tbody><tbody class="cat-group">';
       }
       table.innerHTML = html;
     }
   }
 }
 function filtrarVer(){ renderVer(); }
-function toggleGrupo(el, idx){
-  var body = document.getElementById('cat-body-'+idx);
+function toggleGrupo(el, gid){
+  var body = document.getElementById('cat-body-'+gid);
   if(!body) return;
   body.classList.toggle('collapsed');
-  var arrow = el.querySelector('.arrow');
+  var arrow = document.getElementById('arrow-'+gid);
   if(arrow) arrow.classList.toggle('collapsed', body.classList.contains('collapsed'));
 }
 function expandirTodo(){
