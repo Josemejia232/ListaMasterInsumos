@@ -155,7 +155,9 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripci&oacute;n..." oninput="filtrarVerDebounced()">
         <button class="btn btn-sm btn-outline" onclick="expandirTodo()" style="white-space:nowrap">Expandir todo</button>
         <button class="btn btn-sm btn-outline" onclick="contraerTodo()" style="white-space:nowrap">Contraer todo</button>
+        <button class="btn btn-sm btn-green" onclick="syncCategorias()" id="btn-sync" style="white-space:nowrap">Sincronizar categorías</button>
       </div>
+      <div id="sync-msg" style="padding:.25rem 0;font-size:.8rem;color:var(--green);display:none"></div>
       <div id="total-count" style="padding:.5rem 0;font-size:.85rem;color:var(--muted)"></div>
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem;display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
@@ -377,6 +379,28 @@ async function guardarCategoria(id, texto){
   } catch(e){}
 }
 
+async function syncCategorias(){
+  var btn = document.getElementById('btn-sync');
+  var msg = document.getElementById('sync-msg');
+  btn.disabled = true;
+  btn.textContent = 'Sincronizando...';
+  msg.style.display = 'none';
+  try {
+    var r = await apiFetch('/sync/categories', {method:'POST'});
+    var d = await r.json();
+    msg.style.display = 'block';
+    msg.style.color = 'var(--green)';
+    msg.textContent = 'Actualizados: ' + d.actualizados + ' | Sin categoría en sheet: ' + d.sin_categoria + ' | No encontrados: ' + d.no_encontrados;
+    cargarVerInsumos();
+  } catch(e){
+    msg.style.display = 'block';
+    msg.style.color = 'var(--red)';
+    msg.textContent = 'Error al sincronizar';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Sincronizar categorías';
+}
+
 // ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
   try {
@@ -408,6 +432,7 @@ function renderVer(){
 
   totalCount.style.display = 'block';
   totalCount.textContent = 'Total: ' + _verProds.length + ' insumos';
+  document.getElementById('btn-sync').style.display = isAdmin ? '' : 'none';
 
   if(isAdmin && _viewMode === 'raw'){
     adminWrap.style.display = 'block';
