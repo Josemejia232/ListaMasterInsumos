@@ -1,6 +1,7 @@
 import re
 import csv
 import io
+from urllib.parse import urlparse, parse_qs
 import httpx
 
 
@@ -9,12 +10,20 @@ def extract_sheet_id(url: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _extract_gid(url: str) -> str:
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    gid = params.get("gid", [None])[0]
+    return f"&gid={gid}" if gid else ""
+
+
 async def read_urls_from_sheet(sheet_url: str) -> list[dict]:
     sheet_id = extract_sheet_id(sheet_url)
     if not sheet_id:
         raise ValueError("No se pudo extraer el ID de la hoja de cálculo")
 
-    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+    gid_param = _extract_gid(sheet_url)
+    csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv{gid_param}"
     async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
         resp = await client.get(csv_url)
         resp.raise_for_status()

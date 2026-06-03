@@ -1,6 +1,7 @@
 import asyncio
 import os
 import json
+import re
 import time
 import random
 from datetime import datetime, timezone
@@ -140,6 +141,32 @@ def require_admin(user: Usuario = Depends(get_current_user)):
 
 
 # ─── Upsert ───────────────────────────────────────────────────
+
+def _normalize_url(u: str) -> str:
+    """Normaliza URL para matching: remove www, trailing slash, query params."""
+    if not u:
+        return ""
+    u = u.strip().lower()
+    u = re.sub(r"https?://(www\.)?", "https://", u)
+    u = u.split("?")[0]
+    u = u.rstrip("/")
+    return u
+
+
+def _find_by_url(db: Session, url: str) -> Producto | None:
+    """Busca producto por URL exacta, luego normalizada."""
+    prod = db.query(Producto).filter(Producto.url_origen == url).first()
+    if prod:
+        return prod
+    norm = _normalize_url(url)
+    if not norm:
+        return None
+    todos = db.query(Producto).filter(Producto.url_origen.isnot(None)).all()
+    for p in todos:
+        if _normalize_url(p.url_origen or "") == norm:
+            return p
+    return None
+
 
 def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: str | None = None) -> dict:
     if not producto.codigo:
@@ -288,16 +315,30 @@ def _procesar_urls_bg(entries: list[dict]):
     try:
         for i, entry in enumerate(entries):
             url = entry["url"] if isinstance(entry, dict) else entry
+            cat = entry.get("categoria") if isinstance(entry, dict) else None
             scraper = get_scraper(url)
             if not scraper:
+                if cat:
+                    prod = _find_by_url(bg_db, url)
+                    if prod:
+                        prod.origen = prod.origen or "sheet"
+                        if prod.categoria != cat:
+                            prod.categoria = cat
+                            bg_db.commit()
                 continue
             try:
                 producto = scraper.scrape()
-                cat = entry.get("categoria") if isinstance(entry, dict) else None
                 _upsert_producto(bg_db, producto, origen="sheet", categoria=cat)
                 bg_db.commit()
             except Exception:
                 bg_db.rollback()
+                if cat:
+                    prod = _find_by_url(bg_db, url)
+                    if prod:
+                        prod.origen = prod.origen or "sheet"
+                        if prod.categoria != cat:
+                            prod.categoria = cat
+                            bg_db.commit()
                 continue
             time.sleep(random.uniform(0.5, 1.5))
     finally:
@@ -316,13 +357,20 @@ async def scrape_daily(db: Session = Depends(get_db)):
     nuevos = actualizados = sin_cambio = fallidos = 0
     for entry in entries:
         url = entry["url"] if isinstance(entry, dict) else entry
+        cat = entry.get("categoria") if isinstance(entry, dict) else None
         scraper = get_scraper(url)
         if not scraper:
+            if cat:
+                prod = _find_by_url(db, url)
+                if prod:
+                    prod.origen = prod.origen or "sheet"
+                    if prod.categoria != cat:
+                        prod.categoria = cat
+                        actualizados += 1
             fallidos += 1
             continue
         try:
             producto = scraper.scrape()
-            cat = entry.get("categoria") if isinstance(entry, dict) else None
             resultado = _upsert_producto(db, producto, origen="sheet", categoria=cat)
             if resultado == "nuevo":
                 nuevos += 1
@@ -332,6 +380,13 @@ async def scrape_daily(db: Session = Depends(get_db)):
                 sin_cambio += 1
         except Exception:
             db.rollback()
+            if cat:
+                prod = _find_by_url(db, url)
+                if prod:
+                    prod.origen = prod.origen or "sheet"
+                    if prod.categoria != cat:
+                        prod.categoria = cat
+                        actualizados += 1
             fallidos += 1
             continue
         await asyncio.sleep(random.uniform(0.5, 1.5))
@@ -365,7 +420,7 @@ async def sync_categories(db: Session = Depends(get_db)):
         if not cat:
             sin_categoria += 1
             continue
-        prod = db.query(Producto).filter(Producto.url_origen == url).first()
+        prod = _find_by_url(db, url)
         if prod:
             prod.origen = prod.origen or "sheet"
             if prod.categoria != cat:
@@ -447,6 +502,23 @@ def scrape_sync(url: str, categoria: str | None = None, _admin: Usuario = Depend
         .first()
     )
     return existente
+
+
+# ─── Debug ────────────────────────────────────────────────────
+
+@app.get("/debug/sin-categoria", response_model=list[ProductoResponse])
+def debug_sin_categoria(_admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    """Lista productos que no tienen categoría asignada (NULL o vacío)."""
+    prods = (
+        db.query(Producto)
+        .filter(
+            (Producto.categoria == None) | (Producto.categoria == "")
+        )
+        .order_by(Producto.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    return prods
 
 
 # ─── Stats ────────────────────────────────────────────────────

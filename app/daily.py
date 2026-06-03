@@ -10,6 +10,7 @@ Programar con cron (Linux/Mac) o Task Scheduler (Windows) para ejecución diaria
 
 import sys
 import os
+import re
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -66,6 +67,31 @@ def upsert_producto(db, producto, origen="sheet", categoria=None):
         return "nuevo"
 
 
+def _normalize_url(u: str) -> str:
+    if not u:
+        return ""
+    u = u.strip().lower()
+    u = re.sub(r"https?://(www\.)?", "https://", u)
+    u = u.split("?")[0]
+    u = u.rstrip("/")
+    return u
+
+
+def _find_by_url_or_name(db, url: str) -> Producto | None:
+    """Busca producto por URL exacta o normalizada."""
+    prod = db.query(Producto).filter(Producto.url_origen == url).first()
+    if prod:
+        return prod
+    norm = _normalize_url(url)
+    if not norm:
+        return None
+    todos = db.query(Producto).filter(Producto.url_origen.isnot(None)).all()
+    for p in todos:
+        if _normalize_url(p.url_origen or "") == norm:
+            return p
+    return None
+
+
 async def main():
     sheet_url = sys.argv[1] if len(sys.argv) > 1 else os.getenv("SHEET_URL", "")
     if not sheet_url:
@@ -102,6 +128,13 @@ async def main():
         cat = entry.get("categoria") if isinstance(entry, dict) else None
         scraper = get_scraper(url)
         if not scraper:
+            if cat:
+                prod = _find_by_url_or_name(db, url)
+                if prod:
+                    prod.origen = prod.origen or "sheet"
+                    if prod.categoria != cat:
+                        prod.categoria = cat
+                        actualizados += 1
             fallidos += 1
             continue
         try:
@@ -117,6 +150,13 @@ async def main():
                 sin_cambio += 1
         except Exception as e:
             db.rollback()
+            if cat:
+                prod = _find_by_url_or_name(db, url)
+                if prod:
+                    prod.origen = prod.origen or "sheet"
+                    if prod.categoria != cat:
+                        prod.categoria = cat
+                        actualizados += 1
             fallidos += 1
             print(f"  [{i}/{len(entries)}] FALLIDO: {url[:80]} — {e}")
             continue
