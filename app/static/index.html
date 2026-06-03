@@ -509,29 +509,21 @@ function renderVer(){
           var n3keys = Object.keys(n3map).sort();
           var n2total = countN3(n3map);
           if(n2){
-            html += '<tr class="cat-header cat-l2" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6" style="padding-left:.05rem"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
-            html += '</tbody><tbody class="cat-body" id="cat-body-g'+gid+'">';
-            gid++;
+            html += '<tr class="cat-header cat-l2"><td colspan="6" style="padding-left:.05rem">'+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
           }
           for(var c=0;c<n3keys.length;c++){
             var n3 = n3keys[c];
             var items = n3map[n3];
-            var pad = '.05rem';
-            var rowPad = '.1rem';
             if(n3){
-              html += '<tr class="cat-header cat-l3" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6" style="padding-left:'+pad+'"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
-              html += '</tbody><tbody class="cat-body" id="cat-body-g'+gid+'">';
-              gid++;
+              html += '<tr class="cat-header cat-l3"><td colspan="6" style="padding-left:.05rem">'+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
             }
             for(var d=0;d<items.length;d++){
               var p = items[d]; idx++;
-              html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td style="padding-left:'+rowPad+'">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.n03||p.categoria||'')+'</td><td>'+(p.proveedor||'')+'</td></tr>';
+              html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td style="padding-left:.1rem">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.n03||p.categoria||'')+'</td><td>'+(p.proveedor||'')+'</td></tr>';
             }
-            if(n3){ html += '</tbody><tbody class="cat-group">'; }
           }
-          if(n2){ html += '</tbody><tbody class="cat-group">'; }
         }
-        html += '</tbody><tbody class="cat-group">';
+        html += '</tbody>';
       }
       table.innerHTML = html;
     }
