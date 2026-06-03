@@ -509,15 +509,15 @@ function renderVer(){
           var n3keys = Object.keys(n3map).sort();
           var n2total = countN3(n3map);
           if(n2){
-            html += '<tr class="cat-header cat-l2" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6" style="padding-left:.5rem"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
+            html += '<tr class="cat-header cat-l2" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6" style="padding-left:.1rem"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
             html += '</tbody><tbody class="cat-body" id="cat-body-g'+gid+'">';
             gid++;
           }
           for(var c=0;c<n3keys.length;c++){
             var n3 = n3keys[c];
             var items = n3map[n3];
-            var pad = n2 ? '1rem' : '.5rem';
-            var rowPad = n2 ? '1.5rem' : '1rem';
+            var pad = n2 ? '.2rem' : '.1rem';
+            var rowPad = n2 ? '.3rem' : '.2rem';
             if(n3){
               html += '<tr class="cat-header cat-l3" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="6" style="padding-left:'+pad+'"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
               html += '</tbody><tbody class="cat-body" id="cat-body-g'+gid+'">';
