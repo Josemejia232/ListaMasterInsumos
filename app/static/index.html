@@ -162,7 +162,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div id="admin-table-wrap" class="table-wrap" style="margin-bottom:1.5rem;display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Admin &mdash; datos originales</h3>
         <table>
-          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR</th><th>VALOR.</th><th>PROVEEDOR</th></tr></thead>
+          <thead><tr><th>DESCRIPCION</th><th>DESCRIPCION.</th><th>UNIDAD</th><th>VALOR</th><th>VALOR.</th><th>PROVEEDOR</th></tr></thead>
           <tbody id="admin-ins-tbody"></tbody>
         </table>
         <div class="empty" id="admin-ins-empty">No hay productos.</div>
@@ -170,7 +170,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div id="user-table-wrap" class="table-wrap" style="display:none">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">Usuario &mdash; datos ajustados</h3>
         <table id="ver-ins-table">
-          <thead><tr><th>ID</th><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>PROVEEDOR</th></tr></thead>
+          <thead><tr><th>DESCRIPCION</th><th>UNIDAD</th><th>VALOR</th><th>PROVEEDOR</th></tr></thead>
           <tbody id="ver-ins-tbody"></tbody>
         </table>
         <div class="empty" id="ver-ins-empty">No hay productos.</div>
@@ -458,7 +458,6 @@ function renderVer(){
     else {
       empty.style.display='none';
       tbody.innerHTML = filtrados.map((p, idx) => `<tr>
-        <td>${String(idx+1).padStart(4,'0')}</td>
         <td>${p.descripcion}</td>
         <td contenteditable="true" onblur="guardarAjustada(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)}</td>
         <td>${p.unidad}</td>
@@ -491,7 +490,6 @@ function renderVer(){
       function countN3(n3map){ var t=0; var ks=Object.keys(n3map); for(var i=0;i<ks.length;i++){ t+=n3map[ks[i]].length; } return t; }
       var thead = table.querySelector('thead');
       var html = thead ? thead.outerHTML : '';
-      var idx = 0;
       var gid = 0;
       var n1keys = Object.keys(tree).sort();
       for(var a=0;a<n1keys.length;a++){
@@ -499,7 +497,7 @@ function renderVer(){
         var n2map = tree[n1];
         var n2keys = Object.keys(n2map).sort();
         var n1total = countN2(n2map);
-        html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="5"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n1+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n1total+')</span></td></tr></tbody>';
+        html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="4"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n1+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n1total+')</span></td></tr></tbody>';
         html += '<tbody class="cat-body" id="cat-body-g'+gid+'">';
         gid++;
         for(var b=0;b<n2keys.length;b++){
@@ -508,17 +506,17 @@ function renderVer(){
           var n3keys = Object.keys(n3map).sort();
           var n2total = countN3(n3map);
           if(n2){
-            html += '<tr class="cat-header cat-l2"><td colspan="5" style="padding-left:.05rem">'+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
+            html += '<tr class="cat-header cat-l2"><td colspan="4" style="padding-left:.05rem">'+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
           }
           for(var c=0;c<n3keys.length;c++){
             var n3 = n3keys[c];
             var items = n3map[n3];
             if(n3){
-              html += '<tr class="cat-header cat-l3"><td colspan="5" style="padding-left:.05rem">'+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
+              html += '<tr class="cat-header cat-l3"><td colspan="4" style="padding-left:.05rem">'+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
             }
             for(var d=0;d<items.length;d++){
-              var p = items[d]; idx++;
-              html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td style="padding-left:.1rem">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td>'+(p.proveedor||'')+'</td></tr>';
+              var p = items[d];
+              html += '<tr><td style="padding-left:.1rem">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td>'+(p.proveedor||'')+'</td></tr>';
             }
           }
         }
