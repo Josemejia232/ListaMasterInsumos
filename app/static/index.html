@@ -462,7 +462,7 @@ function renderVer(){
         <td>${p.descripcion}</td>
         <td contenteditable="true" onblur="guardarAjustada(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)}</td>
         <td>${p.unidad}</td>
-        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
+        <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})}${diffHtml(p)}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
         <td contenteditable="true" onblur="guardarProveedor(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${p.proveedor||''}</td>
       </tr>`).join('');
@@ -518,7 +518,7 @@ function renderVer(){
             }
             for(var d=0;d<items.length;d++){
               var p = items[d]; idx++;
-              html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td style="padding-left:.1rem">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})+diffHtml(p)+'</td><td>'+(p.proveedor||'')+'</td></tr>';
+              html += '<tr><td>'+String(idx).padStart(4,'0')+'</td><td style="padding-left:.1rem">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td>'+(p.proveedor||'')+'</td></tr>';
             }
           }
         }
