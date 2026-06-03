@@ -48,7 +48,7 @@
 
 ## 4. Frontend
 - 4.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estático
-- 4.2. Página de login con dos tabs: "Usuario gratis" (prueba gratuita, acceso limitado sin token) e "Ingresar con token" (login con email + token asignado por el admin)
+- 4.2. Página de login con dos tabs: "Usuario gratis" (prueba gratuita, debe ingresar email) e "Ingresar con token" (login con email + token asignado por el admin)
 - 4.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
 - 4.3.1. El menú tiene dos módulos según el rol:
   - **Admin**: módulo **ADMIN** (Productos, Usuarios) + módulo **LISTA INSUMOS** (Insumos) con contador total
