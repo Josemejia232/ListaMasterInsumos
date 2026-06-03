@@ -362,6 +362,21 @@ async function guardarAjustada(id, texto){
   } catch(e){}
 }
 
+async function guardarCategoria(id, texto){
+  var original = _verProds.find(p => p.id === id);
+  if(!original) return;
+  texto = (texto||'').trim();
+  if(!texto) texto = null;
+  try {
+    await apiFetch('/productos/'+id+'/ajustada', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({categoria:texto})
+    });
+    original.categoria = texto;
+    renderVer();
+  } catch(e){}
+}
+
 // ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
   try {
@@ -409,7 +424,7 @@ function renderVer(){
         <td>${p.unidad}</td>
         <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-        <td>${p.categoria||''}</td>
+        <td contenteditable="true" onblur="guardarCategoria(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${p.categoria||''}</td>
       </tr>`).join('');
     }
   } else {

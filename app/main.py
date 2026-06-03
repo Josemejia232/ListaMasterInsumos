@@ -54,6 +54,15 @@ class ScrapeResponse(BaseModel):
     fallidos: int
     mensaje: str
 
+class SyncResponse(BaseModel):
+    total: int
+    actualizados: int
+    sin_cambio: int
+    no_encontrados: int
+    sin_categoria: int
+    urls_no_encontradas: list[str] = []
+    mensaje: str
+
 class ProductoResponse(BaseModel):
     id: int
     codigo: str
@@ -335,7 +344,7 @@ async def scrape_daily(db: Session = Depends(get_db)):
         mensaje=f"Nuevos: {nuevos} | Actualizados: {actualizados} | Sin cambio: {sin_cambio} | Fallidos: {fallidos}",
     )
 
-@app.post("/sync/categories", response_model=ScrapeResponse)
+@app.post("/sync/categories", response_model=SyncResponse)
 async def sync_categories(db: Session = Depends(get_db)):
     """Sincroniza SOLO categorías desde Google Sheet sin hacer scrape. Rápido."""
     if not SHEET_URL:
@@ -345,10 +354,16 @@ async def sync_categories(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
     actualizados = 0
+    sin_categoria = 0
+    no_encontrados = 0
+    urls_no_encontradas = []
     for entry in entries:
         url = entry.get("url", "")
         cat = entry.get("categoria", "")
-        if not url or not cat:
+        if not url:
+            continue
+        if not cat:
+            sin_categoria += 1
             continue
         prod = db.query(Producto).filter(Producto.url_origen == url).first()
         if prod:
@@ -356,12 +371,18 @@ async def sync_categories(db: Session = Depends(get_db)):
             if prod.categoria != cat:
                 prod.categoria = cat
                 actualizados += 1
+        else:
+            no_encontrados += 1
+            urls_no_encontradas.append(url)
     db.commit()
     global _cache_time
     _cache_time = 0
-    return ScrapeResponse(
-        total=len(entries), nuevos=0, actualizados=actualizados, sin_cambio=len(entries)-actualizados, fallidos=0,
-        mensaje=f"Categorías sincronizadas: {actualizados} actualizadas",
+    sin_cambio = len(entries) - actualizados - no_encontrados - sin_categoria
+    return SyncResponse(
+        total=len(entries), actualizados=actualizados, sin_cambio=sin_cambio,
+        no_encontrados=no_encontrados, sin_categoria=sin_categoria,
+        urls_no_encontradas=urls_no_encontradas[:20],
+        mensaje=f"Actualizados: {actualizados} | No encontrados: {no_encontrados} | Sin categoría en sheet: {sin_categoria}",
     )
 
 
