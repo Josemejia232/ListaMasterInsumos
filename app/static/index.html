@@ -379,6 +379,21 @@ async function guardarCategoria(id, texto){
   } catch(e){}
 }
 
+async function guardarProveedor(id, texto){
+  var original = _verProds.find(p => p.id === id);
+  if(!original) return;
+  texto = (texto||'').trim();
+  if(!texto) texto = null;
+  try {
+    await apiFetch('/productos/'+id+'/ajustada', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({proveedor:texto})
+    });
+    original.proveedor = texto;
+    renderVer();
+  } catch(e){}
+}
+
 async function syncCategorias(){
   var btn = document.getElementById('btn-sync');
   var msg = document.getElementById('sync-msg');
@@ -450,7 +465,7 @@ function renderVer(){
         <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:2})}${diffHtml(p)}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
         <td contenteditable="true" onblur="guardarCategoria(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${p.categoria||''}</td>
-        <td>${p.proveedor||''}</td>
+        <td contenteditable="true" onblur="guardarProveedor(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${p.proveedor||''}</td>
       </tr>`).join('');
     }
   } else {

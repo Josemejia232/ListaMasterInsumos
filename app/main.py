@@ -104,6 +104,7 @@ class LoginResponse(BaseModel):
 class UpdateAjustadaRequest(BaseModel):
     descripcion_ajustada: str | None = None
     categoria: str | None = None
+    proveedor: str | None = None
 
 class UsuarioRequest(BaseModel):
     email: str
@@ -500,6 +501,8 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
         prod.descripcion_ajustada = req.descripcion_ajustada
     if req.categoria is not None:
         prod.categoria = req.categoria
+    if req.proveedor is not None:
+        prod.proveedor = req.proveedor
     db.commit()
     db.refresh(prod)
     return prod
