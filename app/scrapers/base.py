@@ -105,6 +105,14 @@ class GenericScraper:
             resp = httpx.get(self.url, headers=self.HEADERS, timeout=15, follow_redirects=True)
             resp.raise_for_status()
             self._html = resp.text
+            if '<html' not in self._html.lower() and '<!doctype' not in self._html.lower():
+                enc = resp.headers.get("content-encoding", "").lower()
+                if enc == "br":
+                    try:
+                        import brotli
+                        self._html = brotli.decompress(resp.content).decode("utf-8", errors="replace")
+                    except ImportError:
+                        pass
         except Exception:
             self._html = ""
 
