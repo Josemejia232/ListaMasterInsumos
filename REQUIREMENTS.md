@@ -64,14 +64,13 @@
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
 - 4.6.2. La sección "Usuario — datos ajustados" NO debe aparecer en el panel del admin
 - 4.6.3. La vista muestra el número total de insumos (ej: "Total: X insumos") sobre la tabla
-- 4.7. Tabla Insumos para usuario (datos ajustados): columnas ID (formato 0001), DESCRIPCION., UNIDAD, VALOR., CATEGORIA
+- 4.7. Tabla Insumos para usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, CATEGORIA
+  - Muestra los datos reales del scraper sin ajustes ni variaciones
   - Los insumos se agrupan por CATEGORIA con encabezados colapsables
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
-- 4.8. Columna VALOR. para usuario: precio original reducido aleatoriamente 0.02%-0.04% (entero, sin decimales)
-- 4.9. Columna DESCRIPCION. para usuario: descripción homologada con sufijo aleatorio para diferir de la original
-- 4.10. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
-- 4.11. Auto-refresh de productos cada 30 segundos
-- 4.12. La URL de Google Sheets **no** se expone al frontend
+- 4.8. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
+- 4.9. Auto-refresh de productos cada 30 segundos
+- 4.10. La URL de Google Sheets **no** se expone al frontend
 
 ## 5. Despliegue
 - 5.1. Servir con uvicorn via Procfile en Render
