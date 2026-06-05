@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ListaMasterInsumos</title>
 <style>
-:root{--bg:#0f172a;--card:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;--accent:#3b82f6;--green:#22c55e;--red:#ef4444;--sidebar:230px}
+:root{--bg:#0a1628;--card:#111d33;--border:#1e3050;--text:#e8edf4;--muted:#8899b3;--accent:#006DCF;--accent-hover:#005bb5;--green:#00b388;--red:#e63946;--sidebar:240px}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex}
 
 /* Login */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;width:100%}
-.login-box{background:var(--card);border:1px solid var(--border);border-radius:.75rem;padding:2rem;width:100%;max-width:380px}
+.login-box{background:var(--card);border:1px solid #1a2d4d;border-radius:.75rem;padding:2rem;width:100%;max-width:380px;border-top:3px solid var(--accent)}
 .login-box h1{font-size:1.3rem;margin-bottom:.25rem}
 .login-box .sub{color:var(--muted);font-size:.85rem;margin-bottom:1.5rem}
 .login-box input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:.375rem;padding:.6rem .75rem;color:var(--text);font-size:.875rem;margin-bottom:.75rem}
@@ -26,16 +26,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .error{color:var(--red);font-size:.8rem;margin-top:.5rem}
 
 /* Sidebar */
-.sidebar{width:var(--sidebar);background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:margin-left .3s;overflow:hidden;flex-shrink:0;min-height:100vh}
+.sidebar{width:var(--sidebar);background:linear-gradient(180deg,#0d1f3c 0%,#0a1628 100%);border-right:1px solid #1a2d4d;display:flex;flex-direction:column;transition:margin-left .3s;overflow:hidden;flex-shrink:0;min-height:100vh}
 .sidebar.collapsed{margin-left:calc(var(--sidebar)*-1)}
-.sidebar-header{padding:1rem;font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid var(--border)}
-.sidebar-header .logo{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+.sidebar-header{padding:1rem;font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:.5rem;border-bottom:1px solid #1a2d4d}
+.sidebar-header .logo{width:26px;height:26px;background:linear-gradient(135deg,#006DCF,#0099CC);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
 .menu-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:.75rem 1rem .35rem}
 .menu-item{display:flex;align-items:center;gap:.65rem;padding:.55rem 1rem;cursor:pointer;font-size:.85rem;color:var(--muted);border-left:3px solid transparent;transition:all .15s}
-.menu-item:hover{color:var(--text);background:rgba(255,255,255,.03)}
-.menu-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(59,130,246,.08)}
+.menu-item:hover{color:var(--text);background:rgba(0,109,207,.06)}
+.menu-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(0,109,207,.10)}
 .menu-item .ico{width:18px;text-align:center;flex-shrink:0;font-size:.9rem}
-.sidebar-footer{margin-top:auto;padding:.75rem 1rem;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:.4rem}
+.sidebar-footer{margin-top:auto;padding:.75rem 1rem;border-top:1px solid #1a2d4d;display:flex;flex-direction:column;gap:.4rem}
 .sidebar-footer .email{font-size:.75rem;color:var(--muted)}
 .sidebar-footer .logout{background:transparent;border:1px solid var(--border);border-radius:.375rem;color:var(--muted);cursor:pointer;padding:.3rem .5rem;font-size:.75rem;text-align:center}
 .sidebar-footer .logout:hover{color:var(--text);border-color:var(--accent)}
@@ -59,10 +59,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .form-inline{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
 .form-inline input{background:var(--card);border:1px solid var(--border);border-radius:.375rem;padding:.375rem .5rem;color:var(--text);font-size:.8125rem}
 .form-inline input:focus{outline:none;border-color:var(--accent)}
-.btn{background:var(--accent);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.btn{background:linear-gradient(135deg,#006DCF,#005bb5);color:#fff;border:none;border-radius:.375rem;padding:.5rem 1rem;font-size:.875rem;cursor:pointer;white-space:nowrap;transition:opacity .15s}
 .btn:hover{opacity:.85}
-.btn-green{background:var(--green)}
-.btn-red{background:var(--red)}
+.btn-green{background:linear-gradient(135deg,#00b388,#009970)}
+.btn-red{background:linear-gradient(135deg,#e63946,#cc2f3c)}
 .btn-sm{padding:.25rem .5rem;font-size:.75rem}
 .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
 .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:.5rem;overflow-x:auto}
@@ -70,25 +70,24 @@ table{width:100%;border-collapse:collapse;font-size:.8125rem}
 th{text-align:left;padding:.625rem .75rem;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:.5rem .75rem;border-bottom:1px solid var(--border);white-space:nowrap}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,.02)}
+tr:hover td{background:rgba(0,109,207,.04)}
 td .actions{display:flex;gap:.25rem}
 .empty{text-align:center;padding:3rem;color:var(--muted)}
 .cat-header{cursor:pointer;background:var(--bg);transition:background .15s}
-.cat-header:hover{background:rgba(59,130,246,.08)}
+.cat-header:hover{background:rgba(0,109,207,.08)}
 .cat-header td{padding:.5rem .75rem;font-weight:700;color:var(--accent);font-size:.82rem;border-bottom:2px solid var(--border)!important}
 .cat-header .arrow{display:inline-block;width:14px;transition:transform .2s;font-size:.7rem}
 .cat-header .arrow.collapsed{transform:rotate(-90deg)}
 .cat-body.collapsed{display:none}
 .cat-group:not(.collapsed) .cat-header .arrow{transform:rotate(0deg)}
-.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid var(--muted);border-top-color:#006DCF;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:.375rem}
 @keyframes spin{to{transform:rotate(360deg)}}
 h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
 
 /* WhatsApp */
-.whatsapp-btn{position:fixed;bottom:1.5rem;right:1.5rem;width:52px;height:52px;background:#25D366;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:transform .2s,opacity .2s;text-decoration:none}
+.whatsapp-btn{position:fixed;bottom:1.5rem;right:1.5rem;width:52px;height:52px;background:#00b388;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:transform .2s,opacity .2s;text-decoration:none}
 .whatsapp-btn:hover{transform:scale(1.1)}
 .whatsapp-btn svg{width:28px;height:28px;fill:#fff}
-
 /* Responsive */
 @media(max-width:768px){
   .sidebar{position:fixed;z-index:100;left:0;top:0;height:100%}
