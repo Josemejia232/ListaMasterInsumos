@@ -727,6 +727,11 @@ def stats(db: Session = Depends(get_db)):
 
 # ─── Insumos CRUD (legacy) ────────────────────────────────────
 
+@app.get("/api/check-email")
+def check_email(email: str, db: Session = Depends(get_db)):
+    existe = db.query(Usuario).filter(Usuario.email == email).first()
+    return {"registrado": existe is not None}
+
 @app.get("/api/insumos", response_model=list[ProductoPublicResponse])
 def listar_insumos(db: Session = Depends(get_db)):
     return db.query(Producto).order_by(Producto.descripcion).all()

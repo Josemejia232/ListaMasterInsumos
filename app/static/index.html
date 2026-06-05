@@ -239,15 +239,34 @@ function cambiarLogin(modo, el){
 function entrarInvitado(){
   var email = document.getElementById('guest-email').value.trim();
   if(!email){ document.getElementById('login-error').textContent='Regístrate gratis para acceder'; return; }
-  _user = null; _viewMode = 'adjusted';
-  document.getElementById('login-wrap').style.display='none';
-  document.getElementById('sidebar').style.display='flex';
-  document.querySelector('.content').style.display='flex';
-  document.getElementById('side-email').textContent = email;
-  document.getElementById('whatsapp-btn').style.display = 'none';
-  buildSidebar();
-  cargarVerInsumos();
-  irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
+  fetch(API+'/api/check-email?email='+encodeURIComponent(email))
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.registrado){
+      document.getElementById('login-error').textContent='Este email ya tiene token. Usa la pestaña "Ingresar con token".';
+      return;
+    }
+    _user = null; _viewMode = 'adjusted';
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('sidebar').style.display='flex';
+    document.querySelector('.content').style.display='flex';
+    document.getElementById('side-email').textContent = email;
+    document.getElementById('whatsapp-btn').style.display = 'none';
+    buildSidebar();
+    cargarVerInsumos();
+    irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
+  })
+  .catch(()=>{
+    _user = null; _viewMode = 'adjusted';
+    document.getElementById('login-wrap').style.display='none';
+    document.getElementById('sidebar').style.display='flex';
+    document.querySelector('.content').style.display='flex';
+    document.getElementById('side-email').textContent = email;
+    document.getElementById('whatsapp-btn').style.display = 'none';
+    buildSidebar();
+    cargarVerInsumos();
+    irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
+  });
 }
 function login(){
   const email = document.getElementById('login-email').value.trim();
