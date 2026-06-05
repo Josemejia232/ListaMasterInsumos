@@ -837,21 +837,16 @@ def startup():
 
     db = SessionLocal()
     try:
-        admin_env_email = os.getenv("ADMIN_EMAIL")
-        admin_env_token = os.getenv("ADMIN_TOKEN")
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
         if not admin:
-            if not admin_env_email or not admin_env_token:
+            admin_email = os.getenv("ADMIN_EMAIL")
+            admin_token = os.getenv("ADMIN_TOKEN")
+            if not admin_email or not admin_token:
                 logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
             else:
-                db.add(Usuario(email=admin_env_email, token=admin_env_token, activo=True, tipo="admin"))
+                db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
                 db.commit()
-                logger.info(f"Admin seed creado: {admin_env_email}")
-        elif admin_env_token and admin.token != admin_env_token:
-            old_token = admin.token
-            admin.token = admin_env_token
-            db.commit()
-            logger.info(f"Admin token actualizado: {old_token[:8]}... -> {admin_env_token[:8]}...")
+                logger.info(f"Admin seed creado: {admin_email}")
     except Exception as e:
         db.rollback()
         logger.warning(f"Seed admin skipped: {e}")
