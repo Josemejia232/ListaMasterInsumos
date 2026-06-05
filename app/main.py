@@ -217,13 +217,17 @@ class UsuarioResponse(BaseModel):
 # ─── Auth ─────────────────────────────────────────────────────
 
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
+    logger.info(f"[AUTH] Authorization header: {repr(authorization[:50]) if authorization else 'NONE'}")
     if not authorization:
         raise HTTPException(status_code=401, detail="Token requerido")
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Formato invalido")
     token = authorization[7:]
     users = db.query(Usuario).filter(Usuario.activo == True).all()
+    logger.info(f"[AUTH] Token from header: {token[:20]}... | Active users in DB: {len(users)}")
     for user in users:
+        if user.token:
+            logger.info(f"[AUTH] Comparing with user {user.email}: token_prefix={user.token[:8]}...")
         if hmac.compare_digest(token, user.token or ""):
             return user
     raise HTTPException(status_code=401, detail="Token invalido o usuario inactivo")
