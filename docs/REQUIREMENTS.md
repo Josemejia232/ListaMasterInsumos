@@ -1,84 +1,138 @@
 # ListaMasterInsumos — Requisitos
 
-> Este documento describe exactamente la estructura de la base de datos y el comportamiento de la aplicación.
-> Cualquier cambio en la BD debe reflejarse aquí y viceversa.
+> Este documento describe la estructura de la base de datos, el comportamiento de la aplicacion y la seguridad.
+> Cualquier cambio en la BD debe reflejarse aqui y viceversa.
 
-## 1. Autenticación y roles
+## 1. Autenticacion y roles
 - 1.1. Login con email + token (token pre-asignado por el admin)
-- 1.2. Usuario gratis: modo prueba gratuita para consultar la app. No se genera token automáticamente. Si el usuario paga, el admin le asigna un token de acceso.
-- 1.3. Login con token pre-asignado: usuario ingresa email + token → se guardan en localStorage
+- 1.2. Usuario gratis: modo prueba gratuita para consultar la app. No se genera token automaticamente. Si el usuario paga, el admin le asigna un token de acceso.
+- 1.3. Login con token pre-asignado: usuario ingresa email + token -> se guardan en localStorage
 - 1.4. Dos roles: **admin** y **usuario**
-- 1.5. Admin seed automático al iniciar: `admin@example.com` / `admin123`
-- 1.6. Admin puede CRUD de usuarios (email, token, activo, tipo)
-- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Token (visible), Activo, Tipo, FechaPago, Días, Acción
-  - Columna Token visible para el admin
-  - FechaPago: fecha del último pago del usuario (columna `fecha_pago` en BD)
-  - Días: días restantes desde FechaPago hasta completar 30 días. Si ≤ 0 → rojo (vencido), ≤ 5 → amarillo, > 5 → verde
-  - Acción: botón $ (Pagar) que actualiza FechaPago a la fecha actual, reiniciando el ciclo de 30 días
-  - Acción: botón Editar, Activar/Bloquear, Eliminar
+- 1.5. Admin seed automatico al iniciar: lee `ADMIN_EMAIL` y `ADMIN_TOKEN` desde `.env`. Si no estan configurados, no crea admin.
+- 1.6. Admin puede CRUD de usuarios (email, activo, tipo). El token NO se expone en la API de usuarios.
+- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Activo, Tipo, FechaPago, Dias, Accion
+  - FechaPago: fecha del ultimo pago del usuario (columna `fecha_pago` en BD)
+  - Dias: dias restantes desde FechaPago hasta completar 30 dias. Si <= 0 -> rojo (vencido), <= 5 -> amarillo, > 5 -> verde
+  - Accion: boton $ (Pagar) que actualiza FechaPago a la fecha actual, reiniciando el ciclo de 30 dias
+  - Accion: boton Editar, Activar/Bloquear, Eliminar
 - 1.7. Bearer token en header `Authorization` para endpoints protegidos
 - 1.8. El usuario no ve el contenido del admin
+- 1.9. Token generation: `secrets.token_hex(32)` (256 bits de entropia)
+- 1.10. Token comparison: `hmac.compare_digest()` (timing-safe)
 
+## 2. Seguridad
 
+### 2.1. Endpoints publicos (sin auth)
+- `GET /api/insumos` — datos basicos de insumos legacy (descripcion, unidad, valor, categoria)
+- `GET /api/stats` — estadisticas generales (total, valor total, tiendas)
 
+### 2.2. Endpoints protegidos (requieren Bearer token)
+- `GET /productos` — precios de scraping, proveedores, URLs de origen
+- `GET/POST/PUT/DELETE /api/insumos/*` — CRUD de insumos
+- `PUT /productos/{id}` — edicion de productos
+- `POST /scrape` — trigger de scraping
+- `POST /scrape/daily` — scrape diario (cambiado de GET a POST)
+- `POST /sync/categories` — sincronizacion de categorias
+- `GET /scrape/sync` — scrape de URL individual
+- `GET/POST/PUT/DELETE /api/usuarios/*` — gestion de usuarios
+- `GET /api/auth/me` — verificar sesion
 
-## 2. Base de datos
-- 2.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
-- 2.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, n01, n02, n03, proveedor, tienda, url_origen, created_at, updated_at
-- 2.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
-- 2.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), fecha_pago, created_at
-- 2.5. Unique constraint `(codigo, tienda)` en productos
-- 2.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
-- 2.7. `DATABASE_URL` desde variable de entorno (`.env` en local, env var en Render)
-- 2.8. Columnas `n01`, `n02`, `n03`: niveles jerárquicos de agrupación desde Google Sheets (Nivel 1, Nivel 2, Nivel 3)
-- 2.9. La BD debe identificar automáticamente si ingresa un nuevo insumo desde Google Sheets y copiarlo en la BD (ver sección 6)
-- 2.10. El Google Sheet debe actualizarse cuando se detecta un cambio de precio (ver sección 6)
+### 2.3. CORS
+- Middleware configurado con origenes permitidos via variable `ALLOWED_ORIGINS`
+- Si no se configura, permite todos (`*`)
 
+### 2.4. Rate limiting
+- Login: 10 intentos/minuto por IP
+- Scrape: 5 peticiones/minuto por IP
 
-## 3. Scraping
-- 3.1. Leer URLs desde Google Sheets (export CSV vía HTTP, sin gspread)
-- 3.2. Columna `URL` obligatoria, columnas `N01`, `N02`, `N03`, `CATEGORIA` y `PROVEEDOR` opcionales
-- 3.3. Scrapers por tienda: Sodimac, Homecenter, Promart, Maestro, Easy
-- 3.4. GenericScraper multi-estrategia: JSON-LD (gana), embedded state, meta tags, HTML patterns
-- 3.5. JSON-LD case-insensitive para `@type`, `offers` como array
-- 3.6. Upsert: si precio cambió → guarda valor anterior y actualiza; si no cambió → saltea (pero siempre actualiza categoria)
-- 3.7. Endpoint `/scrape/daily`: procesa todas las URLs de la hoja configurada en `SHEET_URL`
-- 3.8. Endpoint `/scrape/sync` (admin): scrapea una URL específica y devuelve el producto
-- 3.9. Script standalone `app/daily.py` para cron externo
+### 2.5. Security headers
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 
-## 4. Frontend
-- 4.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estático
-- 4.2. Página de login con dos tabs: "Usuario gratis" (prueba gratuita, debe ingresar email) e "Ingresar con token" (login con email + token asignado por el admin)
-- 4.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
-- 4.3.1. El menú tiene dos módulos según el rol:
-  - **Admin**: módulo **ADMIN** (Productos, Usuarios) + módulo **LISTA INSUMOS** (Insumos) con contador total
-  - **Usuario**: módulo **LISTA INSUMOS** (Insumos) con contador total
-- 4.4. Vista admin (sidebar): Productos, Usuarios
-- 4.5. Vista usuario (sidebar): Insumos
-- 4.6. Tabla única para admin y usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
+### 2.6. XSS Protection
+- Funcion `escapeHtml()` en frontend para datos de API en innerHTML
+- Todos los datos de scraping, usuarios y categorias se escapan antes de inyectar en DOM
+
+### 2.7. Validacion de entrada
+- Pydantic validators en schemas: email, tipo de usuario, URLs
+- URLs de scraping restringidas a dominios Google Sheets (`docs.google.com`)
+- Valores negativos rechazados en insumos
+
+### 2.8. Proteccion de credenciales
+- `.env` en `.gitignore` (nunca se sube a git)
+- `.env.develop` y `.env.production` en `config/`
+- Token admin no se loguea ni se expone en API
+- Password de BD rotada periodicamente
+
+## 3. Base de datos
+- 3.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
+- 3.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, n01, n02, n03, proveedor, descripcion_ajustada, tienda, url_origen, created_at, updated_at
+- 3.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
+- 3.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), fecha_pago, created_at
+- 3.5. Unique constraint `(codigo, tienda)` en productos
+- 3.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
+- 3.7. `DATABASE_URL` desde variable de entorno (`config/.env.develop` o `config/.env.production`, env var en Render)
+- 3.8. Columnas `n01`, `n02`, `n03`: niveles jerarquicos de agrupacion desde Google Sheets (Nivel 1, Nivel 2, Nivel 3)
+- 3.9. La BD debe identificar automaticamente si ingresa un nuevo insumo desde Google Sheets y copiarlo en la BD (ver seccion 6)
+- 3.10. El Google Sheet debe actualizarse cuando se detecta un cambio de precio (ver seccion 6)
+
+## 4. Scraping
+- 4.1. Leer URLs desde Google Sheets (export CSV via HTTP, sin gspread)
+- 4.2. Columna `URL` obligatoria, columnas `N01`, `N02`, `N03`, `CATEGORIA` y `PROVEEDOR` opcionales
+- 4.3. Scrapers por tienda: Sodimac, Homecenter, Promart, Maestro, Easy
+- 4.4. GenericScraper multi-estrategia: JSON-LD (gana), embedded state, meta tags, HTML patterns
+- 4.5. JSON-LD case-insensitive para `@type`, `offers` como array
+- 4.6. Upsert: si precio cambio -> guarda valor anterior y actualiza; si no cambio -> saltea (pero siempre actualiza categoria)
+- 4.7. Endpoint `POST /scrape/daily` (admin): procesa todas las URLs de la hoja configurada en `SHEET_URL`
+- 4.8. Endpoint `GET /scrape/sync` (admin): scrapea una URL especifica y devuelve el producto
+- 4.9. Script standalone `app/daily.py` para cron externo
+- 4.10. Validacion de URLs: solo se permiten dominios Google Sheets (`docs.google.com`)
+
+## 5. Frontend
+- 5.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estatico
+- 5.2. Pagina de login con dos tabs: "Usuario gratis" (prueba gratuita, debe ingresar email) e "Ingresar con token" (login con email + token asignado por el admin)
+- 5.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
+- 5.3.1. El menu tiene dos modulos segun el rol:
+  - **Admin**: modulo **ADMIN** (Productos, Usuarios) + modulo **LISTA INSUMOS** (Insumos) con contador total
+  - **Usuario/Guest**: modulo **LISTA INSUMOS** (Insumos) con contador total
+- 5.4. Vista admin (sidebar): Productos, Usuarios
+- 5.5. Vista usuario/guest (sidebar): Insumos
+- 5.6. Guest mode: usa `/api/insumos` (publico) en vez de `/productos` (protegido)
+- 5.7. Tabla unica para admin y usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
   - Muestra los datos reales del scraper sin ajustes ni variaciones
-  - Los insumos se agrupan jerárquicamente por N01 > N02 > N03 con encabezados colapsables
+  - Los insumos se agrupan jerarquicamente por N01 > N02 > N03 con encabezados colapsables
   - Solo N01 es colapsable (expande/contrae todo su subnivel)
   - N02 y N03 son headers visuales con padding .05rem
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
-  - Admin adicionalmente tiene panel USUARIOS y columna DESCRIPCION. editable
-  - La vista muestra el número total de insumos (ej: "Total: X insumos") sobre la tabla
-- 4.7. Flechas de cambio de precio: rojo ↑ si subió, verde ↓ si bajó, con porcentaje
-- 4.8. Auto-refresh de productos cada 30 segundos
-- 4.9. La URL de Google Sheets **no** se expone al frontend
+  - Admin adicionalmente tiene panel USUARIOS y columna DESCRIPCION editable
+  - La vista muestra el numero total de insumos (ej: "Total: X insumos") sobre la tabla
+- 5.8. Flechas de cambio de precio: rojo si subio, verde si bajo, con porcentaje
+- 5.9. Auto-refresh de productos cada 30 segundos
+- 5.10. La URL de Google Sheets **no** se expone al frontend
+- 5.11. Paleta de colores: SAS Premium (navy blue + gradients)
+- 5.12. XSS protection: funcion `escapeHtml()` en todos los innerHTML
 
-## 5. Despliegue
-- 5.1. Servir con uvicorn via Procfile en Render
-- 5.2. Python 3.12.7 (runtime.txt)
-- 5.3. Variables de entorno: `DATABASE_URL`, `SHEET_URL`, `ADMIN_EMAIL`, `ADMIN_TOKEN`
-- 5.4. Comando dev local: `uvicorn app.main:app --reload`
+## 6. Despliegue
+- 6.1. Servir con uvicorn via Procfile en Render
+- 6.2. Python 3.12.7 (runtime.txt)
+- 6.3. Variables de entorno: `DATABASE_URL`, `SHEET_URL`, `ADMIN_EMAIL`, `ADMIN_TOKEN`, `ALLOWED_ORIGINS`
+- 6.4. Comando dev local: `scripts/start-dev.bat` (Windows) o `bash scripts/start-dev.sh` (Linux/Mac)
+- 6.5. Comando prod local: `scripts/start-prod.bat` (Windows) o `bash scripts/start-prod.sh` (Linux/Mac)
+- 6.6. Estructura de archivos:
+  - `app/` — codigo Python
+  - `config/` — archivos de entorno (.env.develop, .env.production)
+  - `docs/` — documentacion (STACK.md, REQUIREMENTS.md)
+  - `scripts/` — scripts de inicio y auxiliares
 
-## 6. Sincronización Google Sheets ↔ BD
+## 7. Sincronizacion Google Sheets <-> BD
 
-- 6.1. **Sheet → BD**: Al ejecutar `/scrape/daily` o `python -m app.daily`, la app lee las URLs y categorías desde Google Sheets, scrapea los precios y los upserta en la tabla `productos`. Si una URL nueva aparece en el sheet, se crea un nuevo registro en BD. Si cambia la categoría en el sheet, se actualiza en BD aunque el precio no haya cambiado.
-- 6.2. **BD → Sheet (pendiente)**: Cuando el scraper detecta un cambio de precio en una URL, ese nuevo precio debe escribirse de vuelta en el Google Sheet (columna ÚLTIMO PRECIO). Actualmente esto no está implementado. Se requiere Google Apps Script (`scripts/syncPrices.gs`) que:
-  - Se ejecuta periódicamente (time-driven trigger)
-  - Llama a `/scrape/daily` para actualizar la BD
+- 7.1. **Sheet -> BD**: Al ejecutar `POST /scrape/daily` o `python -m app.daily`, la app lee las URLs y categorias desde Google Sheets, scrapea los precios y los upserta en la tabla `productos`. Si una URL nueva aparece en el sheet, se crea un nuevo registro en BD. Si cambia la categoria en el sheet, se actualiza en BD aunque el precio no haya cambiado.
+- 7.2. **BD -> Sheet (pendiente)**: Cuando el scraper detecta un cambio de precio en una URL, ese nuevo precio debe escribirse de vuelta en el Google Sheet (columna ULTIMO PRECIO). Actualmente esto no esta implementado. Se requiere Google Apps Script (`scripts/syncPrices.gs`) que:
+  - Se ejecuta periodicamente (time-driven trigger)
+  - Llama a `POST /scrape/daily` para actualizar la BD
   - Consulta `/productos` y escribe los precios actuales en el sheet
-  - Para producción, la API debe tener URL pública (Render). Para local, usar ngrok.
-- 6.3. La URL del Google Sheet (`SHEET_URL`) nunca se expone al frontend.
+  - Para produccion, la API debe tener URL publica (Render). Para local, usar ngrok.
+- 7.3. La URL del Google Sheet (`SHEET_URL`) nunca se expone al frontend.

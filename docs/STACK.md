@@ -1,6 +1,6 @@
 # ListaMasterInsumos — Stack
 
-| Capa | Tecnología |
+| Capa | Tecnologia |
 |------|-----------|
 | **Runtime** | Python 3.12.7 |
 | **Framework** | FastAPI |
@@ -9,9 +9,10 @@
 | **Driver DB** | psycopg2-binary |
 | **HTTP client** | httpx |
 | **HTML parsing** | BeautifulSoup4 + lxml |
-| **Google Sheets** | Export CSV vía HTTP (sin gspread) |
-| **Auth** | Token por usuario (API key), roles admin/usuario |
-| **Frontend** | HTML + CSS + JS vanilla (sin framework) |
+| **Google Sheets** | Export CSV via HTTP (sin gspread) |
+| **Auth** | Token por usuario (API key), roles admin/usuario, timing-safe comparison |
+| **Seguridad** | CORS, rate limiting, security headers, XSS protection, validacion Pydantic |
+| **Frontend** | HTML + CSS + JS vanilla (sin framework), paleta SAS Premium |
 | **Servidor dev** | uvicorn con hot-reload |
 | **Deploy** | Render (web service, Procfile) |
-| **Entorno** | python-dotenv (.env) |
+| **Entorno** | python-dotenv, config/.env.develop, config/.env.production |
