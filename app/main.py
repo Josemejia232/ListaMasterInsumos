@@ -162,6 +162,18 @@ class InsumoResponse(InsumoRequest):
     created_at: datetime | None = None
     model_config = {"from_attributes": True}
 
+class ProductoPublicResponse(BaseModel):
+    id: int
+    descripcion: str
+    unidad: str
+    valor: float
+    categoria: str | None = None
+    n01: str | None = None
+    n02: str | None = None
+    n03: str | None = None
+    proveedor: str | None = None
+    model_config = {"from_attributes": True}
+
 class LoginRequest(BaseModel):
     email: str
     token: str
@@ -715,9 +727,9 @@ def stats(db: Session = Depends(get_db)):
 
 # ─── Insumos CRUD (legacy) ────────────────────────────────────
 
-@app.get("/api/insumos", response_model=list[InsumoResponse])
+@app.get("/api/insumos", response_model=list[ProductoPublicResponse])
 def listar_insumos(db: Session = Depends(get_db)):
-    return db.query(Insumo).order_by(Insumo.descripcion).all()
+    return db.query(Producto).order_by(Producto.descripcion).all()
 
 @app.post("/api/insumos", response_model=InsumoResponse)
 def crear_insumo(req: InsumoRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
