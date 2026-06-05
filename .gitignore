@@ -5,12 +5,7 @@ __pycache__/
 venv/
 *.db
 
-# Entorno activo (se genera desde .env.develop o .env.production)
+# Entorno activo (se genera desde config/.env.develop o config/.env.production)
 .env
-.env.develop
-.env.production
-
-# Legacy (no usado)
-htdocs/
 
 node_modules/
