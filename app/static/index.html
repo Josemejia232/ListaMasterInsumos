@@ -195,7 +195,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="table-wrap">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">USUARIOS</h3>
         <table>
-          <thead><tr><th>ID</th><th>Email</th><th>Token</th><th>Activo</th><th>Tipo</th><th>FechaPago</th><th>Dias</th><th style="width:190px">Acci&oacute;n</th></tr></thead>
+          <thead><tr><th>ID</th><th>Email</th><th>Activo</th><th>Tipo</th><th>FechaPago</th><th>Dias</th><th style="width:190px">Acci&oacute;n</th></tr></thead>
           <tbody id="usr-tbody"></tbody>
         </table>
         <div class="empty" id="usr-empty">No hay usuarios.</div>
@@ -219,6 +219,14 @@ let _debounceTimer = null;
 function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
 
 var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
+
+// ─── XSS Protection ──────────────────────────────────────
+function escapeHtml(s){
+  if(!s) return '';
+  var d = document.createElement('div');
+  d.appendChild(document.createTextNode(String(s)));
+  return d.innerHTML;
+}
 
 // ─── Auth ───────────────────────────────────────────────
 function cambiarLogin(modo, el){
@@ -471,12 +479,12 @@ function renderVer(){
     else {
       empty.style.display='none';
       tbody.innerHTML = filtrados.map((p, idx) => `<tr>
-        <td>${p.descripcion}</td>
-        <td contenteditable="true" onblur="guardarAjustada(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada)}</td>
-        <td>${p.unidad}</td>
+        <td>${escapeHtml(p.descripcion)}</td>
+        <td contenteditable="true" onblur="guardarAjustada(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${escapeHtml(descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada))}</td>
+        <td>${escapeHtml(p.unidad)}</td>
         <td>$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})}${diffHtml(p)}</td>
         <td>$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-        <td contenteditable="true" onblur="guardarProveedor(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${p.proveedor||''}</td>
+        <td contenteditable="true" onblur="guardarProveedor(${p.id},this.textContent)" style="cursor:text;outline:1px dashed var(--border);border-radius:2px;padding:2px 4px">${escapeHtml(p.proveedor||'')}</td>
       </tr>`).join('');
     }
   } else {
@@ -510,7 +518,7 @@ function renderVer(){
         var n2map = tree[n1];
         var n2keys = Object.keys(n2map).sort();
         var n1total = countN2(n2map);
-        html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="4"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+n1+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n1total+')</span></td></tr></tbody>';
+        html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="4"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+escapeHtml(n1)+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n1total+')</span></td></tr></tbody>';
         html += '<tbody class="cat-body" id="cat-body-g'+gid+'">';
         gid++;
         for(var b=0;b<n2keys.length;b++){
@@ -519,17 +527,17 @@ function renderVer(){
           var n3keys = Object.keys(n3map).sort();
           var n2total = countN3(n3map);
           if(n2){
-            html += '<tr class="cat-header cat-l2"><td colspan="4" style="padding-left:.05rem">'+n2+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
+            html += '<tr class="cat-header cat-l2"><td colspan="4" style="padding-left:.05rem">'+escapeHtml(n2)+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+n2total+')</span></td></tr>';
           }
           for(var c=0;c<n3keys.length;c++){
             var n3 = n3keys[c];
             var items = n3map[n3];
             if(n3){
-              html += '<tr class="cat-header cat-l3"><td colspan="4" style="padding-left:.05rem">'+n3+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
+              html += '<tr class="cat-header cat-l3"><td colspan="4" style="padding-left:.05rem">'+escapeHtml(n3)+' <span style="font-weight:400;color:var(--muted);font-size:.75rem">('+items.length+')</span></td></tr>';
             }
             for(var d=0;d<items.length;d++){
               var p = items[d];
-              html += '<tr><td style="padding-left:.1rem">'+p.descripcion+'</td><td>'+p.unidad+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td>'+(p.proveedor||'')+'</td></tr>';
+              html += '<tr><td style="padding-left:.1rem">'+escapeHtml(p.descripcion)+'</td><td>'+escapeHtml(p.unidad)+'</td><td>$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td>'+escapeHtml(p.proveedor||'')+'</td></tr>';
             }
           }
         }
@@ -576,12 +584,12 @@ async function cargarUsuarios(){
       var dias = fp ? Math.ceil(30 - (Date.now() - fp.getTime()) / (1000*60*60*24)) : null;
       var colorDias = dias != null ? (dias <= 0 ? 'var(--red)' : dias <= 5 ? '#eab308' : 'var(--green)') : 'var(--muted)';
       return `<tr>
-      <td>${u.id}</td><td>${u.email}</td><td>${u.token}</td>
-      <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${u.tipo}</td>
+      <td>${u.id}</td><td>${escapeHtml(u.email)}</td>
+      <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${escapeHtml(u.tipo)}</td>
       <td>${fp ? fp.toLocaleDateString('es-CO') : '-'}</td>
       <td style="color:${colorDias};font-weight:600">${dias != null ? dias : '-'}</td>
       <td><div class="actions">
-        <button class="btn btn-sm btn-outline" data-edit-id="${u.id}" data-edit-email="${u.email}" data-edit-tipo="${u.tipo}" data-edit-activo="${u.activo}" onclick="editarUsuarioBtn(this)" title="Editar">Editar</button>
+        <button class="btn btn-sm btn-outline" data-edit-id="${u.id}" data-edit-email="${escapeHtml(u.email)}" data-edit-tipo="${escapeHtml(u.tipo)}" data-edit-activo="${u.activo}" onclick="editarUsuarioBtn(this)" title="Editar">Editar</button>
         <button class="btn btn-sm ${u.activo?'btn-red':'btn-green'}" onclick="toggleActivo(${u.id},${!u.activo})">${u.activo ? 'Bloquear' : 'Activar'}</button>
         <button class="btn btn-sm btn-green" onclick="renovarPago(${u.id})" title="Pagar">$</button>
         <button class="btn btn-sm btn-red" onclick="eliminarUsuario(${u.id})" title="Eliminar">X</button>

@@ -4,16 +4,21 @@ import json
 import re
 import time
 import random
+import hmac
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
+from collections import defaultdict
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 from app.database import engine, get_db, SessionLocal, Base
@@ -23,12 +28,61 @@ from app.scrapers import get_scraper
 
 load_dotenv()
 
+logger = logging.getLogger("app")
+
 app = FastAPI(
     title="ListaMasterInsumos",
-    description="API para scrapeo de insumos de construcción desde Google Sheets",
+    description="API para scrapeo de insumos de construccion desde Google Sheets",
+)
+
+# ─── CORS ─────────────────────────────────────────────────────
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",")
+ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS if o.strip()]
+if not ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
+
+# ─── Security Headers ─────────────────────────────────────────
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+# ─── Rate Limiting ────────────────────────────────────────────
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+RATE_LIMIT_WINDOW = 60  # seconds
+
+def _check_rate_limit(key: str, max_requests: int) -> bool:
+    now = time.time()
+    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if now - t < RATE_LIMIT_WINDOW]
+    if len(_rate_limit_store[key]) >= max_requests:
+        return False
+    _rate_limit_store[key].append(now)
+    return True
+
+def rate_limit_login(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(f"login:{ip}", 10):
+        raise HTTPException(status_code=429, detail="Demasiados intentos. Intenta en 1 minuto.")
+
+def rate_limit_scrape(request: Request):
+    ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(f"scrape:{ip}", 5):
+        raise HTTPException(status_code=429, detail="Demasiadas peticiones de scrape. Intenta en 1 minuto.")
 
 # Simple in-memory cache
 _cache = {}
@@ -46,6 +100,14 @@ SHEET_URL = os.getenv("SHEET_URL", "")
 
 class ScrapeRequest(BaseModel):
     sheet_url: str
+    @field_validator("sheet_url")
+    @classmethod
+    def validate_sheet_url(cls, v):
+        if not v or not v.startswith("https://"):
+            raise ValueError("URL debe ser HTTPS valida")
+        if "docs.google.com" not in v:
+            raise ValueError("URL debe ser de Google Sheets")
+        return v
 
 class ScrapeResponse(BaseModel):
     total: int
@@ -88,6 +150,12 @@ class InsumoRequest(BaseModel):
     descripcion: str
     un: str = "Unidad"
     valor: float = 0.0
+    @field_validator("valor")
+    @classmethod
+    def validate_valor(cls, v):
+        if v < 0:
+            raise ValueError("Valor no puede ser negativo")
+        return v
 
 class InsumoResponse(InsumoRequest):
     id: int
@@ -97,12 +165,17 @@ class InsumoResponse(InsumoRequest):
 class LoginRequest(BaseModel):
     email: str
     token: str
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Email invalido")
+        return v.strip().lower()
 
 class LoginResponse(BaseModel):
     id: int
     email: str
     tipo: str
-    token: str = ""
 
 class UpdateAjustadaRequest(BaseModel):
     descripcion_ajustada: str | None = None
@@ -117,11 +190,22 @@ class UsuarioRequest(BaseModel):
     token: str = ""
     activo: bool = True
     tipo: str = "usuario"
+    @field_validator("tipo")
+    @classmethod
+    def validate_tipo(cls, v):
+        if v not in ("admin", "usuario"):
+            raise ValueError("Tipo debe ser 'admin' o 'usuario'")
+        return v
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Email invalido")
+        return v.strip().lower()
 
 class UsuarioResponse(BaseModel):
     id: int
     email: str
-    token: str
     activo: bool
     tipo: str
     fecha_pago: datetime | None = None
@@ -135,17 +219,33 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     if not authorization:
         raise HTTPException(status_code=401, detail="Token requerido")
     if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Formato inválido")
+        raise HTTPException(status_code=401, detail="Formato invalido")
     token = authorization[7:]
-    user = db.query(Usuario).filter(Usuario.token == token, Usuario.activo == True).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Token inválido o usuario inactivo")
-    return user
+    users = db.query(Usuario).filter(Usuario.activo == True).all()
+    for user in users:
+        if hmac.compare_digest(token, user.token or ""):
+            return user
+    raise HTTPException(status_code=401, detail="Token invalido o usuario inactivo")
 
 def require_admin(user: Usuario = Depends(get_current_user)):
     if user.tipo != "admin":
         raise HTTPException(status_code=403, detail="Se requiere permisos de admin")
     return user
+
+
+# ─── URL Validation (SSRF prevention) ────────────────────────
+
+ALLOWED_SHEET_DOMAINS = ["docs.google.com", "sheets.google.com"]
+
+def _validate_sheet_url(url: str):
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme != "https":
+            raise ValueError("URL debe ser HTTPS")
+        if parsed.hostname not in ALLOWED_SHEET_DOMAINS:
+            raise ValueError(f"Dominio no permitido: {parsed.hostname}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ─── Upsert ───────────────────────────────────────────────────
@@ -238,32 +338,33 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
 # ─── Auth endpoints ───────────────────────────────────────────
 
 @app.post("/api/auth/register", response_model=LoginResponse)
-def register(req: LoginRequest, db: Session = Depends(get_db)):
+def register(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    rate_limit_login(request)
     existente = db.query(Usuario).filter(Usuario.email == req.email).first()
     if existente:
-        return LoginResponse(id=existente.id, email=existente.email, tipo=existente.tipo, token=existente.token)
+        raise HTTPException(status_code=400, detail="Email ya registrado. Contacta al administrador.")
     import secrets
-    token = secrets.token_hex(16)
+    token = secrets.token_hex(32)
     user = Usuario(email=req.email, token=token, activo=True, tipo="usuario")
     db.add(user)
     db.commit()
     db.refresh(user)
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
 
 @app.post("/api/auth/login", response_model=LoginResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
+def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+    rate_limit_login(request)
     user = db.query(Usuario).filter(
         Usuario.email == req.email,
-        Usuario.token == req.token,
         Usuario.activo == True
     ).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Credenciales inválidas")
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
+    if not user or not hmac.compare_digest(req.token, user.token or ""):
+        raise HTTPException(status_code=401, detail="Credenciales invalidas")
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
 
 @app.get("/api/auth/me", response_model=LoginResponse)
 def auth_me(user: Usuario = Depends(get_current_user)):
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, token=user.token)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
 
 @app.get("/api/usuarios", response_model=list[UsuarioResponse])
 def listar_usuarios(_admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
@@ -276,12 +377,12 @@ def crear_usuario(req: UsuarioRequest, _admin: Usuario = Depends(require_admin),
         raise HTTPException(status_code=400, detail="Email ya registrado")
     if not req.token:
         import secrets
-        req.token = secrets.token_hex(16)
+        req.token = secrets.token_hex(32)
     item = Usuario(email=req.email, token=req.token, activo=req.activo, tipo=req.tipo)
     db.add(item)
     db.commit()
     db.refresh(item)
-    return item
+    return UsuarioResponse(id=item.id, email=item.email, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
 
 @app.put("/api/usuarios/{usuario_id}", response_model=UsuarioResponse)
 def actualizar_usuario(usuario_id: int, req: UsuarioRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
@@ -296,7 +397,7 @@ def actualizar_usuario(usuario_id: int, req: UsuarioRequest, _admin: Usuario = D
     item.tipo = req.tipo
     db.commit()
     db.refresh(item)
-    return item
+    return UsuarioResponse(id=item.id, email=item.email, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
 
 @app.delete("/api/usuarios/{usuario_id}")
 def eliminar_usuario(usuario_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
@@ -315,7 +416,7 @@ def renovar_pago(usuario_id: int, _admin: Usuario = Depends(require_admin), db: 
     item.fecha_pago = func.now()
     db.commit()
     db.refresh(item)
-    return item
+    return UsuarioResponse(id=item.id, email=item.email, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
 
 
 # ─── Scraping ─────────────────────────────────────────────────
@@ -324,12 +425,16 @@ def renovar_pago(usuario_id: int, _admin: Usuario = Depends(require_admin), db: 
 async def scrape_from_sheet(
     req: ScrapeRequest,
     background_tasks: BackgroundTasks,
+    request: Request,
+    _admin: Usuario = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
+    rate_limit_scrape(request)
+    _validate_sheet_url(req.sheet_url)
     try:
         urls = await read_urls_from_sheet(req.sheet_url)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Error al leer Google Sheets")
     if not urls:
         raise HTTPException(status_code=400, detail="No se encontraron URLs en la hoja")
     background_tasks.add_task(_procesar_urls_bg, urls)
@@ -382,14 +487,16 @@ def _procesar_urls_bg(entries: list[dict]):
     finally:
         bg_db.close()
 
-@app.get("/scrape/daily", response_model=ScrapeResponse)
-async def scrape_daily(db: Session = Depends(get_db)):
+@app.post("/scrape/daily", response_model=ScrapeResponse)
+async def scrape_daily(request: Request, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    rate_limit_scrape(request)
     if not SHEET_URL:
         raise HTTPException(status_code=400, detail="SHEET_URL no configurada en .env")
+    _validate_sheet_url(SHEET_URL)
     try:
         entries = await read_urls_from_sheet(SHEET_URL)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Error al leer Google Sheets")
     if not entries:
         raise HTTPException(status_code=400, detail="No se encontraron URLs en la hoja")
     nuevos = actualizados = sin_cambio = fallidos = 0
@@ -446,14 +553,16 @@ async def scrape_daily(db: Session = Depends(get_db)):
     )
 
 @app.post("/sync/categories", response_model=SyncResponse)
-async def sync_categories(db: Session = Depends(get_db)):
-    """Sincroniza SOLO categorías desde Google Sheet sin hacer scrape. Rápido."""
+async def sync_categories(request: Request, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    """Sincroniza SOLO categorias desde Google Sheet sin hacer scrape. Rapido."""
+    rate_limit_scrape(request)
     if not SHEET_URL:
         raise HTTPException(status_code=400, detail="SHEET_URL no configurada")
+    _validate_sheet_url(SHEET_URL)
     try:
         entries = await read_urls_from_sheet(SHEET_URL)
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error al leer Google Sheets: {e}")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Error al leer Google Sheets")
     actualizados = 0
     sin_categoria = 0
     no_encontrados = 0
@@ -500,6 +609,7 @@ def listar_productos(
     tienda: str | None = None,
     skip: int = 0,
     limit: int = 500,
+    _user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     global _cache, _cache_time
@@ -546,14 +656,16 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
     return prod
 
 @app.get("/scrape/sync", response_model=ProductoResponse)
-def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, n02: str | None = None, n03: str | None = None, proveedor: str | None = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, n02: str | None = None, n03: str | None = None, proveedor: str | None = None, request: Request = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    rate_limit_scrape(request)
+    _validate_sheet_url(url)
     scraper = get_scraper(url)
     if not scraper:
         raise HTTPException(status_code=400, detail="URL no soportada")
     try:
         producto = scraper.scrape()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error al scrapear URL")
     _upsert_producto(db, producto, origen="sheet", categoria=categoria, n01=n01, n02=n02, n03=n03, proveedor=proveedor)
     db.commit()
     existente = (
@@ -584,7 +696,7 @@ def debug_sin_categoria(_admin: Usuario = Depends(require_admin), db: Session = 
 # ─── Stats ────────────────────────────────────────────────────
 
 @app.get("/api/stats")
-def stats(db: Session = Depends(get_db)):
+def stats(_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
     total = db.query(func.count(Producto.id)).scalar() or 0
     total_valor = db.query(func.coalesce(func.sum(Producto.valor), 0)).scalar() or 0.0
     hoy = db.query(func.count(Producto.id)).filter(
@@ -599,11 +711,11 @@ def stats(db: Session = Depends(get_db)):
 # ─── Insumos CRUD (legacy) ────────────────────────────────────
 
 @app.get("/api/insumos", response_model=list[InsumoResponse])
-def listar_insumos(db: Session = Depends(get_db)):
+def listar_insumos(_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
     return db.query(Insumo).order_by(Insumo.descripcion).all()
 
 @app.post("/api/insumos", response_model=InsumoResponse)
-def crear_insumo(req: InsumoRequest, db: Session = Depends(get_db)):
+def crear_insumo(req: InsumoRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     item = Insumo(descripcion=req.descripcion, un=req.un, valor=req.valor)
     db.add(item)
     db.commit()
@@ -611,7 +723,7 @@ def crear_insumo(req: InsumoRequest, db: Session = Depends(get_db)):
     return item
 
 @app.put("/api/insumos/{insumo_id}", response_model=InsumoResponse)
-def actualizar_insumo(insumo_id: int, req: InsumoRequest, db: Session = Depends(get_db)):
+def actualizar_insumo(insumo_id: int, req: InsumoRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     item = db.query(Insumo).filter(Insumo.id == insumo_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Insumo no encontrado")
@@ -623,7 +735,7 @@ def actualizar_insumo(insumo_id: int, req: InsumoRequest, db: Session = Depends(
     return item
 
 @app.delete("/api/insumos/{insumo_id}")
-def eliminar_insumo(insumo_id: int, db: Session = Depends(get_db)):
+def eliminar_insumo(insumo_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     item = db.query(Insumo).filter(Insumo.id == insumo_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Insumo no encontrado")
@@ -697,14 +809,17 @@ def startup():
     try:
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
         if not admin:
-            admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
-            admin_token = os.getenv("ADMIN_TOKEN", "admin123")
-            db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
-            db.commit()
-            print(f"Admin creado: {admin_email} / token: {admin_token}")
+            admin_email = os.getenv("ADMIN_EMAIL")
+            admin_token = os.getenv("ADMIN_TOKEN")
+            if not admin_email or not admin_token:
+                logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
+            else:
+                db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
+                db.commit()
+                logger.info(f"Admin seed creado: {admin_email}")
     except Exception as e:
         db.rollback()
-        print(f"Seed admin skipped: {e}")
+        logger.warning(f"Seed admin skipped: {e}")
     finally:
         db.close()
 

@@ -254,11 +254,11 @@ function syncCategoriesOnly() {
 function forceFullScrape() {
   var cfg = getConfig();
   try {
-    var resp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/daily', {
-      method: 'get',
-      headers: { 'Authorization': 'Bearer ' + cfg.token },
-      muteHttpExceptions: true
-    });
+      var resp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/daily', {
+        method: 'post',
+        headers: { 'Authorization': 'Bearer ' + cfg.token },
+        muteHttpExceptions: true
+      });
     if (resp.getResponseCode() === 200) {
       var data = JSON.parse(resp.getContentText());
       SpreadsheetApp.getUi().alert(
