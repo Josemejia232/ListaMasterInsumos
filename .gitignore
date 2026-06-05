@@ -1,9 +1,14 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-.env
-venv/
 .venv/
+venv/
 *.db
+
+# Entorno activo (se genera desde .env.develop o .env.production)
+.env
+
+# Legacy (no usado)
 htdocs/
+
 node_modules/
