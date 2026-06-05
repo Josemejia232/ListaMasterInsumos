@@ -8,7 +8,7 @@
 - 1.2. Usuario gratis: modo prueba gratuita para consultar la app. No se genera token automaticamente. Si el usuario paga, el admin le asigna un token de acceso.
 - 1.3. Login con token pre-asignado: usuario ingresa email + token -> se guardan en localStorage por separado (`user` = {id, email, tipo}, `auth_token` = token)
 - 1.4. Dos roles: **admin** y **usuario**
-- 1.5. Admin seed automatico al iniciar: lee `ADMIN_EMAIL` y `ADMIN_TOKEN` desde `.env` (token de 16 caracteres hex). Si no estan configurados, no crea admin.
+- 1.5. Admin seed automatico al iniciar: lee `ADMIN_EMAIL` y `ADMIN_TOKEN` desde `.env` (token de 16 caracteres hex). Si no estan configurados, no crea admin. Si el admin ya existe pero su token difiere del `.env`, se actualiza automaticamente al iniciar.
 - 1.6. Admin puede CRUD de usuarios (email, activo, tipo). El token se expone en la API de usuarios (`UsuarioResponse` incluye campo `token`) solo para el panel admin (requiere auth de admin).
 - 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Activo, Tipo, Token (primeros 16 chars + boton Copiar), FechaPago, Dias, Accion
   - FechaPago: fecha del ultimo pago del usuario (columna `fecha_pago` en BD)
@@ -60,7 +60,7 @@
 
 ### 2.7. Validacion de entrada
 - Pydantic validators en schemas: email, tipo de usuario, URLs
-- URLs de scraping restringidas a dominios Google Sheets (`docs.google.com`)
+- URLs de sheet (`POST /scrape`, `POST /scrape/daily`) restringidas a dominios Google Sheets (`docs.google.com`). URL de producto (`GET /scrape/sync`) solo valida HTTPS (SSRF prevention).
 - Valores negativos rechazados en insumos
 
 ### 2.8. Proteccion de credenciales
@@ -89,9 +89,9 @@
 - 4.5. JSON-LD case-insensitive para `@type`, `offers` como array
 - 4.6. Upsert: si precio cambio -> guarda valor anterior y actualiza; si no cambio -> saltea (pero siempre actualiza categoria)
 - 4.7. Endpoint `POST /scrape/daily` (admin): procesa todas las URLs de la hoja configurada en `SHEET_URL`
-- 4.8. Endpoint `GET /scrape/sync` (admin): scrapea una URL especifica y devuelve el producto
+- 4.8. Endpoint `GET /scrape/sync` (admin): scrapea una URL especifica y devuelve el producto. Invalida el cache de `/productos` al actualizar.
 - 4.9. Script standalone `app/daily.py` para cron externo
-- 4.10. Validacion de URLs: solo se permiten dominios Google Sheets (`docs.google.com`)
+- 4.10. Validacion de URLs: endpoints de sheet (`POST /scrape`, `POST /scrape/daily`) solo permiten dominios Google Sheets. `GET /scrape/sync` solo valida HTTPS para evitar SSRF.
 
 ## 5. Frontend
 - 5.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estatico
@@ -132,9 +132,12 @@
 ## 7. Sincronizacion Google Sheets <-> BD
 
 - 7.1. **Sheet -> BD**: Al ejecutar `POST /scrape/daily` o `python -m app.daily`, la app lee las URLs y categorias desde Google Sheets, scrapea los precios y los upserta en la tabla `productos`. Si una URL nueva aparece en el sheet, se crea un nuevo registro en BD. Si cambia la categoria en el sheet, se actualiza en BD aunque el precio no haya cambiado.
-- 7.2. **BD -> Sheet (pendiente)**: Cuando el scraper detecta un cambio de precio en una URL, ese nuevo precio debe escribirse de vuelta en el Google Sheet (columna ULTIMO PRECIO). Actualmente esto no esta implementado. Se requiere Google Apps Script (`scripts/syncPrices.gs`) que:
-  - Se ejecuta periodicamente (time-driven trigger)
-  - Llama a `POST /scrape/daily` para actualizar la BD
-  - Consulta `/productos` y escribe los precios actuales en el sheet
-  - Para produccion, la API debe tener URL publica (Render). Para local, usar ngrok.
+- 7.2. **BD -> Sheet**: Implementado via Google Apps Script (`scripts/syncPrices.gs`) que:
+  - Se ejecuta manualmente (menu ListaMaster) o con trigger time-driven (cada hora)
+  - Lee config desde celdas **H1** (URL de la API) y **H2** (token de admin)
+  - Scrapea URLs nuevas via `GET /scrape/sync` (una por una con pausa 1-2s)
+  - Consulta `GET /productos` y escribe los precios actuales en el sheet
+  - Sincroniza categorias via `POST /sync/categories`
+  - Para produccion: URL en H1 = `https://listamasterinsumos.onrender.com`, token en H2 = `ADMIN_TOKEN` del .env
+  - Para local: usar ngrok para exponer la API local
 - 7.3. La URL del Google Sheet (`SHEET_URL`) nunca se expone al frontend.
