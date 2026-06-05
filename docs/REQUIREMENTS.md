@@ -25,6 +25,7 @@
 
 ### 2.1. Endpoints publicos (sin auth)
 - `GET /api/insumos` — datos de productos con categorias (descripcion, unidad, valor, categoria, n01, n02, n03, proveedor). Consulta la tabla `productos`.
+- `GET /api/check-email?email=...` — verifica si un email ya esta registrado como usuario (retorna `{"registrado": true/false}`).
 - `GET /api/stats` — estadisticas generales (total, valor total, tiendas)
 
 ### 2.2. Endpoints protegidos (requieren Bearer token)
@@ -94,7 +95,7 @@
 
 ## 5. Frontend
 - 5.1. Single-page application (HTML + CSS + JS vanilla) servida por FastAPI como estatico
-- 5.2. Pagina de login con dos tabs: "Usuario gratis" (prueba gratuita, debe ingresar email) e "Ingresar con token" (login con email + token asignado por el admin)
+- 5.2. Pagina de login con dos tabs: "Usuario gratis" (prueba gratuita, debe ingresar email) e "Ingresar con token" (login con email + token asignado por el admin). Si el email ya esta registrado como usuario, se muestra error: "Este email ya tiene token. Usa la pestaña Ingresar con token."
 - 5.3. Sidebar colapsible, oculto por defecto, responsive (media queries)
 - 5.3.1. El menu tiene dos modulos segun el rol:
   - **Admin**: modulo **ADMIN** (Productos, Usuarios) + modulo **LISTA INSUMOS** (Insumos) con contador total
