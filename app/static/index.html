@@ -195,7 +195,7 @@ h2{font-size:1.05rem;margin-bottom:1rem;color:var(--text)}
       <div class="table-wrap">
         <h3 style="padding:.75rem;font-size:.9rem;color:var(--muted)">USUARIOS</h3>
         <table>
-          <thead><tr><th>ID</th><th>Email</th><th>Activo</th><th>Tipo</th><th>FechaPago</th><th>Dias</th><th style="width:190px">Acci&oacute;n</th></tr></thead>
+          <thead><tr><th>ID</th><th>Email</th><th>Activo</th><th>Tipo</th><th>Token</th><th>FechaPago</th><th>Dias</th><th style="width:190px">Acci&oacute;n</th></tr></thead>
           <tbody id="usr-tbody"></tbody>
         </table>
         <div class="empty" id="usr-empty">No hay usuarios.</div>
@@ -597,6 +597,7 @@ async function cargarUsuarios(){
       return `<tr>
       <td>${u.id}</td><td>${escapeHtml(u.email)}</td>
       <td style="color:${u.activo?'var(--green)':'var(--red)'}">${u.activo ? 'Si' : 'No'}</td><td>${escapeHtml(u.tipo)}</td>
+      <td><code style="font-size:0.75rem;word-break:break-all">${escapeHtml(u.token.substring(0,16))}...</code> <button class="btn btn-sm btn-outline" onclick="copiarToken('${escapeHtml(u.token)}')" title="Copiar token">Copiar</button></td>
       <td>${fp ? fp.toLocaleDateString('es-CO') : '-'}</td>
       <td style="color:${colorDias};font-weight:600">${dias != null ? dias : '-'}</td>
       <td><div class="actions">
@@ -626,7 +627,9 @@ async function guardarUsuario(){
       await apiFetch('/api/usuarios/'+_editUsrId, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
       _editUsrId=null; document.querySelector('#section-usuarios .btn-green').textContent='Agregar';
     } else {
-      await apiFetch('/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      const res = await apiFetch('/api/usuarios', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      const nuevo = await res.json();
+      alert('Usuario creado!\n\nToken: ' + nuevo.token + '\n\nCopia este token y enviaselo al usuario.');
     }
     document.getElementById('usr-email').value=''; document.getElementById('usr-token').value='';
     document.getElementById('usr-tipo').value='usuario';
@@ -649,6 +652,11 @@ async function renovarPago(id){
     await apiFetch('/api/usuarios/'+id+'/pago', {method:'POST'});
     await cargarUsuarios();
   } catch(e){}
+}
+function copiarToken(token){
+  navigator.clipboard.writeText(token).then(()=>alert('Token copiado!')).catch(()=>{
+    var t=document.createElement('textarea'); t.value=token; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); alert('Token copiado!');
+  });
 }
 </script>
 </body>

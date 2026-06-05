@@ -206,6 +206,7 @@ class UsuarioRequest(BaseModel):
 class UsuarioResponse(BaseModel):
     id: int
     email: str
+    token: str
     activo: bool
     tipo: str
     fecha_pago: datetime | None = None
@@ -382,7 +383,7 @@ def crear_usuario(req: UsuarioRequest, _admin: Usuario = Depends(require_admin),
     db.add(item)
     db.commit()
     db.refresh(item)
-    return UsuarioResponse(id=item.id, email=item.email, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
+    return UsuarioResponse(id=item.id, email=item.email, token=item.token, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
 
 @app.put("/api/usuarios/{usuario_id}", response_model=UsuarioResponse)
 def actualizar_usuario(usuario_id: int, req: UsuarioRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
@@ -397,7 +398,7 @@ def actualizar_usuario(usuario_id: int, req: UsuarioRequest, _admin: Usuario = D
     item.tipo = req.tipo
     db.commit()
     db.refresh(item)
-    return UsuarioResponse(id=item.id, email=item.email, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
+    return UsuarioResponse(id=item.id, email=item.email, token=item.token, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
 
 @app.delete("/api/usuarios/{usuario_id}")
 def eliminar_usuario(usuario_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
@@ -416,7 +417,7 @@ def renovar_pago(usuario_id: int, _admin: Usuario = Depends(require_admin), db: 
     item.fecha_pago = func.now()
     db.commit()
     db.refresh(item)
-    return UsuarioResponse(id=item.id, email=item.email, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
+    return UsuarioResponse(id=item.id, email=item.email, token=item.token, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
 
 
 # ─── Scraping ─────────────────────────────────────────────────
