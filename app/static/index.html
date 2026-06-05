@@ -254,12 +254,12 @@ function login(){
   const token = document.getElementById('login-token').value.trim();
   if(!email || !token){ document.getElementById('login-error').textContent='Completa todos los campos'; return; }
   fetch(API+'/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token})})
-  .then(r=>{ if(!r.ok){ document.getElementById('login-error').textContent='Credenciales inválidas'; throw new Error('fail'); } return r.json(); })
-  .then(u=>{ _user=u; localStorage.setItem('user', JSON.stringify(u)); initApp(); })
+  .then(r=>{ if(!r.ok){ document.getElementById('login-error').textContent='Credenciales invalidas'; throw new Error('fail'); } return r.json(); })
+  .then(u=>{ _user=u; localStorage.setItem('user', JSON.stringify(u)); localStorage.setItem('auth_token', token); initApp(); })
   .catch(()=>{});
 }
 function logout(){
-  _user = null; _viewMode = null; localStorage.removeItem('user');
+  _user = null; _viewMode = null; localStorage.removeItem('user'); localStorage.removeItem('auth_token');
   document.getElementById('login-wrap').style.display='flex';
   document.getElementById('sidebar').style.display='none';
   document.querySelector('.content').style.display='none';
@@ -324,12 +324,15 @@ function initApp(){
 }
 (function(){
   const saved = localStorage.getItem('user');
+  const savedToken = localStorage.getItem('auth_token');
   if(saved){
     try{ _user = JSON.parse(saved); }catch(e){ _user = null; }
-    if(_user){
-      fetch(API+'/api/auth/me', {headers:{'Authorization':'Bearer '+_user.token}})
+    if(_user && savedToken){
+      fetch(API+'/api/auth/me', {headers:{'Authorization':'Bearer '+savedToken}})
         .then(r => { if(r.ok) return r.json().then(u => { _user = u; initApp(); }); logout(); })
         .catch(() => logout());
+    } else {
+      logout();
     }
   }
   var _refreshTimer = setInterval(() => {
@@ -359,14 +362,15 @@ function descripcionAjustada(desc, id, ajustada){
   const idx = ((id * 7919 + 12345) % 233280) % sufijos.length;
   return desc + sufijos[idx];
 }
-const $auth = () => _user ? 'Bearer '+_user.token : '';
+const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Bearer '+t : ''; };
 
 async function apiFetch(url, opts){
   opts = opts || {};
   opts.headers = opts.headers || {};
-  if(_user) opts.headers['Authorization'] = $auth();
+  var t = localStorage.getItem('auth_token');
+  if(t) opts.headers['Authorization'] = 'Bearer '+t;
   var r = await fetch(API+url, opts);
-  if(_user && r.status === 401){ logout(); throw new Error('Sesión expirada'); }
+  if(t && r.status === 401){ logout(); throw new Error('Sesion expirada'); }
   return r;
 }
 
