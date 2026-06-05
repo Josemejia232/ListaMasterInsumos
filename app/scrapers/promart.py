@@ -16,15 +16,10 @@ class PromartScraper(GenericScraper):
         return "promart" in self.url.lower()
 
     def scrape(self) -> ProductoScraped:
+        api_data = self._try_api()
+        if api_data:
+            return api_data
         product = super().scrape()
-        if not product.codigo or not product.valor:
-            api_data = self._try_api()
-            if api_data:
-                product.codigo = api_data.codigo or product.codigo
-                product.descripcion = api_data.descripcion or product.descripcion
-                product.valor = api_data.valor or product.valor
-                if api_data.unidad != "Unidad":
-                    product.unidad = api_data.unidad
         return product
 
     def _try_api(self) -> ProductoScraped | None:
