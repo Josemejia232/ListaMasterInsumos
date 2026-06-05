@@ -440,10 +440,17 @@ async function syncCategorias(){
 // ─── Productos ──────────────────────────────────────────
 async function cargarVerInsumos(){
   try {
-    const r = await apiFetch('/productos?limit=500');
+    var url = '/productos?limit=500';
+    if(!_user) url = '/api/insumos';
+    const r = await apiFetch(url);
     if(!r.ok) return;
     var data = await r.text();
     var newData = JSON.parse(data);
+    if(!_user){
+      newData = newData.map(function(p){
+        return {id:p.id, descripcion:p.descripcion, unidad:p.un, valor:p.valor, categoria:p.categoria, n01:'', n02:'', n03:'', proveedor:'', descripcion_ajustada:null, valor_anterior:null};
+      });
+    }
     var changed = true;
     if(_verProds.length === newData.length){
       var oldIds = _verProds.map(function(p){ return p.id + '|' + p.valor + '|' + p.categoria + '|' + p.descripcion_ajustada; }).join();

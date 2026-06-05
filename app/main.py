@@ -696,7 +696,7 @@ def debug_sin_categoria(_admin: Usuario = Depends(require_admin), db: Session = 
 # ─── Stats ────────────────────────────────────────────────────
 
 @app.get("/api/stats")
-def stats(_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+def stats(db: Session = Depends(get_db)):
     total = db.query(func.count(Producto.id)).scalar() or 0
     total_valor = db.query(func.coalesce(func.sum(Producto.valor), 0)).scalar() or 0.0
     hoy = db.query(func.count(Producto.id)).filter(
@@ -711,7 +711,7 @@ def stats(_user: Usuario = Depends(get_current_user), db: Session = Depends(get_
 # ─── Insumos CRUD (legacy) ────────────────────────────────────
 
 @app.get("/api/insumos", response_model=list[InsumoResponse])
-def listar_insumos(_user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+def listar_insumos(db: Session = Depends(get_db)):
     return db.query(Insumo).order_by(Insumo.descripcion).all()
 
 @app.post("/api/insumos", response_model=InsumoResponse)
