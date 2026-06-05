@@ -6,10 +6,10 @@
 ## 1. Autenticacion y roles
 - 1.1. Login con email + token (token pre-asignado por el admin)
 - 1.2. Usuario gratis: modo prueba gratuita para consultar la app. No se genera token automaticamente. Si el usuario paga, el admin le asigna un token de acceso.
-- 1.3. Login con token pre-asignado: usuario ingresa email + token -> se guardan en localStorage
+- 1.3. Login con token pre-asignado: usuario ingresa email + token -> se guardan en localStorage por separado (`user` = {id, email, tipo}, `auth_token` = token)
 - 1.4. Dos roles: **admin** y **usuario**
-- 1.5. Admin seed automatico al iniciar: lee `ADMIN_EMAIL` y `ADMIN_TOKEN` desde `.env`. Si no estan configurados, no crea admin.
-- 1.6. Admin puede CRUD de usuarios (email, activo, tipo). El token NO se expone en la API de usuarios.
+- 1.5. Admin seed automatico al iniciar: lee `ADMIN_EMAIL` y `ADMIN_TOKEN` desde `.env` (token de 16 caracteres hex). Si no estan configurados, no crea admin.
+- 1.6. Admin puede CRUD de usuarios (email, activo, tipo). El token NO se expone en la API de usuarios (LoginResponse no incluye campo token).
 - 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Activo, Tipo, FechaPago, Dias, Accion
   - FechaPago: fecha del ultimo pago del usuario (columna `fecha_pago` en BD)
   - Dias: dias restantes desde FechaPago hasta completar 30 dias. Si <= 0 -> rojo (vencido), <= 5 -> amarillo, > 5 -> verde
@@ -17,8 +17,9 @@
   - Accion: boton Editar, Activar/Bloquear, Eliminar
 - 1.7. Bearer token en header `Authorization` para endpoints protegidos
 - 1.8. El usuario no ve el contenido del admin
-- 1.9. Token generation: `secrets.token_hex(32)` (256 bits de entropia)
+- 1.9. Token generation: `secrets.token_hex(8)` (16 caracteres hex)
 - 1.10. Token comparison: `hmac.compare_digest()` (timing-safe)
+- 1.11. Frontend almacena token por separado: `localStorage.user` = {id, email, tipo}, `localStorage.auth_token` = token. La funcion `apiFetch()` lee `auth_token` para el header Authorization.
 
 ## 2. Seguridad
 
@@ -118,7 +119,7 @@
 ## 6. Despliegue
 - 6.1. Servir con uvicorn via Procfile en Render
 - 6.2. Python 3.12.7 (runtime.txt)
-- 6.3. Variables de entorno: `DATABASE_URL`, `SHEET_URL`, `ADMIN_EMAIL`, `ADMIN_TOKEN`, `ALLOWED_ORIGINS`
+- 6.3. Variables de entorno: `DATABASE_URL`, `SHEET_URL`, `ADMIN_EMAIL`, `ADMIN_TOKEN` (16 chars hex), `ALLOWED_ORIGINS`
 - 6.4. Comando dev local: `scripts/start-dev.bat` (Windows) o `bash scripts/start-dev.sh` (Linux/Mac)
 - 6.5. Comando prod local: `scripts/start-prod.bat` (Windows) o `bash scripts/start-prod.sh` (Linux/Mac)
 - 6.6. Estructura de archivos:
