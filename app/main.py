@@ -675,7 +675,13 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
 @app.get("/scrape/sync", response_model=ProductoResponse)
 def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, n02: str | None = None, n03: str | None = None, proveedor: str | None = None, request: Request = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     rate_limit_scrape(request)
-    _validate_sheet_url(url)
+    # Validar que la URL sea HTTPS (SSRF prevention)
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme != "https":
+            raise ValueError("URL debe ser HTTPS")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
     scraper = get_scraper(url)
     if not scraper:
         raise HTTPException(status_code=400, detail="URL no soportada")
@@ -685,6 +691,8 @@ def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, 
         raise HTTPException(status_code=500, detail="Error al scrapear URL")
     _upsert_producto(db, producto, origen="sheet", categoria=categoria, n01=n01, n02=n02, n03=n03, proveedor=proveedor)
     db.commit()
+    global _cache_time
+    _cache_time = 0
     existente = (
         db.query(Producto)
         .filter(Producto.codigo == producto.codigo, Producto.tienda == producto.tienda)
@@ -829,16 +837,21 @@ def startup():
 
     db = SessionLocal()
     try:
+        admin_env_email = os.getenv("ADMIN_EMAIL")
+        admin_env_token = os.getenv("ADMIN_TOKEN")
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
         if not admin:
-            admin_email = os.getenv("ADMIN_EMAIL")
-            admin_token = os.getenv("ADMIN_TOKEN")
-            if not admin_email or not admin_token:
+            if not admin_env_email or not admin_env_token:
                 logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
             else:
-                db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
+                db.add(Usuario(email=admin_env_email, token=admin_env_token, activo=True, tipo="admin"))
                 db.commit()
-                logger.info(f"Admin seed creado: {admin_email}")
+                logger.info(f"Admin seed creado: {admin_env_email}")
+        elif admin_env_token and admin.token != admin_env_token:
+            old_token = admin.token
+            admin.token = admin_env_token
+            db.commit()
+            logger.info(f"Admin token actualizado: {old_token[:8]}... -> {admin_env_token[:8]}...")
     except Exception as e:
         db.rollback()
         logger.warning(f"Seed admin skipped: {e}")

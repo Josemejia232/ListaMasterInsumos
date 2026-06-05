@@ -9,8 +9,8 @@
  *   ⑤ Sincroniza categorías desde el sheet hacia la BD
  *
  * Configuración:
- *   Celda Z1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
- *   Celda Z2 = Token de admin
+ *   Celda H1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
+ *   Celda H2 = Token de admin
  *
  * Uso:
  *   - Menú "ListaMaster" en la hoja → ejecutar manualmente
@@ -33,11 +33,11 @@ function onOpen() {
 
 function getConfig() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var apiUrl = sheet.getRange('Z1').getValue();
-  var token  = sheet.getRange('Z2').getValue();
+  var apiUrl = sheet.getRange('H1').getValue();
+  var token  = sheet.getRange('H2').getValue();
   return {
     apiUrl: (apiUrl && apiUrl.toString().trim()) ? apiUrl.toString().trim() : 'https://listamasterinsumos.onrender.com',
-    token:  (token && token.toString().trim())  ? token.toString().trim()  : 'admin123'
+    token:  (token && token.toString().trim())  ? token.toString().trim()  : 'REDACTED_ADMIN_TOKEN'
   };
 }
 
