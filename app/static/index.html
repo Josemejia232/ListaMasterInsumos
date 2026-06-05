@@ -428,9 +428,14 @@ async function syncCategorias(){
   try {
     var r = await apiFetch('/sync/categories', {method:'POST'});
     var d = await r.json();
+    if(!r.ok){
+      msg.style.color = 'var(--red)';
+      msg.textContent = 'Error: ' + (d.detail || 'No se pudo sincronizar');
+    } else {
+      msg.style.color = 'var(--green)';
+      msg.textContent = 'Actualizados: ' + d.actualizados + ' | Sin categoría en sheet: ' + d.sin_categoria + ' | No encontrados: ' + d.no_encontrados;
+    }
     msg.style.display = 'block';
-    msg.style.color = 'var(--green)';
-    msg.textContent = 'Actualizados: ' + d.actualizados + ' | Sin categoría en sheet: ' + d.sin_categoria + ' | No encontrados: ' + d.no_encontrados;
     cargarVerInsumos();
   } catch(e){
     msg.style.display = 'block';
