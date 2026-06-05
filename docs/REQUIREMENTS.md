@@ -9,8 +9,8 @@
 - 1.3. Login con token pre-asignado: usuario ingresa email + token -> se guardan en localStorage por separado (`user` = {id, email, tipo}, `auth_token` = token)
 - 1.4. Dos roles: **admin** y **usuario**
 - 1.5. Admin seed automatico al iniciar: lee `ADMIN_EMAIL` y `ADMIN_TOKEN` desde `.env` (token de 16 caracteres hex). Si no estan configurados, no crea admin.
-- 1.6. Admin puede CRUD de usuarios (email, activo, tipo). El token NO se expone en la API de usuarios (LoginResponse no incluye campo token).
-- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Activo, Tipo, FechaPago, Dias, Accion
+- 1.6. Admin puede CRUD de usuarios (email, activo, tipo). El token se expone en la API de usuarios (`UsuarioResponse` incluye campo `token`) solo para el panel admin (requiere auth de admin).
+- 1.6.1. Panel USUARIOS (solo admin): tabla con ID, Email, Activo, Tipo, Token (primeros 16 chars + boton Copiar), FechaPago, Dias, Accion
   - FechaPago: fecha del ultimo pago del usuario (columna `fecha_pago` en BD)
   - Dias: dias restantes desde FechaPago hasta completar 30 dias. Si <= 0 -> rojo (vencido), <= 5 -> amarillo, > 5 -> verde
   - Accion: boton $ (Pagar) que actualiza FechaPago a la fecha actual, reiniciando el ciclo de 30 dias
@@ -24,7 +24,7 @@
 ## 2. Seguridad
 
 ### 2.1. Endpoints publicos (sin auth)
-- `GET /api/insumos` — datos basicos de insumos legacy (descripcion, unidad, valor, categoria)
+- `GET /api/insumos` — datos de productos con categorias (descripcion, unidad, valor, categoria, n01, n02, n03, proveedor). Consulta la tabla `productos`.
 - `GET /api/stats` — estadisticas generales (total, valor total, tiendas)
 
 ### 2.2. Endpoints protegidos (requieren Bearer token)
@@ -71,7 +71,7 @@
 ## 3. Base de datos
 - 3.1. Usar **exclusivamente** Neon PostgreSQL (sin archivos locales ni SQLite)
 - 3.2. Tabla `productos`: id (PK), codigo, descripcion, unidad, valor, valor_anterior, origen ('sheet'|'manual'), categoria, n01, n02, n03, proveedor, descripcion_ajustada, tienda, url_origen, created_at, updated_at
-- 3.3. Tabla `insumos` (legacy): id (PK), descripcion, un, valor, categoria, created_at
+- 3.3. Tabla `insumos` (legacy CRUD): id (PK), descripcion, un, valor, categoria, created_at. Solo usada por endpoints CRUD admin (`POST/PUT/DELETE /api/insumos`). El GET publico `/api/insumos` consulta la tabla `productos`.
 - 3.4. Tabla `usuarios`: id (PK), email (unique), token, activo (bool), tipo ('admin'|'usuario'), fecha_pago, created_at
 - 3.5. Unique constraint `(codigo, tienda)` en productos
 - 3.6. `origen` columna: "sheet" (Google Sheets) o "manual" (scrape directo)
@@ -101,14 +101,14 @@
   - **Usuario/Guest**: modulo **LISTA INSUMOS** (Insumos) con contador total
 - 5.4. Vista admin (sidebar): Productos, Usuarios
 - 5.5. Vista usuario/guest (sidebar): Insumos
-- 5.6. Guest mode: usa `/api/insumos` (publico) en vez de `/productos` (protegido)
-- 5.7. Tabla unica para admin y usuario: columnas ID (formato 0001), DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
+- 5.6. Guest mode: usa `/api/insumos` (publico) en vez de `/productos` (protegido). `/api/insumos` retorna los mismos datos de la tabla `productos` con categorias (n01, n02, n03, proveedor).
+- 5.7. Tabla unica para admin, usuario e invitado: columnas DESCRIPCION, UNIDAD, VALOR, PROVEEDOR
   - Muestra los datos reales del scraper sin ajustes ni variaciones
   - Los insumos se agrupan jerarquicamente por N01 > N02 > N03 con encabezados colapsables
   - Solo N01 es colapsable (expande/contrae todo su subnivel)
   - N02 y N03 son headers visuales con padding .05rem
   - Botones "Expandir todo" y "Contraer todo" para controlar la vista
-  - Admin adicionalmente tiene panel USUARIOS y columna DESCRIPCION editable
+  - Admin adicionalmente tiene vista raw (datos originales editables) y panel USUARIOS
   - La vista muestra el numero total de insumos (ej: "Total: X insumos") sobre la tabla
 - 5.8. Flechas de cambio de precio: rojo si subio, verde si bajo, con porcentaje
 - 5.9. Auto-refresh de productos cada 30 segundos
