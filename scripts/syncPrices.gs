@@ -154,6 +154,8 @@ function syncPrices() {
 
   if (!productos || !productos.length) { Logger.log('No hay productos'); return; }
 
+  Logger.log('Productos obtenidos: ' + productos.length);
+
   var now = new Date();
   var actualizados = 0;
   var cambios = 0;
@@ -171,7 +173,7 @@ function syncPrices() {
     for (var m = 0; m < productos.length; m++) {
       if (productos[m].url_origen === sUrl) { match = productos[m]; break; }
     }
-    if (!match) continue;
+    if (!match) { Logger.log('  Sin match: ' + sUrl.substring(0, 50)); continue; }
 
     var precioDB = match.valor;
     var precioStr = '$' + precioDB.toLocaleString('es-CO');
@@ -194,16 +196,12 @@ function syncPrices() {
       value: now
     });
 
-    // Actualizar nombre del producto en col B si cambió
-    var nombreDB = match.descripcion || '';
-    var nombreOld = data[k][nombreCol] ? data[k][nombreCol].toString().trim() : '';
-    if (nombreOld !== nombreDB) {
-      batchNombreUpdates.push({
-        row: k + 1,
-        col: nombreCol + 1,
-        value: nombreDB
-      });
-    }
+    // Escribir nombre del producto en col B (siempre)
+    batchNombreUpdates.push({
+      row: k + 1,
+      col: nombreCol + 1,
+      value: match.descripcion || ''
+    });
 
     actualizados++;
   }
