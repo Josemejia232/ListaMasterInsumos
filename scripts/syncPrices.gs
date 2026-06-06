@@ -54,32 +54,31 @@ function syncPrices() {
   // Detectar columnas
   var urlCol = headers.indexOf('insumo');
   if (urlCol === -1) urlCol = headers.indexOf('url');
-  if (urlCol === -1) { Logger.log('No se encontró columna URL/INSUMO'); return; }
+  if (urlCol === -1) {
+    urlCol = 0; // Col A por defecto
+    sheet.getRange(1, 1).setValue('URL');
+    headers[0] = 'url';
+  }
 
-  // Columna B = Nombre del producto
-  var nombreCol = 1; // Col B (0-based)
-  var nombreHeader = (headers[nombreCol] || '').trim();
-  if (!nombreHeader || nombreHeader.indexOf('nombre') === -1) {
+  // Col B = Nombre del producto
+  var nombreCol = 1;
+  if ((headers[nombreCol] || '').indexOf('nombre') === -1) {
     sheet.getRange(1, nombreCol + 1).setValue('NOMBRE PRODUCTO');
     headers[nombreCol] = 'nombre producto';
   }
 
-  var precioCol = -1;
-  for (var i = 0; i < headers.length; i++) {
-    if (headers[i].indexOf('precio') !== -1) { precioCol = i; break; }
-  }
-  if (precioCol === -1) {
-    precioCol = 8; // Col I (0-based)
+  // Col F = ÚLTIMO PRECIO
+  var precioCol = 5;
+  if ((headers[precioCol] || '').indexOf('precio') === -1) {
     sheet.getRange(1, precioCol + 1).setValue('ÚLTIMO PRECIO');
+    headers[precioCol] = 'último precio';
   }
 
-  var fechaCol = -1;
-  for (var j = 0; j < headers.length; j++) {
-    if (headers[j].indexOf('actualizaci') !== -1) { fechaCol = j; break; }
-  }
-  if (fechaCol === -1) {
-    fechaCol = 9; // Col J (0-based)
+  // Col G = ÚLTIMA ACTUALIZACIÓN
+  var fechaCol = 6;
+  if ((headers[fechaCol] || '').indexOf('actualizaci') === -1) {
     sheet.getRange(1, fechaCol + 1).setValue('ÚLTIMA ACTUALIZACIÓN');
+    headers[fechaCol] = 'última actualización';
   }
 
   // Detectar columna CATEGORIA
