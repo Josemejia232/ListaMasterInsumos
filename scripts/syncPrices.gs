@@ -56,22 +56,29 @@ function syncPrices() {
   if (urlCol === -1) urlCol = headers.indexOf('url');
   if (urlCol === -1) { Logger.log('No se encontró columna URL/INSUMO'); return; }
 
+  // Columna B = Nombre del producto
+  var nombreCol = 1; // Col B (0-based)
+  var nombreHeader = (headers[nombreCol] || '').trim();
+  if (!nombreHeader || nombreHeader.indexOf('nombre') === -1) {
+    sheet.getRange(1, nombreCol + 1).setValue('NOMBRE PRODUCTO');
+    headers[nombreCol] = 'nombre producto';
+  }
+
   var precioCol = -1;
   for (var i = 0; i < headers.length; i++) {
     if (headers[i].indexOf('precio') !== -1) { precioCol = i; break; }
   }
+  if (precioCol === -1) {
+    precioCol = 8; // Col I (0-based)
+    sheet.getRange(1, precioCol + 1).setValue('ÚLTIMO PRECIO');
+  }
+
   var fechaCol = -1;
   for (var j = 0; j < headers.length; j++) {
     if (headers[j].indexOf('actualizaci') !== -1) { fechaCol = j; break; }
   }
-
-  // Crear columnas si no existen
-  if (precioCol === -1) {
-    precioCol = headers.length;
-    sheet.getRange(1, precioCol + 1).setValue('ÚLTIMO PRECIO');
-  }
   if (fechaCol === -1) {
-    fechaCol = headers.length + (precioCol === headers.length ? 1 : 0);
+    fechaCol = 9; // Col J (0-based)
     sheet.getRange(1, fechaCol + 1).setValue('ÚLTIMA ACTUALIZACIÓN');
   }
 
@@ -150,8 +157,9 @@ function syncPrices() {
   var now = new Date();
   var actualizados = 0;
   var cambios = 0;
-  var batchUpdates = [];  // [fila, colPrecio, valor, colFecha]
+  var batchUpdates = [];
   var batchDateUpdates = [];
+  var batchNombreUpdates = [];
 
   // ④ Comparar y actualizar
   for (var k = 1; k < data.length; k++) {
@@ -185,10 +193,22 @@ function syncPrices() {
       col: fechaCol + 1,
       value: now
     });
+
+    // Actualizar nombre del producto en col B si cambió
+    var nombreDB = match.descripcion || '';
+    var nombreOld = data[k][nombreCol] ? data[k][nombreCol].toString().trim() : '';
+    if (nombreOld !== nombreDB) {
+      batchNombreUpdates.push({
+        row: k + 1,
+        col: nombreCol + 1,
+        value: nombreDB
+      });
+    }
+
     actualizados++;
   }
 
-  // ⑤ Escribir batch (más eficiente que setValue por celda)
+  // ⑤ Escribir batch
   if (batchUpdates.length > 0) {
     for (var b = 0; b < batchUpdates.length; b++) {
       var up = batchUpdates[b];
@@ -204,6 +224,14 @@ function syncPrices() {
     }
   }
 
+  if (batchNombreUpdates.length > 0) {
+    for (var n = 0; n < batchNombreUpdates.length; n++) {
+      var nu = batchNombreUpdates[n];
+      sheet.getRange(nu.row, nu.col).setValue(nu.value);
+    }
+    Logger.log('Nombres actualizados: ' + batchNombreUpdates.length);
+  }
+
   // ⑥ Sincronizar categorías automáticamente (sin scrape, rápido)
   try {
     var catResp = UrlFetchApp.fetch(cfg.apiUrl + '/sync/categories', {
@@ -217,7 +245,7 @@ function syncPrices() {
     }
   } catch (e) { Logger.log('Sync categorías error: ' + e); }
 
-  Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas actualizadas, ' + cambios + ' cambios de precio');
+  Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas, ' + cambios + ' precios, ' + batchNombreUpdates.length + ' nombres');
 }
 
 
