@@ -163,16 +163,40 @@ function syncPrices() {
   var batchNombreUpdates = [];
 
   // ④ Comparar y actualizar
+  var matches = 0;
+  var sinMatch = 0;
   for (var k = 1; k < data.length; k++) {
     var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
     if (!sUrl) continue;
 
-    // Buscar producto por URL
+    // Buscar producto por URL (exacta primero, luego normalizada)
     var match = null;
     for (var m = 0; m < productos.length; m++) {
-      if (productos[m].url_origen === sUrl) { match = productos[m]; break; }
+      var pu = productos[m].url_origen;
+      if (pu === sUrl) { match = productos[m]; break; }
     }
-    if (!match) { Logger.log('  Sin match: ' + sUrl.substring(0, 50)); continue; }
+
+    // Fallback: normalizar ambas URLs (sin trailing slash)
+    if (!match) {
+      var sNorm = sUrl.replace(/\/+$/, '').toLowerCase();
+      for (var m = 0; m < productos.length; m++) {
+        var pNorm = (productos[m].url_origen || '').replace(/\/+$/, '').toLowerCase();
+        if (pNorm === sNorm) { match = productos[m]; break; }
+      }
+    }
+
+    // Fallback 2: si la URL del sheet contiene la URL de BD o viceversa
+    if (!match) {
+      for (var m = 0; m < productos.length; m++) {
+        var pu = (productos[m].url_origen || '').toLowerCase();
+        if (sUrl.toLowerCase().indexOf(pu) !== -1 || pu.indexOf(sUrl.toLowerCase()) !== -1) {
+          match = productos[m]; break;
+        }
+      }
+    }
+
+    if (!match) { sinMatch++; continue; }
+    matches++;
 
     var precioDB = match.valor;
     var precioStr = '$' + precioDB.toLocaleString('es-CO');
@@ -204,6 +228,8 @@ function syncPrices() {
 
     actualizados++;
   }
+
+  Logger.log('Matches: ' + matches + ', Sin match: ' + sinMatch);
 
   // ⑤ Escribir batch
   if (batchUpdates.length > 0) {
