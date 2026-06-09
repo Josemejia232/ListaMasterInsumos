@@ -7,5 +7,6 @@ venv/
 
 # Entorno activo (se genera desde config/.env.develop o config/.env.production)
 .env
+config/.env.production
 
 node_modules/

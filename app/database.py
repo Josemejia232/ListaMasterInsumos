@@ -18,27 +18,35 @@ POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "4"))
 MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "6"))
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_size=POOL_SIZE,
-    max_overflow=MAX_OVERFLOW,
-    pool_recycle=POOL_RECYCLE,
-    pool_pre_ping=True,
-    connect_args={
-        "connect_timeout": 10,
-        "keepalives": 1,
-        "keepalives_idle": 30,
-        "keepalives_interval": 10,
-        "keepalives_count": 3,
-    },
-)
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
-@event.listens_for(engine, "connect")
-def _set_session_attrs(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("SET statement_timeout = '30000'")
-    cursor.execute("SET idle_in_transaction_session_timeout = '60000'")
-    cursor.close()
+if IS_SQLITE:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        pool_size=POOL_SIZE,
+        max_overflow=MAX_OVERFLOW,
+        pool_recycle=POOL_RECYCLE,
+        pool_pre_ping=True,
+        connect_args={
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 3,
+        },
+    )
+
+    @event.listens_for(engine, "connect")
+    def _set_session_attrs(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("SET statement_timeout = '30000'")
+        cursor.execute("SET idle_in_transaction_session_timeout = '60000'")
+        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

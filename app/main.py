@@ -21,10 +21,11 @@ from sqlalchemy import func, text
 from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
-from app.database import engine, get_db, SessionLocal, Base
-from app.models import Producto, Insumo, Usuario
+from app.database import engine, get_db, SessionLocal, Base, IS_SQLITE
+from app.models import Producto, Insumo, Usuario, Pago
 from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
+from app import bold as bold_client
 
 load_dotenv()
 
@@ -187,7 +188,10 @@ class LoginRequest(BaseModel):
 class LoginResponse(BaseModel):
     id: int
     email: str
+    token: str = ""
     tipo: str
+    fecha_pago: datetime | None = None
+    plan_activo: bool = False
 
 class UpdateAjustadaRequest(BaseModel):
     descripcion_ajustada: str | None = None
@@ -224,6 +228,46 @@ class UsuarioResponse(BaseModel):
     fecha_pago: datetime | None = None
     created_at: datetime | None = None
     model_config = {"from_attributes": True}
+
+
+class CrearLinkRequest(BaseModel):
+    usuario_id: int
+    amount: float
+    description: str = "Suscripcion ListaMasterInsumos"
+    expiration_minutes: int = 60
+    @field_validator("amount")
+    @classmethod
+    def validate_amount(cls, v):
+        if v < 1000:
+            raise ValueError("Monto minimo: $1,000 COP")
+        return v
+
+class CrearLinkResponse(BaseModel):
+    id: int
+    payment_link: str
+    url: str
+    reference: str
+    amount: float
+    status: str
+
+class PagoResponse(BaseModel):
+    id: int
+    usuario_id: int
+    payment_link: str
+    url: str
+    reference: str
+    amount: float
+    status: str
+    transaction_id: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    model_config = {"from_attributes": True}
+
+class ComprarPlanResponse(BaseModel):
+    id: int
+    url: str
+    amount: float
+    status: str
 
 
 # ─── Auth ─────────────────────────────────────────────────────
@@ -354,6 +398,14 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
 
 # ─── Auth endpoints ───────────────────────────────────────────
 
+def _plan_activo(user: Usuario) -> bool:
+    if user.tipo == "admin":
+        return True
+    if not user.fecha_pago:
+        return False
+    delta = datetime.utcnow() - user.fecha_pago
+    return delta.days < 30
+
 @app.post("/api/auth/register", response_model=LoginResponse)
 def register(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     rate_limit_login(request)
@@ -366,7 +418,7 @@ def register(req: LoginRequest, request: Request, db: Session = Depends(get_db))
     db.add(user)
     db.commit()
     db.refresh(user)
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
+    return LoginResponse(id=user.id, email=user.email, token=user.token, tipo=user.tipo, fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
@@ -377,12 +429,51 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     ).first()
     if not user or not hmac.compare_digest(req.token, user.token or ""):
         raise HTTPException(status_code=401, detail="Credenciales invalidas")
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
+
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
 
 @app.get("/api/auth/me", response_model=LoginResponse)
 def auth_me(user: Usuario = Depends(get_current_user)):
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
 
+@app.post("/api/auth/comprar-plan", response_model=ComprarPlanResponse)
+async def comprar_plan(
+    request: Request,
+    user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rate_limit_scrape(request)
+    amount = 10000
+    reference = f"usr_{user.id}_{int(time.time())}"
+    try:
+        payload = await bold_client.create_payment_link(
+            amount_total=amount,
+            description="Plan ListaMasterInsumos - 30 dias",
+            reference=reference,
+            payer_email=user.email,
+            expiration_minutes=120,
+        )
+    except Exception as e:
+        logger.error(f"[comprar-plan] Error Bold: {e}")
+        raise HTTPException(status_code=502, detail=f"Error en pasarela de pago: {str(e)}")
+
+    pago = Pago(
+        usuario_id=user.id,
+        payment_link=payload["payment_link"],
+        url=payload["url"],
+        reference=reference,
+        amount=amount,
+        status="ACTIVE",
+    )
+    db.add(pago)
+    db.commit()
+    db.refresh(pago)
+    return ComprarPlanResponse(
+        id=pago.id,
+        url=pago.url,
+        amount=pago.amount,
+        status=pago.status,
+    )
 @app.get("/api/usuarios", response_model=list[UsuarioResponse])
 def listar_usuarios(_admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     return db.query(Usuario).order_by(Usuario.email).all()
@@ -434,6 +525,16 @@ def renovar_pago(usuario_id: int, _admin: Usuario = Depends(require_admin), db: 
     db.commit()
     db.refresh(item)
     return UsuarioResponse(id=item.id, email=item.email, token=item.token, activo=item.activo, tipo=item.tipo, fecha_pago=item.fecha_pago, created_at=item.created_at)
+
+@app.post("/api/usuarios/{usuario_id}/reset-token")
+def resetear_token(usuario_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    item = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    import secrets
+    item.token = secrets.token_hex(16)
+    db.commit()
+    return {"token": item.token}
 
 
 # ─── Scraping ─────────────────────────────────────────────────
@@ -630,6 +731,26 @@ def listar_productos(
     db: Session = Depends(get_db),
 ):
     global _cache, _cache_time
+
+    if not _plan_activo(_user):
+        total = db.query(func.count(Producto.id)).scalar() or 0
+        prods = db.query(Producto).filter(
+            Producto.n01.isnot(None), Producto.n01 != ""
+        ).order_by(Producto.n01, Producto.n02, Producto.n03, Producto.descripcion).all()
+        from collections import OrderedDict
+        cats = OrderedDict()
+        for p in prods:
+            cats.setdefault(p.n01, []).append(p)
+        result = []
+        for items in cats.values():
+            result.extend(items[:10])
+        data = json.dumps(jsonable_encoder(result))
+        response = JSONResponse(content=json.loads(data))
+        response.headers["X-Total-Count"] = str(total)
+        response.headers["X-Free-Tier"] = "1"
+        response.headers["X-Free-Cats"] = str(len(cats))
+        return response
+
     now = time.time()
     if (now - _cache_time) < CACHE_TTL and not tienda:
         return JSONResponse(content=json.loads(_cache["data"]), headers={"X-Cache":"HIT","ETag":_cache["etag"]})
@@ -733,6 +854,148 @@ def stats(db: Session = Depends(get_db)):
     return {"total": total, "total_valor": total_valor, "scrapeados_hoy": hoy, "tiendas": tiendas}
 
 
+# ─── Pagos Bold ───────────────────────────────────────────────
+
+@app.post("/api/pagos/crear-link", response_model=CrearLinkResponse)
+async def crear_link_pago(
+    req: CrearLinkRequest,
+    request: Request,
+    _admin: Usuario = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    rate_limit_scrape(request)
+    usuario = db.query(Usuario).filter(Usuario.id == req.usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    reference = f"usr_{req.usuario_id}_{int(time.time())}"
+    payload = await bold_client.create_payment_link(
+        amount_total=req.amount,
+        description=req.description,
+        reference=reference,
+        payer_email=usuario.email,
+        expiration_minutes=req.expiration_minutes,
+    )
+
+    pago = Pago(
+        usuario_id=req.usuario_id,
+        payment_link=payload["payment_link"],
+        url=payload["url"],
+        reference=reference,
+        amount=req.amount,
+        status="ACTIVE",
+    )
+    db.add(pago)
+    db.commit()
+    db.refresh(pago)
+    return CrearLinkResponse(
+        id=pago.id,
+        payment_link=pago.payment_link,
+        url=pago.url,
+        reference=pago.reference,
+        amount=pago.amount,
+        status=pago.status,
+    )
+
+
+@app.get("/api/pagos", response_model=list[PagoResponse])
+def listar_pagos(
+    usuario_id: int | None = None,
+    _admin: Usuario = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Pago).order_by(Pago.created_at.desc())
+    if usuario_id:
+        query = query.filter(Pago.usuario_id == usuario_id)
+    return query.limit(200).all()
+
+
+@app.get("/api/pagos/{pago_id}", response_model=PagoResponse)
+def obtener_pago(pago_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    pago = db.query(Pago).filter(Pago.id == pago_id).first()
+    if not pago:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    return pago
+
+
+@app.put("/api/pagos/sync/{pago_id}", response_model=PagoResponse)
+async def sync_pago(pago_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    pago = db.query(Pago).filter(Pago.id == pago_id).first()
+    if not pago:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    try:
+        data = await bold_client.get_payment_link_status(pago.payment_link)
+        new_status = data.get("status", pago.status)
+        pago.status = new_status
+        pago.transaction_id = data.get("transaction_id") or pago.transaction_id
+        if new_status == "PAID" and pago.usuario_id:
+            usuario = db.query(Usuario).filter(Usuario.id == pago.usuario_id).first()
+            if usuario:
+                usuario.fecha_pago = func.now()
+        db.commit()
+        db.refresh(pago)
+        return pago
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error sincronizando: {str(e)}")
+
+
+@app.post("/api/webhooks/bold")
+async def webhook_bold(request: Request, db: Session = Depends(get_db)):
+    import hashlib
+    import base64
+
+    body = await request.body()
+    signature = request.headers.get("x-bold-signature", "")
+
+    body_str = body.decode("utf-8")
+    encoded = base64.b64encode(body_str.encode("utf-8"))
+    computed = hmac.new(
+        key=bold_client.BOLD_SECRET.encode(),
+        digestmod=hashlib.sha256,
+        msg=encoded,
+    ).hexdigest()
+
+    if not hmac.compare_digest(computed, signature):
+        logger.warning("[Webhook] Firma invalida")
+        raise HTTPException(status_code=400, detail="Firma invalida")
+
+    try:
+        event = json.loads(body_str)
+    except Exception:
+        raise HTTPException(status_code=400, detail="JSON invalido")
+
+    logger.info(f"[Webhook] Evento recibido: type={event.get('type')} subject={event.get('subject')}")
+
+    event_type = event.get("type", "")
+    if event_type not in ("SALE_APPROVED", "SALE_REJECTED"):
+        return {"status": "ignored", "type": event_type}
+
+    data = event.get("data", {})
+    reference = data.get("metadata", {}).get("reference", "")
+
+    if not reference:
+        return {"status": "no_reference"}
+
+    pago = db.query(Pago).filter(Pago.reference == reference).first()
+    if not pago:
+        logger.info(f"[Webhook] Pago no encontrado para referencia: {reference}")
+        return {"status": "pago_no_encontrado"}
+
+    if event_type == "SALE_APPROVED":
+        pago.status = "PAID"
+        pago.transaction_id = data.get("payment_id", "")
+        usuario = db.query(Usuario).filter(Usuario.id == pago.usuario_id).first()
+        if usuario:
+            usuario.fecha_pago = func.now()
+    else:
+        pago.status = "REJECTED"
+        pago.transaction_id = data.get("payment_id", "")
+
+    db.commit()
+    logger.info(f"[Webhook] Pago {pago.id} actualizado a {pago.status}")
+    return {"status": "ok", "pago_id": pago.id, "pago_status": pago.status}
+
+
 # ─── Insumos CRUD (legacy) ────────────────────────────────────
 
 @app.get("/api/check-email")
@@ -783,51 +1046,52 @@ _index_mtime = 0
 def startup():
     Base.metadata.create_all(bind=engine)
 
-    with engine.connect() as conn:
-        try:
-            conn.execute(text(
-                "DO $$ BEGIN "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='updated_at') THEN "
-                "ALTER TABLE productos ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='valor_anterior') THEN "
-                "ALTER TABLE productos ADD COLUMN valor_anterior FLOAT; "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='origen') THEN "
-                "ALTER TABLE productos ADD COLUMN origen VARCHAR(20); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='categoria') THEN "
-                "ALTER TABLE productos ADD COLUMN categoria VARCHAR(200); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
-                "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='insumos' AND column_name='categoria') THEN "
-                "ALTER TABLE insumos ADD COLUMN categoria VARCHAR(200); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='descripcion_ajustada') THEN "
-                "ALTER TABLE productos ADD COLUMN descripcion_ajustada VARCHAR(500); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='fecha_pago') THEN "
-                "ALTER TABLE usuarios ADD COLUMN fecha_pago TIMESTAMP; "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='proveedor') THEN "
-                "ALTER TABLE productos ADD COLUMN proveedor VARCHAR(200); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n01') THEN "
-                "ALTER TABLE productos ADD COLUMN n01 VARCHAR(200); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n02') THEN "
-                "ALTER TABLE productos ADD COLUMN n02 VARCHAR(200); "
-                "END IF; "
-                "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n03') THEN "
-                "ALTER TABLE productos ADD COLUMN n03 VARCHAR(200); "
-                "END IF; "
-                "END $$;"
-            ))
-            conn.commit()
-        except Exception:
-            conn.rollback()
+    if not IS_SQLITE:
+        with engine.connect() as conn:
+            try:
+                conn.execute(text(
+                    "DO $$ BEGIN "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='updated_at') THEN "
+                    "ALTER TABLE productos ADD COLUMN updated_at TIMESTAMP DEFAULT NOW(); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='valor_anterior') THEN "
+                    "ALTER TABLE productos ADD COLUMN valor_anterior FLOAT; "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='origen') THEN "
+                    "ALTER TABLE productos ADD COLUMN origen VARCHAR(20); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='categoria') THEN "
+                    "ALTER TABLE productos ADD COLUMN categoria VARCHAR(200); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='uq_producto_codigo_tienda') THEN "
+                    "ALTER TABLE productos ADD CONSTRAINT uq_producto_codigo_tienda UNIQUE (codigo, tienda); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='insumos' AND column_name='categoria') THEN "
+                    "ALTER TABLE insumos ADD COLUMN categoria VARCHAR(200); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='descripcion_ajustada') THEN "
+                    "ALTER TABLE productos ADD COLUMN descripcion_ajustada VARCHAR(500); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='fecha_pago') THEN "
+                    "ALTER TABLE usuarios ADD COLUMN fecha_pago TIMESTAMP; "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='proveedor') THEN "
+                    "ALTER TABLE productos ADD COLUMN proveedor VARCHAR(200); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n01') THEN "
+                    "ALTER TABLE productos ADD COLUMN n01 VARCHAR(200); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n02') THEN "
+                    "ALTER TABLE productos ADD COLUMN n02 VARCHAR(200); "
+                    "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n03') THEN "
+                    "ALTER TABLE productos ADD COLUMN n03 VARCHAR(200); "
+                    "END IF; "
+                    "END $$;"
+                ))
+                conn.commit()
+            except Exception:
+                conn.rollback()
 
     global _index_html, _index_mtime
     index_path = static_dir / "index.html"
@@ -860,11 +1124,14 @@ def favicon():
 
 @app.get("/")
 def root():
+    global _index_html, _index_mtime
+    index = static_dir / "index.html"
+    if index.exists():
+        current_mtime = index.stat().st_mtime
+        if not _index_html or current_mtime != _index_mtime:
+            _index_html = index.read_text(encoding="utf-8")
+            _index_mtime = current_mtime
     if _index_html:
         from fastapi.responses import HTMLResponse
         return HTMLResponse(content=_index_html)
-    index = static_dir / "index.html"
-    if index.exists():
-        from fastapi.responses import FileResponse
-        return FileResponse(str(index))
     return {"app": "ListaMasterInsumos", "status": "ok"}

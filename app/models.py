@@ -48,3 +48,18 @@ class Usuario(Base):
     tipo = Column(String(20), default="usuario", nullable=False)  # admin | usuario
     fecha_pago = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class Pago(Base):
+    __tablename__ = "pagos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_id = Column(Integer, nullable=False, index=True)
+    payment_link = Column(String(30), unique=True, nullable=False)
+    url = Column(String(200), nullable=False)
+    reference = Column(String(60), unique=True, nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    status = Column(String(20), default="ACTIVE", nullable=False)
+    transaction_id = Column(String(50), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

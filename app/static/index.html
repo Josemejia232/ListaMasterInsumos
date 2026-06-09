@@ -496,6 +496,16 @@ h2::before{
     <!-- Lista Insumos -->
     <div class="section active" id="section-ver-insumos">
       <h2>Lista de Insumos</h2>
+      <div id="plan-banner" class="section-card" style="display:none;margin-bottom:1rem;border:2px solid var(--accent);background:linear-gradient(135deg,#f0f4ff,#e8f0fe)">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem">
+          <div>
+            <span style="font-weight:600;color:var(--accent)">&#127991; Mi Plan</span>
+            <span id="plan-status" style="margin-left:.5rem;font-size:.78rem;color:var(--muted)"></span>
+          </div>
+          <button id="plan-btn" class="btn btn-green" onclick="comprarPlan()">Comprar plan - $10.000 COP</button>
+        </div>
+        <div id="plan-msg" style="margin-top:.5rem;font-size:.77rem;color:var(--text2)"></div>
+      </div>
       <div class="form-row">
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripción o categoría..." oninput="filtrarVerDebounced()">
         <button class="btn btn-sm btn-outline" onclick="expandirTodo()" style="white-space:nowrap">Expandir todo</button>
@@ -539,10 +549,34 @@ h2::before{
       <div class="table-wrap">
         <h3 style="padding:.8rem 1rem;font-size:.85rem;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">USUARIOS REGISTRADOS</h3>
         <table>
-          <thead><tr><th>ID</th><th>Email</th><th>Activo</th><th>Tipo</th><th>Token</th><th>FechaPago</th><th>Dias</th><th style="width:200px">Acción</th></tr></thead>
+          <thead><tr><th>ID</th><th>Email</th><th>Activo</th><th>Tipo</th><th>Token</th><th>FechaPago</th><th>Vence</th><th>Dias</th><th style="width:200px">Acción</th></tr></thead>
           <tbody id="usr-tbody"></tbody>
         </table>
         <div class="empty" id="usr-empty">No hay usuarios.</div>
+      </div>
+    </div>
+
+    <!-- Pagos -->
+    <div class="section" id="section-pagos">
+      <h2>Pagos Bold</h2>
+      <div class="section-card">
+        <h3 style="font-size:.875rem;font-weight:600;margin-bottom:.6rem;color:var(--text2)">Crear link de pago</h3>
+        <div class="form-inline">
+          <select id="pago-usr" style="flex:1.5;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.42rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+            <option value="">Seleccionar usuario...</option>
+          </select>
+          <input type="number" id="pago-amount" placeholder="Monto (COP)" min="1000" step="1000" value="30000" style="flex:1">
+          <input type="text" id="pago-desc" placeholder="Descripcion" value="Suscripcion ListaMasterInsumos" style="flex:1">
+          <button class="btn btn-green" onclick="crearLinkPago()">Crear link</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <h3 style="padding:.8rem 1rem;font-size:.85rem;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">LINKS DE PAGO</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Usuario</th><th>Link</th><th>Referencia</th><th>Monto</th><th>Estado</th><th>Transaccion</th><th style="width:120px">Acciones</th></tr></thead>
+          <tbody id="pagos-tbody"></tbody>
+        </table>
+        <div class="empty" id="pagos-empty">No hay pagos registrados.</div>
       </div>
     </div>
 
@@ -554,12 +588,21 @@ h2::before{
 </a>
 
 <script>
+window.cambiarLogin = function(modo, el){
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
+  document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
+  document.getElementById('login-error').textContent = '';
+};
+
 const API = '';
 let _user = null;
 let _editUsrId = null;
 let _verProds = [];
 let _viewMode = null;
 let _debounceTimer = null;
+let _freeTierInfo = null;
 
 function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
 var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
@@ -573,42 +616,36 @@ function escapeHtml(s){
 }
 
 // ─── Auth ──────────────────────────────────────────────
-function cambiarLogin(modo, el){
-  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
-  if(el) el.classList.add('active');
-  document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
-  document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
-  document.getElementById('login-error').textContent = '';
-}
-function entrarInvitado(){
+async function entrarInvitado(){
   var email = document.getElementById('guest-email').value.trim();
   if(!email){ document.getElementById('login-error').textContent='Regístrate gratis para acceder'; return; }
-  fetch(API+'/api/check-email?email='+encodeURIComponent(email))
-  .then(r=>r.json())
-  .then(d=>{
-    if(d.registrado){
+  try {
+    var check = await fetch(API+'/api/check-email?email='+encodeURIComponent(email));
+    var cd = await check.json();
+    if(cd.registrado){
       document.getElementById('login-error').textContent='Este email ya tiene token. Usa la pestaña "Ingresar con token".';
       return;
     }
+    var reg = await fetch(API+'/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email, token:''})});
+    if(!reg.ok){ document.getElementById('login-error').textContent='Error al registrar'; return; }
+    var u = await reg.json();
+    _user = u; _viewMode = 'adjusted';
+    localStorage.setItem('user', JSON.stringify(u));
+    localStorage.setItem('auth_token', u.token || '');
+    initGuest(email);
+  } catch(e){
     _user = null; _viewMode = 'adjusted';
-    document.getElementById('login-wrap').style.display='none';
-    document.getElementById('sidebar').style.display='flex';
-    document.querySelector('.content').style.display='flex';
-    document.getElementById('side-email').textContent = email;
-    document.getElementById('whatsapp-btn').style.display = 'none';
-    buildSidebar(); cargarVerInsumos();
-    irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
-  })
-  .catch(()=>{
-    _user = null; _viewMode = 'adjusted';
-    document.getElementById('login-wrap').style.display='none';
-    document.getElementById('sidebar').style.display='flex';
-    document.querySelector('.content').style.display='flex';
-    document.getElementById('side-email').textContent = email;
-    document.getElementById('whatsapp-btn').style.display = 'none';
-    buildSidebar(); cargarVerInsumos();
-    irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
-  });
+    initGuest(email);
+  }
+}
+function initGuest(email){
+  document.getElementById('login-wrap').style.display='none';
+  document.getElementById('sidebar').style.display='flex';
+  document.querySelector('.content').style.display='flex';
+  document.getElementById('side-email').textContent = email;
+  document.getElementById('whatsapp-btn').style.display = 'none';
+  buildSidebar(); cargarVerInsumos();
+  irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
 }
 function login(){
   const email = document.getElementById('login-email').value.trim();
@@ -639,6 +676,7 @@ function buildSidebar(){
     items.push({label:'ADMIN', header:true});
     items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos', mode:'raw'});
     items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
+    items.push({id:'pagos', icon:'&#128179;', text:'Pagos'});
   }
   items.push({label:'LISTA INSUMOS', header:true});
   items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
@@ -658,11 +696,12 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios'};
+  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
   if(section==='usuarios') cargarUsuarios();
+  if(section==='pagos') cargarPagos();
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
@@ -802,17 +841,26 @@ async function cargarVerInsumos(){
         return {id:p.id, descripcion:p.descripcion, unidad:p.unidad, valor:p.valor, categoria:p.categoria||'', n01:p.n01||'', n02:p.n02||'', n03:p.n03||'', proveedor:p.proveedor||'', descripcion_ajustada:null, valor_anterior:null};
       });
     }
+    var total = parseInt(r.headers.get('X-Total-Count') || '0');
+    var cats = parseInt(r.headers.get('X-Free-Cats') || '0');
+    if(total && cats){
+      _freeTierInfo = {total:total, categorias:cats};
+    } else {
+      _freeTierInfo = null;
+    }
     var changed = true;
     if(_verProds.length === newData.length){
       var oldIds = _verProds.map(p=> p.id+'|'+p.valor+'|'+p.categoria+'|'+p.descripcion_ajustada).join();
       var newIds = newData.map(p=> p.id+'|'+p.valor+'|'+p.categoria+'|'+p.descripcion_ajustada).join();
       changed = oldIds !== newIds;
     }
-    if(changed){ _verProds = newData; renderVer(); }
+    _verProds = newData;
+    if(changed || !_verProds.length){ renderVer(); }
   } catch(e){}
 }
 
 function renderVer(){
+  renderPlanBanner();
   const q = (document.getElementById('ver-filtro').value||'').toLowerCase().trim();
   const isAdmin = _user && _user.tipo === 'admin';
   const filtrados = !q ? _verProds : _verProds.filter(p=>
@@ -824,7 +872,11 @@ function renderVer(){
   const userWrap = document.getElementById('user-table-wrap');
 
   totalCount.style.display = 'inline-flex';
-  totalCount.textContent = '📦 '+_verProds.length+' insumos';
+  if(_freeTierInfo && !isAdmin){
+    totalCount.textContent = '📦 '+_verProds.length+' de '+_freeTierInfo.total+' insumos (10 x categoria)';
+  } else {
+    totalCount.textContent = '📦 '+_verProds.length+' insumos';
+  }
   document.getElementById('btn-sync').style.display = isAdmin ? '' : 'none';
 
   if(isAdmin && _viewMode === 'raw'){
@@ -844,7 +896,13 @@ function renderVer(){
       </tr>`).join('');
     }
   } else {
-    adminWrap.style.display = 'none'; userWrap.style.display = 'block';
+    adminWrap.style.display = 'none';
+    var planBloqueado = !isAdmin && !(_user && _user.plan_activo);
+    if(planBloqueado){
+      userWrap.style.display = 'none';
+      return;
+    }
+    userWrap.style.display = 'block';
     var table = document.getElementById('ver-ins-table');
     var empty = document.getElementById('ver-ins-empty');
     if(!filtrados.length){ table.innerHTML=''; empty.style.display='block'; }
@@ -917,15 +975,17 @@ async function cargarUsuarios(){
     empty.style.display='none';
     tbody.innerHTML = items.map(u => {
       var fp=u.fecha_pago?new Date(u.fecha_pago):null;
-      var dias=fp?Math.ceil(30-(Date.now()-fp.getTime())/(1000*60*60*24)):null;
+      var vence=fp?new Date(fp.getTime()+30*24*60*60*1000):null;
+      var dias=fp?Math.ceil((vence.getTime()-Date.now())/(1000*60*60*24)):null;
       var colorDias=dias!=null?(dias<=0?'var(--red)':dias<=5?'#f59e0b':'var(--green)'):'var(--muted)';
       return `<tr>
       <td style="color:var(--muted)">${u.id}</td>
       <td style="font-weight:500">${escapeHtml(u.email)}</td>
       <td><span style="background:${u.activo?'var(--green-light)':'var(--red-light)'};color:${u.activo?'var(--green)':'var(--red)'};padding:.2rem .55rem;border-radius:1rem;font-size:.73rem;font-weight:600">${u.activo?'Activo':'Bloqueado'}</span></td>
       <td style="color:var(--muted)">${escapeHtml(u.tipo)}</td>
-      <td><code style="font-size:0.73rem;word-break:break-all;background:#f4f5ff;padding:.15rem .4rem;border-radius:.3rem;color:var(--accent2)">${escapeHtml(u.token.substring(0,16))}…</code> <button class="btn btn-sm btn-outline" onclick="copiarToken('${escapeHtml(u.token)}')">Copiar</button></td>
+      <td><code style="font-size:0.73rem;word-break:break-all;background:#f4f5ff;padding:.15rem .4rem;border-radius:.3rem;color:var(--accent2)">${escapeHtml(u.token.substring(0,16))}…</code> <button class="btn btn-sm btn-outline" onclick="copiarToken('${escapeHtml(u.token)}')">Copiar</button> <button class="btn btn-sm btn-outline" onclick="resetearToken(${u.id})" title="Resetear token">⟳</button></td>
       <td style="color:var(--muted)">${fp?fp.toLocaleDateString('es-CO'):'-'}</td>
+      <td style="color:${colorDias};font-weight:500">${vence?vence.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'2-digit'}):'-'}</td>
       <td style="color:${colorDias};font-weight:700">${dias!=null?dias:'-'}</td>
       <td><div class="actions">
         <button class="btn btn-sm btn-outline" data-edit-id="${u.id}" data-edit-email="${escapeHtml(u.email)}" data-edit-tipo="${escapeHtml(u.tipo)}" data-edit-activo="${u.activo}" onclick="editarUsuarioBtn(this)">Editar</button>
@@ -978,6 +1038,139 @@ function copiarToken(token){
   navigator.clipboard.writeText(token).then(()=>alert('Token copiado!')).catch(()=>{
     var t=document.createElement('textarea'); t.value=token; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t); alert('Token copiado!');
   });
+}
+
+async function resetearToken(id){
+  if(!confirm('¿Resetear el token de este usuario? Debera usar el nuevo token para iniciar sesion.')) return;
+  try{
+    var r = await apiFetch('/api/usuarios/'+id+'/reset-token', {method:'POST'});
+    var d = await r.json();
+    alert('Nuevo token: ' + d.token + '\n\nCopialo y compartilo con el usuario.');
+    await cargarUsuarios();
+  }catch(e){ alert('Error: '+e.message); }
+}
+
+function renderPlanBanner(){
+  var banner = document.getElementById('plan-banner');
+  if(!banner) return;
+  var isAdmin = _user && _user.tipo === 'admin';
+  if(isAdmin){ banner.style.display = 'none'; return; }
+  banner.style.display = 'block';
+  var fp = _user && _user.fecha_pago ? new Date(_user.fecha_pago) : null;
+  var vence = fp ? new Date(fp.getTime() + 30*24*60*60*1000) : null;
+  var dias = fp ? Math.ceil((vence.getTime()-Date.now())/(1000*60*60*24)) : null;
+  var statusEl = document.getElementById('plan-status');
+  var msgEl = document.getElementById('plan-msg');
+  var btn = document.getElementById('plan-btn');
+  if(fp && dias > 0){
+    statusEl.textContent = 'Activo ('+dias+' dias restantes)';
+    statusEl.style.color = 'var(--green)';
+    msgEl.textContent = '✅ Tu plan vence el '+vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})+'. Acceso completo a toda la base de datos.';
+    btn.textContent = 'Renovar plan - $10.000 COP';
+    banner.style.borderColor = 'var(--green)';
+  } else if(fp && dias <= 0){
+    statusEl.textContent = 'Vencido';
+    statusEl.style.color = 'var(--red)';
+    var fi = _freeTierInfo;
+    msgEl.textContent = '⚠️ Tu plan vencio el '+vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})+'.'+(fi?' Solo ves 10 insumos x '+fi.categorias+' categorias ('+_verProds.length+' de '+fi.total+' productos). Compra el plan completo.':'');
+    btn.textContent = 'Comprar plan - $10.000 COP';
+    banner.style.borderColor = 'var(--red)';
+  } else {
+    statusEl.textContent = 'Sin plan';
+    statusEl.style.color = '#f59e0b';
+    var fi2 = _freeTierInfo;
+    msgEl.textContent = '💡 Ves 10 insumos por categoria ('+_verProds.length+' de '+fi2.total+' productos en '+fi2.categorias+' categorias). Paga $10.000 COP para acceder a toda la base.';
+    btn.textContent = 'Comprar plan - $10.000 COP';
+    banner.style.borderColor = '#f59e0b';
+  }
+}
+
+async function comprarPlan(){
+  var btn = document.getElementById('plan-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creando link...';
+  try {
+    var r = await apiFetch('/api/auth/comprar-plan', {method:'POST'});
+    if(!r.ok){
+      var d = await r.json();
+      alert('Error: ' + (d.detail || 'No se pudo crear el link de pago'));
+      renderPlanBanner();
+      return;
+    }
+    var pago = await r.json();
+    window.open(pago.url, '_blank');
+    btn.textContent = 'Link creado - continuar al pago';
+    setTimeout(function(){ renderPlanBanner(); }, 3000);
+  } catch(e){
+    alert('Error: ' + e.message);
+    renderPlanBanner();
+  }
+  btn.disabled = false;
+}
+
+var _pagosUsuariosCache = [];
+async function cargarPagosUsuariosDropdown(){
+  try {
+    var r = await apiFetch('/api/usuarios');
+    if(!r.ok) return;
+    _pagosUsuariosCache = await r.json();
+    var sel = document.getElementById('pago-usr');
+    var currentVal = sel.value;
+    sel.innerHTML = '<option value="">Seleccionar usuario...</option>' +
+      _pagosUsuariosCache.map(function(u){ return '<option value="'+u.id+'">'+u.email+' (ID:'+u.id+')</option>'; }).join('');
+    sel.value = currentVal;
+  } catch(e){}
+}
+async function cargarPagos(){
+  var sec=document.getElementById('section-pagos');
+  if(!sec||!sec.classList.contains('active')) return;
+  cargarPagosUsuariosDropdown();
+  try {
+    var r = await apiFetch('/api/pagos'); if(!r.ok) return;
+    var items = await r.json();
+    var tbody=document.getElementById('pagos-tbody'), empty=document.getElementById('pagos-empty');
+    if(!items.length){ tbody.innerHTML=''; empty.style.display='block'; }
+    else {
+      empty.style.display='none';
+      tbody.innerHTML = items.map(function(p){
+        var statusColor = p.status==='PAID'?'var(--green)':p.status==='REJECTED'?'var(--red)':p.status==='ACTIVE'?'var(--accent)':'var(--muted)';
+        return '<tr>'+
+        '<td style="color:var(--muted)">'+p.id+'</td>'+
+        '<td style="font-weight:500">ID:'+p.usuario_id+'</td>'+
+        '<td><a href="'+escapeHtml(p.url)+'" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600">'+escapeHtml(p.payment_link)+'</a></td>'+
+        '<td style="font-size:.73rem;color:var(--text2)">'+escapeHtml(p.reference)+'</td>'+
+        '<td style="font-weight:600;color:var(--accent)">$'+Number(p.amount).toLocaleString('es-CO')+'</td>'+
+        '<td style="font-weight:600;color:'+statusColor+'">'+escapeHtml(p.status)+'</td>'+
+        '<td style="font-size:.73rem;color:var(--muted)">'+escapeHtml(p.transaction_id||'-')+'</td>'+
+        '<td><div class="actions">'+
+        '<button class="btn btn-sm btn-outline" onclick="sincronizarPago('+p.id+')" title="Sincronizar">&#8635;</button>'+
+        '</div></td></tr>';
+      }).join('');
+    }
+  } catch(e){}
+}
+async function crearLinkPago(){
+  var usrId = document.getElementById('pago-usr').value;
+  var amount = parseInt(document.getElementById('pago-amount').value) || 30000;
+  var desc = document.getElementById('pago-desc').value.trim() || 'Suscripcion ListaMasterInsumos';
+  if(!usrId){ alert('Selecciona un usuario'); return; }
+  if(amount < 1000){ alert('Monto minimo: $1,000 COP'); return; }
+  try {
+    var r = await apiFetch('/api/pagos/crear-link', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({usuario_id:parseInt(usrId), amount:amount, description:desc})});
+    if(!r.ok){ var err=await r.json(); alert('Error: '+(err.detail||'No se pudo crear el link')); return; }
+    var pago = await r.json();
+    var link = pago.url;
+    navigator.clipboard.writeText(link).then(function(){ alert('Link creado y copiado!\n\n'+link); });
+    await cargarPagos();
+  } catch(e){ alert('Error: '+e.message); }
+}
+async function sincronizarPago(id){
+  try {
+    var r = await apiFetch('/api/pagos/sync/'+id, {method:'PUT'});
+    if(!r.ok){ var err=await r.json(); alert('Error: '+(err.detail||'No se pudo sincronizar')); return; }
+    await cargarPagos();
+    if(document.getElementById('section-usuarios').classList.contains('active')) cargarUsuarios();
+  } catch(e){ alert('Error: '+e.message); }
 }
 </script>
 </body>
