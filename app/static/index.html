@@ -897,11 +897,6 @@ function renderVer(){
     }
   } else {
     adminWrap.style.display = 'none';
-    var planBloqueado = !isAdmin && !(_user && _user.plan_activo);
-    if(planBloqueado){
-      userWrap.style.display = 'none';
-      return;
-    }
     userWrap.style.display = 'block';
     var table = document.getElementById('ver-ins-table');
     var empty = document.getElementById('ver-ins-empty');
