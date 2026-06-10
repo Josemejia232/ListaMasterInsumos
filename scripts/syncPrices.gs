@@ -180,7 +180,6 @@ function syncPrices() {
   var batchAnteriorUpdates = [];
   var batchFechaUpdates = [];
   var batchNombreUpdates = [];
-  var batchAnteriorSeed = [];
 
   // ④ Comparar y actualizar
   var matches = 0;
@@ -232,7 +231,6 @@ function syncPrices() {
     }
 
     var precioOld = data[k][precioCol] ? data[k][precioCol].toString().trim() : '';
-    var anteriorOld = data[k][anteriorCol] ? data[k][anteriorCol].toString().trim() : '';
 
     // Si el precio cambió (y es válido)
     if (precioStr && precioOld !== precioStr) {
@@ -259,13 +257,6 @@ function syncPrices() {
 
       cambios++;
       if (precioOld) backups++;
-    } else if (precioStr && precioOld === precioStr && !anteriorOld) {
-      // ✅ Seed: copiar precio actual a col J si está vacía (primera sincronización)
-      batchAnteriorSeed.push({
-        row: k + 1,
-        col: anteriorCol + 1,
-        value: precioOld
-      });
     }
 
     // Escribir nombre del producto en col B (siempre, es informativo)
@@ -280,16 +271,7 @@ function syncPrices() {
 
   Logger.log('Matches: ' + matches + ', Sin match: ' + sinMatch + ', Precios invalidos: ' + preciosInvalidos);
 
-  // ⑤ Escribir batch
-  // Semilla: copiar precio actual a col J donde esté vacía (primer sync)
-  if (batchAnteriorSeed.length > 0) {
-    for (var s = 0; s < batchAnteriorSeed.length; s++) {
-      var sv = batchAnteriorSeed[s];
-      sheet.getRange(sv.row, sv.col).setValue(sv.value);
-    }
-    Logger.log('Semilla col J (precio actual copiado): ' + batchAnteriorSeed.length);
-  }
-
+  // ⑤ Escribir batch de precios/fechas/nombres
   if (batchAnteriorUpdates.length > 0) {
     for (var b = 0; b < batchAnteriorUpdates.length; b++) {
       var ab = batchAnteriorUpdates[b];
@@ -321,6 +303,23 @@ function syncPrices() {
     }
     Logger.log('Nombres actualizados: ' + batchNombreUpdates.length);
   }
+
+  // ⑤.½ Semilla col J: copiar precio de F a J donde J esté vacía
+  //    (usa getValue/getRange directo, no el array data que puede estar desactualizado)
+  var semilla = 0;
+  for (var k = 1; k < data.length; k++) {
+    var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
+    if (!sUrl) continue;
+    var fCell = sheet.getRange(k + 1, precioCol + 1);
+    var jCell = sheet.getRange(k + 1, anteriorCol + 1);
+    var fVal = fCell.getValue();
+    var jVal = jCell.getValue();
+    if (fVal && (!jVal || !jVal.toString().trim())) {
+      jCell.setValue(fVal);
+      semilla++;
+    }
+  }
+  if (semilla > 0) Logger.log('Semilla col J (precio copiado de F): ' + semilla);
 
   // ⑥ Sincronizar categorías automáticamente (sin scrape, rápido)
   try {
