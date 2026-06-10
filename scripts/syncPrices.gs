@@ -11,11 +11,11 @@
  * Seguridad ante caída del scraper:
  *   · Solo escribe precio si valor > 0
  *   · Solo actualiza fecha si el precio realmente cambió
- *   · Respalda precio anterior en col I antes de sobrescribir
+ *   · Respalda precio anterior en col J antes de sobrescribir
  *
  * Configuración:
- *   Celda K1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
- *   Celda K2 = Token de admin
+ *   Celda I1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
+ *   Celda I2 = Token de admin
  *
  * Uso:
  *   - Menú "ListaMaster" en la hoja → ejecutar manualmente
@@ -38,23 +38,8 @@ function onOpen() {
 
 function getConfig() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  // Config principal en col K (antes estaba en I, ahora I = PRECIO ANTERIOR)
-  var apiUrl = sheet.getRange('K1').getValue();
-  var token  = sheet.getRange('K2').getValue();
-  // Fallback: si K vacío, leer de I (solo si I1 parece URL)
-  var i1Val = sheet.getRange('I1').getValue();
-  if ((!apiUrl || !apiUrl.toString().trim()) && i1Val) {
-    var i1Str = i1Val.toString().trim();
-    if (i1Str.indexOf('http') === 0) {
-      apiUrl = i1Str;
-    }
-  }
-  if (!token || !token.toString().trim()) {
-    var i2Val = sheet.getRange('I2').getValue();
-    if (i2Val && i2Val.toString().trim()) {
-      token = i2Val;
-    }
-  }
+  var apiUrl = sheet.getRange('I1').getValue();
+  var token  = sheet.getRange('I2').getValue();
   return {
     apiUrl: (apiUrl && apiUrl.toString().trim() && apiUrl.toString().trim().indexOf('http') === 0) ? apiUrl.toString().trim() : 'https://listamasterinsumos.onrender.com',
     token:  (token && token.toString().trim())  ? token.toString().trim()  : 'REDACTED_ADMIN_TOKEN'
@@ -101,20 +86,11 @@ function syncPrices() {
     headers[fechaCol] = 'última actualización';
   }
 
-  // Col I = PRECIO ANTERIOR (backup)
-  // ⚠️ No pisar celdas con contenido que no sea header (ej: config antigua)
-  var anteriorCol = 8;
-  var i1Content = sheet.getRange(1, anteriorCol + 1).getValue();
-  var i1Str = (i1Content && i1Content.toString().trim()) || '';
-  if (!i1Str || i1Str.toLowerCase().indexOf('anterior') !== -1) {
+  // Col J = PRECIO ANTERIOR (backup)
+  var anteriorCol = 9;
+  if ((headers[anteriorCol] || '').indexOf('anterior') === -1) {
     sheet.getRange(1, anteriorCol + 1).setValue('PRECIO ANTERIOR');
     headers[anteriorCol] = 'precio anterior';
-  } else if (i1Str.toLowerCase().indexOf('http') === 0) {
-    // Es la API URL antigua → no tocar, config sigue en I1
-    headers[anteriorCol] = i1Str;
-  } else {
-    // Otro contenido (ej: token) → no tocar
-    headers[anteriorCol] = i1Str;
   }
 
   // Detectar columna CATEGORIA

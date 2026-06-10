@@ -107,3 +107,28 @@ Los productos se organizan en 3 niveles jerárquicos:
 - `n01` — Categoría principal (ej: Materiales, Herramientas, Acabados)
 - `n02` — Subcategoría
 - `n03` — Sub-subcategoría
+
+## Google Sheets — Sincronización
+
+El script `scripts/syncPrices.gs` se ejecuta en el Google Sheet vinculado y sincroniza precios con la API. Usa autenticación Bearer token (admin).
+
+### Columnas del Sheet
+
+| Col | Header | Descripción |
+|-----|--------|-------------|
+| A | URL | URL del producto a scrapear |
+| B | NOMBRE PRODUCTO | Nombre del producto (escrito por el script) |
+| C-E | _(libre)_ | Categoría, n01, n02, n03, proveedor, etc. |
+| F | ÚLTIMO PRECIO | Precio actual (escrito por el script) |
+| G | ÚLTIMA ACTUALIZACIÓN | Fecha de última actualización (solo si cambió precio) |
+| H | _(libre)_ | |
+| I | _(config)_ | **I1** = URL de la API, **I2** = Token de admin |
+| J | PRECIO ANTERIOR | Backup del precio antes de sobrescribir |
+
+### Protección ante caída del scraper
+
+- Solo escribe precio si `valor > 0`
+- Solo actualiza fecha (col G) si el precio realmente cambió
+- Respalda el precio anterior en col J antes de sobrescribir
+- Si `/productos` falla o devuelve vacío → no toca la hoja
+- `forceFullScrape` pide confirmación antes de ejecutar
