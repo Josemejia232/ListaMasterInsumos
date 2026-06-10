@@ -939,6 +939,16 @@ async def sync_pago(pago_id: int, _admin: Usuario = Depends(require_admin), db: 
         raise HTTPException(status_code=500, detail=f"Error sincronizando: {str(e)}")
 
 
+@app.delete("/api/pagos/{pago_id}")
+def eliminar_pago(pago_id: int, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
+    pago = db.query(Pago).filter(Pago.id == pago_id).first()
+    if not pago:
+        raise HTTPException(status_code=404, detail="Pago no encontrado")
+    db.delete(pago)
+    db.commit()
+    return {"status": "ok"}
+
+
 @app.post("/api/webhooks/bold")
 async def webhook_bold(request: Request, db: Session = Depends(get_db)):
     import hashlib

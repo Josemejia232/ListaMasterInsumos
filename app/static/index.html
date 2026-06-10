@@ -1145,6 +1145,7 @@ async function cargarPagos(){
         '<td style="font-size:.73rem;color:var(--muted)">'+escapeHtml(p.transaction_id||'-')+'</td>'+
         '<td><div class="actions">'+
         '<button class="btn btn-sm btn-outline" onclick="sincronizarPago('+p.id+')" title="Sincronizar">&#8635;</button>'+
+        '<button class="btn btn-sm btn-outline" onclick="eliminarPago('+p.id+')" title="Eliminar" style="color:var(--red)">&#10005;</button>'+
         '</div></td></tr>';
       }).join('');
     }
@@ -1171,6 +1172,14 @@ async function sincronizarPago(id){
     if(!r.ok){ var err=await r.json(); alert('Error: '+(err.detail||'No se pudo sincronizar')); return; }
     await cargarPagos();
     if(document.getElementById('section-usuarios').classList.contains('active')) cargarUsuarios();
+  } catch(e){ alert('Error: '+e.message); }
+}
+async function eliminarPago(id){
+  if(!confirm('¿Eliminar este link de pago?')) return;
+  try {
+    var r = await apiFetch('/api/pagos/'+id, {method:'DELETE'});
+    if(!r.ok){ var err=await r.json(); alert('Error: '+(err.detail||'No se pudo eliminar')); return; }
+    await cargarPagos();
   } catch(e){ alert('Error: '+e.message); }
 }
 </script>
