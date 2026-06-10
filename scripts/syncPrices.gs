@@ -180,6 +180,7 @@ function syncPrices() {
   var batchAnteriorUpdates = [];
   var batchFechaUpdates = [];
   var batchNombreUpdates = [];
+  var batchAnteriorSeed = [];
 
   // ④ Comparar y actualizar
   var matches = 0;
@@ -231,10 +232,11 @@ function syncPrices() {
     }
 
     var precioOld = data[k][precioCol] ? data[k][precioCol].toString().trim() : '';
+    var anteriorOld = data[k][anteriorCol] ? data[k][anteriorCol].toString().trim() : '';
 
     // Si el precio cambió (y es válido)
     if (precioStr && precioOld !== precioStr) {
-      // ✅ Backup: guardar precio anterior en col I
+      // ✅ Backup: mover precio anterior a col J
       batchAnteriorUpdates.push({
         row: k + 1,
         col: anteriorCol + 1,
@@ -257,6 +259,13 @@ function syncPrices() {
 
       cambios++;
       if (precioOld) backups++;
+    } else if (precioStr && precioOld === precioStr && !anteriorOld) {
+      // ✅ Seed: copiar precio actual a col J si está vacía (primera sincronización)
+      batchAnteriorSeed.push({
+        row: k + 1,
+        col: anteriorCol + 1,
+        value: precioOld
+      });
     }
 
     // Escribir nombre del producto en col B (siempre, es informativo)
@@ -272,12 +281,21 @@ function syncPrices() {
   Logger.log('Matches: ' + matches + ', Sin match: ' + sinMatch + ', Precios invalidos: ' + preciosInvalidos);
 
   // ⑤ Escribir batch
+  // Semilla: copiar precio actual a col J donde esté vacía (primer sync)
+  if (batchAnteriorSeed.length > 0) {
+    for (var s = 0; s < batchAnteriorSeed.length; s++) {
+      var sv = batchAnteriorSeed[s];
+      sheet.getRange(sv.row, sv.col).setValue(sv.value);
+    }
+    Logger.log('Semilla col J (precio actual copiado): ' + batchAnteriorSeed.length);
+  }
+
   if (batchAnteriorUpdates.length > 0) {
     for (var b = 0; b < batchAnteriorUpdates.length; b++) {
       var ab = batchAnteriorUpdates[b];
       sheet.getRange(ab.row, ab.col).setValue(ab.value);
     }
-    Logger.log('Backups (precio anterior en col I): ' + backups);
+    Logger.log('Backups (precio anterior en col J): ' + backups);
   }
 
   if (batchPrecioUpdates.length > 0) {
@@ -356,7 +374,7 @@ function forceFullScrape() {
   var ui = SpreadsheetApp.getUi();
   var respuesta = ui.alert(
     '⚠️ Forzar scrape completo',
-    'Esto va a re-scrapear TODAS las URLs. Los precios actuales en la hoja se respaldarán en col I antes de sobrescribir.\n\n¿Continuar?',
+    'Esto va a re-scrapear TODAS las URLs. Los precios actuales en la hoja se respaldarán en col J antes de sobrescribir.\n\n¿Continuar?',
     ui.ButtonSet.YES_NO
   );
   if (respuesta !== ui.Button.YES) return;
