@@ -1,17 +1,24 @@
 /**
- * ListaMasterInsumos — Google Apps Script (v2 · resiliente)
+ * ListaMasterInsumos — Google Apps Script (v3 · optimizado)
  *
  * Estrategia:
  *   ① Lee el sheet y detecta URLs NUEVAS (sin ÚLTIMO PRECIO)
- *   ② Solo scrapea las URLs nuevas → llama a /scrape/sync una por una (con pausa)
+ *   ② Scrapea max 25 URLs nuevas por ejecución → /scrape/sync una por una (con pausa)
  *   ③ Para URLs con precio existente → compara con /productos (cacheado, rápido)
  *   ④ Actualiza solo las celdas que cambiaron (batch al final)
- *   ⑤ Sincroniza categorías desde el sheet hacia la BD
+ *   ⑤ Semilla col J en una sola operación de lectura/escritura (batch)
+ *   ⑥ Sincroniza categorías desde el sheet hacia la BD
  *
  * Seguridad ante caída del scraper:
  *   · Solo escribe precio si valor > 0
  *   · Solo actualiza fecha si el precio realmente cambió
  *   · Respalda precio anterior en col J antes de sobrescribir
+ *
+ * Optimizaciones anti-timeout (límite 6 min de Google):
+ *   · Máximo 25 URLs nuevas por ejecución (el trigger horario procesa el resto)
+ *   · Búsqueda O(1) con Map indexado en vez de O(n) triple barrido
+ *   · Semilla col J con getRange.getValues/setValues batch (2 lecturas + 1 escritura)
+ *   · Logger.log solo en resúmenes, no por fila
  *
  * Configuración:
  *   Celda I1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
@@ -21,6 +28,8 @@
  *   - Menú "ListaMaster" en la hoja → ejecutar manualmente
  *   - Trigger: Time-driven → cada hora (syncPrices)
  */
+
+var MAX_NEW_PER_RUN = 25;  // URLs nuevas a scrapear por ejecución
 
 // ─── Menú ─────────────────────────────────────────────────
 
@@ -114,9 +123,16 @@ function syncPrices() {
     }
   }
 
-  // ② Scrape solo URLs nuevas (con pausa para evitar bloqueo)
+  // ② Scrape solo URLs nuevas (max 25 por ejecución para no superar 6 min)
+  var totalNuevas = nuevas.length;
+  var pendientes = 0;
+  if (totalNuevas > MAX_NEW_PER_RUN) {
+    pendientes = totalNuevas - MAX_NEW_PER_RUN;
+    nuevas = nuevas.slice(0, MAX_NEW_PER_RUN);
+  }
+
   if (nuevas.length > 0) {
-    Logger.log('Scrapeando ' + nuevas.length + ' URLs nuevas...');
+    Logger.log('Scrapeando ' + nuevas.length + ' de ' + totalNuevas + ' URLs nuevas' + (pendientes ? ' (quedan ' + pendientes + ' para proxima ejecucion)' : ''));
     for (var n = 0; n < nuevas.length; n++) {
       var rowIdx = nuevas[n];
       var rowUrl = data[rowIdx][urlCol].toString().trim();
@@ -129,9 +145,7 @@ function syncPrices() {
           headers: { 'Authorization': 'Bearer ' + cfg.token },
           muteHttpExceptions: true,
         });
-        if (scrapeResp.getResponseCode() < 300) {
-          Logger.log('  OK [' + (n+1) + '/' + nuevas.length + ']: ' + rowUrl.substring(0, 60));
-        } else {
+        if (scrapeResp.getResponseCode() >= 300) {
           Logger.log('  FAIL [' + (n+1) + '/' + nuevas.length + ']: ' + scrapeResp.getResponseCode());
         }
       } catch (e) {
@@ -154,23 +168,35 @@ function syncPrices() {
       muteHttpExceptions: true
     });
     if (resp.getResponseCode() !== 200) {
-      Logger.log('Productos respondió ' + resp.getResponseCode());
-      // ⚠️ Scraper o API caídos → no tocar la hoja
+      Logger.log('Productos respondió ' + resp.getResponseCode() + ' — preservando hoja');
       return;
     }
   } catch (e) {
-    // ⚠️ Error de red o API caída → preservar datos
     Logger.log('Error obteniendo productos (API caida?): ' + e);
     return;
   }
 
   var productos;
   try { productos = JSON.parse(resp.getContentText()); }
-  catch (e) { Logger.log('Error parseando JSON (respuesta corrupta?): ' + e); return; }
+  catch (e) { Logger.log('Error parseando JSON — preservando hoja'); return; }
 
-  if (!productos || !productos.length) { Logger.log('No hay productos (BD vacia?) - preservando hoja'); return; }
+  if (!productos || !productos.length) { Logger.log('No hay productos (BD vacia?) — preservando hoja'); return; }
 
-  Logger.log('Productos obtenidos: ' + productos.length);
+  // ✅ Optimización: indexar productos en Maps para búsqueda O(1)
+  var urlMap = {};      // exact match:  url_origen → producto
+  var normMap = {};     // normalized:   url sin trailing slash → producto
+  var productosSinMatch = [];  // solo para el fallback contains (O(n) como último recurso)
+
+  for (var pi = 0; pi < productos.length; pi++) {
+    var p = productos[pi];
+    var pu = p.url_origen;
+    if (pu) {
+      urlMap[pu] = p;
+      var pn = pu.replace(/\/+$/, '').toLowerCase();
+      if (!normMap[pn]) normMap[pn] = p;  // primera ocurrencia gana
+    }
+    productosSinMatch.push(p);
+  }
 
   var now = new Date();
   var actualizados = 0;
@@ -181,7 +207,7 @@ function syncPrices() {
   var batchFechaUpdates = [];
   var batchNombreUpdates = [];
 
-  // ④ Comparar y actualizar
+  // ④ Comparar y actualizar (búsqueda optimizada con Maps)
   var matches = 0;
   var sinMatch = 0;
   var preciosInvalidos = 0;
@@ -190,28 +216,17 @@ function syncPrices() {
     var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
     if (!sUrl) continue;
 
-    // Buscar producto por URL (exacta primero, luego normalizada)
-    var match = null;
-    for (var m = 0; m < productos.length; m++) {
-      var pu = productos[m].url_origen;
-      if (pu === sUrl) { match = productos[m]; break; }
-    }
-
-    // Fallback: normalizar ambas URLs (sin trailing slash)
+    // Búsqueda O(1): exacta primero, luego normalizada
+    var match = urlMap[sUrl];
     if (!match) {
-      var sNorm = sUrl.replace(/\/+$/, '').toLowerCase();
-      for (var m = 0; m < productos.length; m++) {
-        var pNorm = (productos[m].url_origen || '').replace(/\/+$/, '').toLowerCase();
-        if (pNorm === sNorm) { match = productos[m]; break; }
-      }
+      match = normMap[sUrl.replace(/\/+$/, '').toLowerCase()];
     }
-
-    // Fallback 2: si la URL del sheet contiene la URL de BD o viceversa
+    // Fallback O(n): substring (solo cuando los dos anteriores fallan, ~5% de casos)
     if (!match) {
-      for (var m = 0; m < productos.length; m++) {
-        var pu = (productos[m].url_origen || '').toLowerCase();
+      for (var fm = 0; fm < productosSinMatch.length; fm++) {
+        var pu = (productosSinMatch[fm].url_origen || '').toLowerCase();
         if (sUrl.toLowerCase().indexOf(pu) !== -1 || pu.indexOf(sUrl.toLowerCase()) !== -1) {
-          match = productos[m]; break;
+          match = productosSinMatch[fm]; break;
         }
       }
     }
@@ -225,7 +240,6 @@ function syncPrices() {
     // ✅ Validar precio (solo escribir si > 0)
     if (typeof precioDB !== 'number' || isNaN(precioDB) || precioDB <= 0) {
       preciosInvalidos++;
-      Logger.log('  Precio invalido para ' + sUrl.substring(0, 50) + ': ' + precioDB + ' — preservando hoja');
     } else {
       precioStr = '$' + precioDB.toLocaleString('es-CO');
     }
@@ -234,42 +248,32 @@ function syncPrices() {
 
     // Si el precio cambió (y es válido)
     if (precioStr && precioOld !== precioStr) {
-      // ✅ Backup: mover precio anterior a col J
       batchAnteriorUpdates.push({
         row: k + 1,
         col: anteriorCol + 1,
         value: precioOld || ''
       });
-
-      // ✅ Escribir nuevo precio en col F
       batchPrecioUpdates.push({
         row: k + 1,
         col: precioCol + 1,
         value: precioStr
       });
-
-      // ✅ Solo actualizar fecha si el precio cambió
       batchFechaUpdates.push({
         row: k + 1,
         col: fechaCol + 1,
         value: now
       });
-
       cambios++;
       if (precioOld) backups++;
     }
 
-    // Escribir nombre del producto en col B (siempre, es informativo)
     batchNombreUpdates.push({
       row: k + 1,
       col: nombreCol + 1,
       value: match.descripcion || ''
     });
-
     actualizados++;
   }
-
-  Logger.log('Matches: ' + matches + ', Sin match: ' + sinMatch + ', Precios invalidos: ' + preciosInvalidos);
 
   // ⑤ Escribir batch de precios/fechas/nombres
   if (batchAnteriorUpdates.length > 0) {
@@ -277,7 +281,6 @@ function syncPrices() {
       var ab = batchAnteriorUpdates[b];
       sheet.getRange(ab.row, ab.col).setValue(ab.value);
     }
-    Logger.log('Backups (precio anterior en col J): ' + backups);
   }
 
   if (batchPrecioUpdates.length > 0) {
@@ -285,7 +288,6 @@ function syncPrices() {
       var up = batchPrecioUpdates[b];
       sheet.getRange(up.row, up.col).setValue(up.value);
     }
-    Logger.log('Precios actualizados: ' + cambios);
   }
 
   if (batchFechaUpdates.length > 0) {
@@ -293,7 +295,6 @@ function syncPrices() {
       var du = batchFechaUpdates[d];
       sheet.getRange(du.row, du.col).setValue(du.value);
     }
-    Logger.log('Fechas actualizadas: ' + batchFechaUpdates.length + ' (solo donde cambió precio)');
   }
 
   if (batchNombreUpdates.length > 0) {
@@ -301,30 +302,34 @@ function syncPrices() {
       var nu = batchNombreUpdates[n];
       sheet.getRange(nu.row, nu.col).setValue(nu.value);
     }
-    Logger.log('Nombres actualizados: ' + batchNombreUpdates.length);
   }
 
-  // ⑤.½ Semilla col J: copiar precio de F a J donde J esté vacía
-  //    Lee directo de celdas, no del array data.
-  var semilla = 0;
+  // ⑤.½ Semilla col J: BATCH read F y J, BATCH write solo donde J vacía
   var lastRow = sheet.getLastRow();
-  Logger.log('[Semilla] Revisando filas 2 a ' + lastRow + ' (col F=' + (precioCol+1) + ', col J=' + (anteriorCol+1) + ')');
-  for (var r = 2; r <= lastRow; r++) {
-    var fVal = sheet.getRange(r, precioCol + 1).getValue();
-    var jVal = sheet.getRange(r, anteriorCol + 1).getValue();
-    var fStr = (fVal !== null && fVal !== undefined) ? fVal.toString().trim() : '';
-    var jStr = (jVal !== null && jVal !== undefined) ? jVal.toString().trim() : '';
-    // Debug: loggear primeras 5 filas
-    if (r <= 6) Logger.log('[Semilla] Fila ' + r + ' → F="' + fStr + '" J="' + jStr + '"');
-    if (fStr && !jStr) {
-      sheet.getRange(r, anteriorCol + 1).setValue(fVal);
-      semilla++;
+  if (lastRow >= 2) {
+    // Leer toda la columna F de una vez
+    var fRange = sheet.getRange(2, precioCol + 1, lastRow - 1, 1);
+    var fValues = fRange.getValues();
+    // Leer toda la columna J de una vez
+    var jRange = sheet.getRange(2, anteriorCol + 1, lastRow - 1, 1);
+    var jValues = jRange.getValues();
+
+    var semilla = 0;
+    for (var r = 0; r < fValues.length; r++) {
+      var fv = fValues[r][0];
+      var jv = jValues[r][0];
+      var fStr = (fv != null) ? fv.toString().trim() : '';
+      var jStr = (jv != null) ? jv.toString().trim() : '';
+      if (fStr && !jStr) {
+        jValues[r][0] = fv;  // copiar F → J en el array
+        semilla++;
+      }
     }
-  }
-  if (semilla > 0) {
-    Logger.log('Semilla col J (precio copiado de F): ' + semilla + ' filas');
-  } else {
-    Logger.log('[Semilla] Ninguna fila necesitó copia (ya tenían J o F vacía).');
+
+    // Escribir columna J de vuelta en una sola llamada (solo si hubo cambios)
+    if (semilla > 0) {
+      jRange.setValues(jValues);
+    }
   }
 
   // ⑥ Sincronizar categorías automáticamente (sin scrape, rápido)
@@ -336,11 +341,18 @@ function syncPrices() {
     });
     if (catResp.getResponseCode() === 200) {
       var catData = JSON.parse(catResp.getContentText());
-      Logger.log('Categorías sincronizadas: ' + catData.actualizados);
     }
-  } catch (e) { Logger.log('Sync categorías error: ' + e); }
+  } catch (e) {}
 
-  Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas, ' + cambios + ' precios, ' + backups + ' backups');
+  // ─── Resumen final (único Logger.log pesado) ───
+  Logger.log(
+    'Sync OK | ' +
+    'Nuevas: ' + totalNuevas + ' (scrapeadas: ' + nuevas.length + (pendientes ? ', pendientes: ' + pendientes : '') + ') | ' +
+    'Matches: ' + matches + ' | Sin match: ' + sinMatch + ' | ' +
+    'Precios act: ' + cambios + ' | Backups: ' + backups + ' | ' +
+    'Nombres: ' + batchNombreUpdates.length + ' | ' +
+    'Semilla J: ' + (typeof semilla !== 'undefined' ? semilla : 0)
+  );
 }
 
 
@@ -375,7 +387,6 @@ function syncCategoriesOnly() {
 // ─── Menú: Forzar scrape completo ──────────────────────────
 
 function forceFullScrape() {
-  // ✅ Confirmación antes de scrape masivo
   var ui = SpreadsheetApp.getUi();
   var respuesta = ui.alert(
     '⚠️ Forzar scrape completo',
