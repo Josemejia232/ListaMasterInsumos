@@ -132,3 +132,9 @@ El script `scripts/syncPrices.gs` se ejecuta en el Google Sheet vinculado y sinc
 - Respalda el precio anterior en col J antes de sobrescribir
 - Si `/productos` falla o devuelve vacío → no toca la hoja
 - `forceFullScrape` pide confirmación antes de ejecutar
+
+### Solución de problemas GAS
+
+- **401 en `/scrape/sync` o `/productos`**: El token en I2 no coincide con el del admin en la BD. Verificar en Render → Environment Variables que `ADMIN_TOKEN` coincida con el token real del admin (loguearse en la app para confirmarlo).
+- **Columna J vacía**: El script ejecuta una semilla automática que copia F → J en el primer sync. Revisar Logs de Cloud (Editor Apps Script → Ejecuciones → ver log detallado) para confirmar `Semilla col J: X filas`.
+- **"PRECIO ANTERIOR" aparece en I1**: Versión vieja del script pisó la API URL. Borrar I1 y restaurar `https://listamasterinsumos.onrender.com`, o actualizar el script a la versión más reciente de `scripts/syncPrices.gs`.
