@@ -1,5 +1,5 @@
 /**
- * ListaMasterInsumos — Google Apps Script (optimizado)
+ * ListaMasterInsumos — Google Apps Script (v2 · resiliente)
  *
  * Estrategia:
  *   ① Lee el sheet y detecta URLs NUEVAS (sin ÚLTIMO PRECIO)
@@ -8,9 +8,14 @@
  *   ④ Actualiza solo las celdas que cambiaron (batch al final)
  *   ⑤ Sincroniza categorías desde el sheet hacia la BD
  *
+ * Seguridad ante caída del scraper:
+ *   · Solo escribe precio si valor > 0
+ *   · Solo actualiza fecha si el precio realmente cambió
+ *   · Respalda precio anterior en col I antes de sobrescribir
+ *
  * Configuración:
- *   Celda I1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
- *   Celda I2 = Token de admin
+ *   Celda K1 = URL de la API (ej: https://listamasterinsumos.onrender.com)
+ *   Celda K2 = Token de admin
  *
  * Uso:
  *   - Menú "ListaMaster" en la hoja → ejecutar manualmente
@@ -33,8 +38,16 @@ function onOpen() {
 
 function getConfig() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var apiUrl = sheet.getRange('I1').getValue();
-  var token  = sheet.getRange('I2').getValue();
+  // Nuevo: config en col K (antes estaba en I, ahora I = PRECIO ANTERIOR)
+  var apiUrl = sheet.getRange('K1').getValue();
+  var token  = sheet.getRange('K2').getValue();
+  // Fallback: si K está vacío, probar ubicación antigua (I)
+  if (!apiUrl || !apiUrl.toString().trim()) {
+    apiUrl = sheet.getRange('I1').getValue();
+  }
+  if (!token || !token.toString().trim()) {
+    token = sheet.getRange('I2').getValue();
+  }
   return {
     apiUrl: (apiUrl && apiUrl.toString().trim()) ? apiUrl.toString().trim() : 'https://listamasterinsumos.onrender.com',
     token:  (token && token.toString().trim())  ? token.toString().trim()  : 'REDACTED_ADMIN_TOKEN'
@@ -79,6 +92,13 @@ function syncPrices() {
   if ((headers[fechaCol] || '').indexOf('actualizaci') === -1) {
     sheet.getRange(1, fechaCol + 1).setValue('ÚLTIMA ACTUALIZACIÓN');
     headers[fechaCol] = 'última actualización';
+  }
+
+  // Col I = PRECIO ANTERIOR (backup)
+  var anteriorCol = 8;
+  if ((headers[anteriorCol] || '').indexOf('anterior') === -1) {
+    sheet.getRange(1, anteriorCol + 1).setValue('PRECIO ANTERIOR');
+    headers[anteriorCol] = 'precio anterior';
   }
 
   // Detectar columna CATEGORIA
@@ -143,28 +163,37 @@ function syncPrices() {
     });
     if (resp.getResponseCode() !== 200) {
       Logger.log('Productos respondió ' + resp.getResponseCode());
+      // ⚠️ Scraper o API caídos → no tocar la hoja
       return;
     }
-  } catch (e) { Logger.log('Error obteniendo productos: ' + e); return; }
+  } catch (e) {
+    // ⚠️ Error de red o API caída → preservar datos
+    Logger.log('Error obteniendo productos (API caida?): ' + e);
+    return;
+  }
 
   var productos;
   try { productos = JSON.parse(resp.getContentText()); }
-  catch (e) { Logger.log('Error parseando JSON'); return; }
+  catch (e) { Logger.log('Error parseando JSON (respuesta corrupta?): ' + e); return; }
 
-  if (!productos || !productos.length) { Logger.log('No hay productos'); return; }
+  if (!productos || !productos.length) { Logger.log('No hay productos (BD vacia?) - preservando hoja'); return; }
 
   Logger.log('Productos obtenidos: ' + productos.length);
 
   var now = new Date();
   var actualizados = 0;
   var cambios = 0;
-  var batchUpdates = [];
-  var batchDateUpdates = [];
+  var backups = 0;
+  var batchPrecioUpdates = [];
+  var batchAnteriorUpdates = [];
+  var batchFechaUpdates = [];
   var batchNombreUpdates = [];
 
   // ④ Comparar y actualizar
   var matches = 0;
   var sinMatch = 0;
+  var preciosInvalidos = 0;
+
   for (var k = 1; k < data.length; k++) {
     var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
     if (!sUrl) continue;
@@ -199,27 +228,46 @@ function syncPrices() {
     matches++;
 
     var precioDB = match.valor;
-    var precioStr = '$' + precioDB.toLocaleString('es-CO');
+    var precioStr = '';
+
+    // ✅ Validar precio (solo escribir si > 0)
+    if (typeof precioDB !== 'number' || isNaN(precioDB) || precioDB <= 0) {
+      preciosInvalidos++;
+      Logger.log('  Precio invalido para ' + sUrl.substring(0, 50) + ': ' + precioDB + ' — preservando hoja');
+    } else {
+      precioStr = '$' + precioDB.toLocaleString('es-CO');
+    }
+
     var precioOld = data[k][precioCol] ? data[k][precioCol].toString().trim() : '';
 
-    // Si el precio cambió o es nuevo
-    if (precioOld !== precioStr) {
-      batchUpdates.push({
+    // Si el precio cambió (y es válido)
+    if (precioStr && precioOld !== precioStr) {
+      // ✅ Backup: guardar precio anterior en col I
+      batchAnteriorUpdates.push({
+        row: k + 1,
+        col: anteriorCol + 1,
+        value: precioOld || ''
+      });
+
+      // ✅ Escribir nuevo precio en col F
+      batchPrecioUpdates.push({
         row: k + 1,
         col: precioCol + 1,
         value: precioStr
       });
+
+      // ✅ Solo actualizar fecha si el precio cambió
+      batchFechaUpdates.push({
+        row: k + 1,
+        col: fechaCol + 1,
+        value: now
+      });
+
       cambios++;
+      if (precioOld) backups++;
     }
 
-    // Siempre actualizar fecha
-    batchDateUpdates.push({
-      row: k + 1,
-      col: fechaCol + 1,
-      value: now
-    });
-
-    // Escribir nombre del producto en col B (siempre)
+    // Escribir nombre del producto en col B (siempre, es informativo)
     batchNombreUpdates.push({
       row: k + 1,
       col: nombreCol + 1,
@@ -229,22 +277,31 @@ function syncPrices() {
     actualizados++;
   }
 
-  Logger.log('Matches: ' + matches + ', Sin match: ' + sinMatch);
+  Logger.log('Matches: ' + matches + ', Sin match: ' + sinMatch + ', Precios invalidos: ' + preciosInvalidos);
 
   // ⑤ Escribir batch
-  if (batchUpdates.length > 0) {
-    for (var b = 0; b < batchUpdates.length; b++) {
-      var up = batchUpdates[b];
+  if (batchAnteriorUpdates.length > 0) {
+    for (var b = 0; b < batchAnteriorUpdates.length; b++) {
+      var ab = batchAnteriorUpdates[b];
+      sheet.getRange(ab.row, ab.col).setValue(ab.value);
+    }
+    Logger.log('Backups (precio anterior en col I): ' + backups);
+  }
+
+  if (batchPrecioUpdates.length > 0) {
+    for (var b = 0; b < batchPrecioUpdates.length; b++) {
+      var up = batchPrecioUpdates[b];
       sheet.getRange(up.row, up.col).setValue(up.value);
     }
     Logger.log('Precios actualizados: ' + cambios);
   }
 
-  if (batchDateUpdates.length > 0) {
-    for (var d = 0; d < batchDateUpdates.length; d++) {
-      var du = batchDateUpdates[d];
+  if (batchFechaUpdates.length > 0) {
+    for (var d = 0; d < batchFechaUpdates.length; d++) {
+      var du = batchFechaUpdates[d];
       sheet.getRange(du.row, du.col).setValue(du.value);
     }
+    Logger.log('Fechas actualizadas: ' + batchFechaUpdates.length + ' (solo donde cambió precio)');
   }
 
   if (batchNombreUpdates.length > 0) {
@@ -268,7 +325,7 @@ function syncPrices() {
     }
   } catch (e) { Logger.log('Sync categorías error: ' + e); }
 
-  Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas, ' + cambios + ' precios, ' + batchNombreUpdates.length + ' nombres');
+  Logger.log('Sincronización completa — ' + nuevas.length + ' nuevas, ' + actualizados + ' filas, ' + cambios + ' precios, ' + backups + ' backups');
 }
 
 
@@ -303,13 +360,22 @@ function syncCategoriesOnly() {
 // ─── Menú: Forzar scrape completo ──────────────────────────
 
 function forceFullScrape() {
+  // ✅ Confirmación antes de scrape masivo
+  var ui = SpreadsheetApp.getUi();
+  var respuesta = ui.alert(
+    '⚠️ Forzar scrape completo',
+    'Esto va a re-scrapear TODAS las URLs. Los precios actuales en la hoja se respaldarán en col I antes de sobrescribir.\n\n¿Continuar?',
+    ui.ButtonSet.YES_NO
+  );
+  if (respuesta !== ui.Button.YES) return;
+
   var cfg = getConfig();
   try {
-      var resp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/daily', {
-        method: 'post',
-        headers: { 'Authorization': 'Bearer ' + cfg.token },
-        muteHttpExceptions: true
-      });
+    var resp = UrlFetchApp.fetch(cfg.apiUrl + '/scrape/daily', {
+      method: 'post',
+      headers: { 'Authorization': 'Bearer ' + cfg.token },
+      muteHttpExceptions: true
+    });
     if (resp.getResponseCode() === 200) {
       var data = JSON.parse(resp.getContentText());
       SpreadsheetApp.getUi().alert(
@@ -317,9 +383,9 @@ function forceFullScrape() {
         data.mensaje
       );
     } else {
-      SpreadsheetApp.getUi().alert('Error: ' + resp.getResponseCode());
+      SpreadsheetApp.getUi().alert('Error: ' + resp.getResponseCode() + '\n\nLos datos existentes en la hoja NO fueron modificados.');
     }
   } catch (e) {
-    SpreadsheetApp.getUi().alert('Error: ' + e);
+    SpreadsheetApp.getUi().alert('Error de conexión: ' + e + '\n\nLos datos existentes en la hoja NO fueron modificados.');
   }
 }
