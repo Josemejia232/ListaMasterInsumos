@@ -305,21 +305,27 @@ function syncPrices() {
   }
 
   // ⑤.½ Semilla col J: copiar precio de F a J donde J esté vacía
-  //    (usa getValue/getRange directo, no el array data que puede estar desactualizado)
+  //    Lee directo de celdas, no del array data.
   var semilla = 0;
-  for (var k = 1; k < data.length; k++) {
-    var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
-    if (!sUrl) continue;
-    var fCell = sheet.getRange(k + 1, precioCol + 1);
-    var jCell = sheet.getRange(k + 1, anteriorCol + 1);
-    var fVal = fCell.getValue();
-    var jVal = jCell.getValue();
-    if (fVal && (!jVal || !jVal.toString().trim())) {
-      jCell.setValue(fVal);
+  var lastRow = sheet.getLastRow();
+  Logger.log('[Semilla] Revisando filas 2 a ' + lastRow + ' (col F=' + (precioCol+1) + ', col J=' + (anteriorCol+1) + ')');
+  for (var r = 2; r <= lastRow; r++) {
+    var fVal = sheet.getRange(r, precioCol + 1).getValue();
+    var jVal = sheet.getRange(r, anteriorCol + 1).getValue();
+    var fStr = (fVal !== null && fVal !== undefined) ? fVal.toString().trim() : '';
+    var jStr = (jVal !== null && jVal !== undefined) ? jVal.toString().trim() : '';
+    // Debug: loggear primeras 5 filas
+    if (r <= 6) Logger.log('[Semilla] Fila ' + r + ' → F="' + fStr + '" J="' + jStr + '"');
+    if (fStr && !jStr) {
+      sheet.getRange(r, anteriorCol + 1).setValue(fVal);
       semilla++;
     }
   }
-  if (semilla > 0) Logger.log('Semilla col J (precio copiado de F): ' + semilla);
+  if (semilla > 0) {
+    Logger.log('Semilla col J (precio copiado de F): ' + semilla + ' filas');
+  } else {
+    Logger.log('[Semilla] Ninguna fila necesitó copia (ya tenían J o F vacía).');
+  }
 
   // ⑥ Sincronizar categorías automáticamente (sin scrape, rápido)
   try {
