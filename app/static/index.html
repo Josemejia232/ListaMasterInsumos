@@ -848,6 +848,12 @@ async function cargarVerInsumos(){
     } else {
       _freeTierInfo = null;
     }
+    console.log('[cargarVerInsumos] productos recibidos:', newData.length, '| total:', total, '| categorias:', cats, '| freeTier:', !!_freeTierInfo);
+    if(_freeTierInfo){
+      var catDist = {};
+      newData.forEach(function(p){ var c = p.n01 || 'SinCat'; catDist[c] = (catDist[c]||0)+1; });
+      console.log('[cargarVerInsumos] distribucion por categoria:', JSON.stringify(catDist));
+    }
     var changed = true;
     if(_verProds.length === newData.length){
       var oldIds = _verProds.map(p=> p.id+'|'+p.valor+'|'+p.categoria+'|'+p.descripcion_ajustada).join();
@@ -873,7 +879,7 @@ function renderVer(){
 
   totalCount.style.display = 'inline-flex';
   if(_freeTierInfo && !isAdmin){
-    totalCount.textContent = '📦 '+_verProds.length+' de '+_freeTierInfo.total+' insumos (10 x categoria)';
+    totalCount.textContent = '📦 '+_verProds.length+' de '+_freeTierInfo.total+' insumos (10 x '+_freeTierInfo.categorias+' cat)';
   } else {
     totalCount.textContent = '📦 '+_verProds.length+' insumos';
   }
