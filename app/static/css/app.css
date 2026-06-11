@@ -105,6 +105,9 @@ body{
 }
 .login-box input::placeholder{color:var(--muted)}
 #anc-cant::placeholder,#mez-vol::placeholder,#mamp-vol::placeholder{color:var(--muted)}
+.calc-vr-insumo::-webkit-outer-spin-button,
+.calc-vr-insumo::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.calc-vr-insumo[type=number]{-moz-appearance:textfield}
 .login-box input:focus{
   outline:none;
   border-color:var(--accent);
