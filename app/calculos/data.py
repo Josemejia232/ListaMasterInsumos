@@ -32,7 +32,7 @@ class Mezcla:
 
 # ─── Precios fijos (agua, mano de obra — no están en la BD) ───
 PRECIOS_FIJOS: dict[str, float] = {
-    "Agua": 57.0,
+    "Agua": 0.0,
     "M.O. CUADRILLA AG 1:2": 19888.0,
     "M.O. CUADRILLA AG 0:2": 11288.0,
     "Mezcladora a gasolina 1 1/2 bulto": 4125.0,

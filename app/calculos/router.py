@@ -12,6 +12,11 @@ from app.calculos.data_anclajes import calcular_anclaje
 
 router = APIRouter(prefix="/api/calculos", tags=["Cálculos"])
 
+# Conversion: cantidad en unidad técnica → unidad de compra
+_CONVERSION: dict[str, float] = {
+    "Cemento": 50.0,  # 50 kg por saco
+}
+
 # Fallback cuando no se encuentra en BD ni en fijos
 _FALLBACK_PRECIOS: dict[str, float] = {
     "Cemento": 546.0,
@@ -164,13 +169,15 @@ def _calcular_mezcla(mezcla_id: str, db: Session) -> MezclaResponse:
                 vr_unitario = _FALLBACK_PRECIOS.get(mat.nombre, 0.0)
                 fuente = "fallback"
 
-        vr_total = round(mat.cantidad * vr_unitario, 2)
+        factor = _CONVERSION.get(mat.nombre, 1.0)
+        cantidad_compra = round(mat.cantidad / factor, 4)
+        vr_total = round(cantidad_compra * vr_unitario, 2)
         total += vr_total
 
         materiales_calc.append(MaterialCalculado(
             nombre=mat.nombre,
-            unidad=mat.unidad,
-            cantidad=mat.cantidad,
+            unidad=mat.unidad if factor == 1.0 else ("Saco" if mat.nombre == "Cemento" else mat.unidad),
+            cantidad=cantidad_compra,
             vr_unitario=vr_unitario,
             vr_total=vr_total,
             fuente=fuente,

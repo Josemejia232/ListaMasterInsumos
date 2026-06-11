@@ -198,7 +198,7 @@ const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Be
 
 // ─── Cálculos ──────────────────────────────────────────
 const _CONV = {
-  "Cemento": { u:"Bolsa", f:50 },
+  "Cemento": { u:"Bolsa", f:1 },
   "Arena de rio": { u:"Viaje", f:1.05 },
   "Arena de pozo": { u:"Viaje", f:1.05 },
   "Arena de peña": { u:"Viaje", f:1.05 },
