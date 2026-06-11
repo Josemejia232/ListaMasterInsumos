@@ -7,7 +7,7 @@ import hmac
 from app.database import get_db
 from app.models import Insumo, Producto, Usuario, UsoCalculo
 from app.calculos.data import MEZCLAS, PRECIOS_FIJOS
-from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje
+from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse
 from app.calculos.data_anclajes import calcular_anclaje
 
 router = APIRouter(prefix="/api/calculos", tags=["Cálculos"])
@@ -72,10 +72,9 @@ def _get_user(authorization: str = Header(None), db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token requerido")
     token = authorization[7:]
-    users = db.query(Usuario).filter(Usuario.activo == True).all()
-    for user in users:
-        if hmac.compare_digest(token, user.token or ""):
-            return user
+    user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token).first()
+    if user and hmac.compare_digest(token, user.token or ""):
+        return user
     raise HTTPException(status_code=401, detail="Token invalido")
 
 
@@ -130,21 +129,13 @@ def _buscar_precio_bd(nombre: str, keywords: list[str], db: Session) -> float | 
     if not keywords:
         return None
 
-    condiciones = []
-    for kw in keywords:
-        for tbl_col in [
-            (Insumo, Insumo.descripcion),
-            (Producto, Producto.descripcion),
-        ]:
-            modelo, col = tbl_col
-            condiciones.append(
-                db.query(func.min(modelo.valor))
-                .filter(col.ilike(f"%{kw}%"))
-                .filter(modelo.valor > 0)
-            )
-
+    from sqlalchemy import or_
     mejor = None
-    for q in condiciones:
+    for modelo, col in [(Insumo, Insumo.descripcion), (Producto, Producto.descripcion)]:
+        q = db.query(func.min(modelo.valor)).filter(
+            or_(*[col.ilike(f"%{kw}%") for kw in keywords]),
+            modelo.valor > 0
+        )
         v = q.scalar()
         if v is not None:
             if mejor is None or v < mejor:
@@ -199,7 +190,7 @@ def _calcular_mezcla(mezcla_id: str, db: Session) -> MezclaResponse:
     )
 
 
-@router.get("", response_model=list[MezclaResponse])
+@router.get("", response_model=list[MezclaMetaResponse])
 def listar_mezclas(
     tipo: str | None = None,
     user: Usuario = Depends(_get_user),
@@ -219,7 +210,14 @@ def listar_mezclas(
         m = MEZCLAS[mezcla_id]
         if tipo and m.tipo != tipo:
             continue
-        resultados.append(_calcular_mezcla(mezcla_id, db))
+        resultados.append(MezclaMetaResponse(
+            id=m.id,
+            tipo=m.tipo,
+            nombre=m.nombre,
+            proporcion=m.proporcion,
+            resistencia_psi=m.resistencia_psi,
+            categoria=m.categoria,
+        ))
 
     if plan == "free":
         cats = {"concreto": 0, "mortero": 0, "mamposteria": 0}

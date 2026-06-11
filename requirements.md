@@ -50,6 +50,8 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
   - Mano de obra → Horas cuadrilla (hc)
   - Mezcladora → Horas (hr)
 - **Nota final** en lista con resumen de cantidades a comprar (excluye MO/mezcladora/agua)
+- **Indicadores de carga** con spinner animado en todas las consultas de calculadora
+- **Caché frontend** (`_calcCache`) para evitar re-consultas al servidor al cambiar filtros
 
 ### Admin
 - Vista completa de productos con datos originales (código, URL, tienda)
@@ -72,11 +74,19 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 
 - **Backend:** FastAPI + SQLAlchemy + Pydantic
 - **Base de datos:** PostgreSQL (producción) / SQLite (desarrollo)
-- **Frontend:** HTML + CSS + JavaScript vanilla (SPA)
+- **Frontend:** HTML + CSS + JavaScript vanilla (SPA) con responsive design
 - **Scraping:** BeautifulSoup4 + lxml + httpx
 - **Pagos:** Bold API (integration link)
 - **Fuente de datos:** Google Sheets (`gspread`)
 - **Hosting:** Render
+
+## Responsive Design
+
+- **Desktop:** Layout completo con tablas, formularios en línea y tarjetas de plan en fila
+- **Tablet (≤768px):** Formularios apilados, tablas con scroll horizontal, tarjetas de plan en columna
+- **Móvil (≤480px):** Inputs 100% ancho, tipografía reducida, anclajes en columna vertical
+- **Spinner de carga:** Indicador visual animado mientras se consultan datos del servidor
+- **Caché frontend:** `_calcCache` evita re-consultas innecesarias a la lista de mezclas/mampostería
 
 ## Endpoints Principales
 
@@ -147,6 +157,25 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 | Plus | $15,000 COP | 30 días | Ilimitados | ✅ Ilimitada |
 
 **Upgrade Básico → Plus:** prorrateo automático por días no usados del Básico. Pago mínimo $5,000 (día 0). Al pagar, reinicia a 30 días limpios de Plus.
+
+## Performance
+
+### Optimizaciones implementadas
+
+| Optimización | Impacto | Archivo |
+|--------------|---------|---------|
+| **Listado ligero** (`MezclaMetaResponse`) | Reducción de ~500ms a ~30ms en listar mezclas | `router.py` |
+| **Caché frontend** (`_calcCache`) | Evita re-consultas al cambiar filtros de tipo/categoría | `index.html` |
+| **Indicadores de carga** | Spinner animado mientras se cargan datos | `index.html` |
+| **Lazy loading** | Resultados de cálculo solo se renderizan al hacer clic en "Calcular" | `index.html` |
+| **Responsive CSS** | Media queries para 768px y 480px | `index.html` |
+| **Auth por token** (`Usuario.token == token`) | Busca directo en BD en lugar de traer todos los usuarios | `router.py` |
+| **Queries unificadas** (`or_` en palabras clave) | Reduce de N queries a 2 por material (Insumo + Producto) | `router.py` |
+| **Sin carga automática** | Al cambiar filtro de tipo/categoría, no recarga la mezcla automáticamente | `index.html` |
+
+### DNS / Localhost
+- En Windows, `localhost` puede tener delay de ~2s por resolución DNS
+- **Solución:** Usar `127.0.0.1` para pruebas locales; en producción (Render) no aplica
 
 ## Módulo Cálculos — Datos
 

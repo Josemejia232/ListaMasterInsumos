@@ -442,6 +442,11 @@ h2::before{
   .page-wrap{padding:1rem}
   table{font-size:.75rem}
   th,td{padding:.4rem .55rem}
+  /* Resultado tablet */
+  .section-card > div[style*="display:flex;justify-content:space-between"]{flex-wrap:wrap;gap:.3rem}
+  #mez-result-wrap .section-card td:first-child,
+  #mamp-result-wrap .section-card td:first-child,
+  #anc-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:160px}
 }
 @media(max-width:480px){
   .form-row,.form-inline{flex-direction:column}
@@ -453,6 +458,28 @@ h2::before{
   .plan-card{min-width:100% !important;flex:none !important}
   #plan-banner .form-row{flex-direction:column}
   .calc-card table,.calc-card .section-card table{display:block;overflow-x:auto;white-space:nowrap}
+  /* Resultado responsive */
+  .section-card > div[style*="display:flex;justify-content:space-between"]{flex-direction:column;align-items:flex-start;gap:.4rem}
+  .section-card > div[style*="display:flex;justify-content:space-between"] > div:last-child{font-size:.95rem !important}
+  #mez-result-wrap .section-card td,#mez-result-wrap .section-card th,
+  #mamp-result-wrap .section-card td,#mamp-result-wrap .section-card th,
+  #anc-result-wrap .section-card td,#anc-result-wrap .section-card th{font-size:.65rem;padding:.2rem .25rem !important}
+  #mez-result-wrap .section-card td:first-child,#mamp-result-wrap .section-card td:first-child,
+  #anc-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:120px}
+  .section-card ul{padding-left:.8rem !important}
+  .section-card li{font-size:.75rem}
+}
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
 </head>
@@ -724,6 +751,12 @@ function _limiteCalcMsg(detail){
 
 let _calcData = null;
 let _editCant = false;
+let _calcCache = {};
+
+function _showLoading(elId){
+  const el = document.getElementById(elId);
+  if(el) el.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)"><div class="loading-spinner" style="margin:0 auto 1rem;border-top-color:var(--accent)"></div>Cargando...</div>';
+}
 
 function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
 var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
@@ -952,21 +985,31 @@ function recalcularMezcla(el){
 
 async function cargarSelectMezclas(){
   const tipo = document.getElementById('mez-tipo').value || '';
+  if(_calcCache[tipo||'all']){ _renderSelectMezclas(tipo, _calcCache[tipo||'all']); return; }
   const params = [];
   if(tipo) params.push('tipo='+tipo);
   const path = '/api/calculos' + (params.length ? '?'+params.join('&') : '');
+  _showLoading('mez-card-wrap');
   try {
     const r = await apiFetch(path);
     if(r.status === 403){ const me = await r.json(); document.getElementById('mez-card-wrap').innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
     if(!r.ok) return;
     const data = await r.json();
-    const sel = document.getElementById('mez-select');
-    const current = sel.value;
-    sel.innerHTML = '<option value="">Seleccione una mezcla...</option>'+
-      data.map(m => '<option value="'+m.id+'">'+escapeHtml(m.nombre)+'</option>').join('');
-    if(current && data.some(m => m.id===current)) sel.value = current;
-    cargarMezcla();
+    _calcCache[tipo||'all'] = data;
+    _renderSelectMezclas(tipo, data);
   } catch(e){}
+}
+
+function _renderSelectMezclas(tipo, data){
+  const sel = document.getElementById('mez-select');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Seleccione una mezcla...</option>'+
+    data.map(m => '<option value="'+m.id+'">'+escapeHtml(m.nombre)+'</option>').join('');
+  if(current && data.some(m => m.id===current)) sel.value = current;
+  // No llamar cargarMezcla() automáticamente — el onchange del select ya lo hace cuando el usuario elige
+  document.getElementById('mez-card-wrap').innerHTML = '';
+  document.getElementById('mez-result-wrap').style.display = 'none';
+  _calcData = null;
 }
 
 async function cargarMezcla(){
@@ -980,18 +1023,31 @@ async function cargarMezcla(){
 
 async function cargarSelectMamposteria(){
   const cat = document.getElementById('mamp-cat').value;
+  if(_calcCache['mamposteria']){
+    const filtered = cat ? _calcCache['mamposteria'].filter(m => m.categoria === cat) : _calcCache['mamposteria'];
+    _renderSelectMamposteria(filtered); return;
+  }
+  _showLoading('mamp-card-wrap');
   try {
     const r = await apiFetch('/api/calculos?tipo=mamposteria');
     if(!r.ok) return;
     const data = await r.json();
-    const sel = document.getElementById('mamp-select');
-    const current = sel.value;
+    _calcCache['mamposteria'] = data;
     const filtered = cat ? data.filter(m => m.categoria === cat) : data;
-    sel.innerHTML = '<option value="">Seleccione un tipo de muro...</option>'+
-      filtered.map(m => '<option value="'+m.id+'" data-categoria="'+(m.categoria||'')+'">'+escapeHtml(m.nombre)+'</option>').join('');
-    if(current && data.some(m => m.id===current)) sel.value = current;
-    cargarMamposteria();
+    _renderSelectMamposteria(filtered);
   } catch(e){}
+}
+
+function _renderSelectMamposteria(data){
+  const sel = document.getElementById('mamp-select');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Seleccione un tipo de muro...</option>'+
+    data.map(m => '<option value="'+m.id+'" data-categoria="'+(m.categoria||'')+'">'+escapeHtml(m.nombre)+'</option>').join('');
+  if(current && data.some(m => m.id===current)) sel.value = current;
+  // No llamar cargarMamposteria() automáticamente — el onchange del select ya lo hace cuando el usuario elige
+  document.getElementById('mamp-card-wrap').innerHTML = '';
+  document.getElementById('mamp-result-wrap').style.display = 'none';
+  _calcData = null;
 }
 
 async function cargarMamposteria(){
@@ -1004,8 +1060,10 @@ async function cargarMamposteria(){
 }
 
 async function _renderCard(id, wrap, rwrap, prefix){
+  wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)"><div class="loading-spinner" style="margin:0 auto 1rem;border-top-color:var(--accent)"></div>Cargando...</div>';
+  rwrap.style.display = 'none';
   try {
-  const r = await apiFetch('/api/calculos/'+id);
+    const r = await apiFetch('/api/calculos/'+id);
     if(r.status === 403){ const e = await r.json(); wrap.innerHTML = _limiteCalcMsg(e.detail||'Sin acceso'); return; }
     if(!r.ok) return;
     const m = await r.json();
@@ -1114,7 +1172,7 @@ function _renderVolumen(prefix){
     return Number(scaled).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(mat.unidad)+' de '+escapeHtml(name);
   }).filter(Boolean);
   const note = parts.length ? '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>' : '';
-  rwrap.innerHTML = '<div class="section-card" style="padding:0;overflow:hidden">'+
+  rwrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
     '<div style="padding:.6rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
     '<div style="font-weight:600;font-size:.85rem">Resultado para <span style="color:var(--accent)">'+Number(vol).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})+' '+unitLabel+'</span></div>'+
     '<div style="font-size:1.05rem;font-weight:700;color:var(--accent)">$'+Math.round(gTotal).toLocaleString('es-CO')+'</div></div>'+
@@ -1140,6 +1198,7 @@ async function calcularAnclajes(){
   const rwrap = document.getElementById('anc-result-wrap');
   rwrap.style.display = 'none';
   if(diam < 4 || prof < 20 || cant < 1){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Verifique los valores ingresados</div>'; return; }
+  _showLoading('anc-card-wrap');
   try {
     const r = await apiFetch('/api/calculos/anclajes', {
       method:'POST',
@@ -1163,8 +1222,8 @@ async function calcularAnclajes(){
       return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
     }).filter(Boolean);
     const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
-    wrap.innerHTML = '<div class="section-card" style="padding:0;overflow:hidden">'+
-      '<div style="padding:.6rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
       '<div><div style="font-weight:600;font-size:.85rem">Anclaje Químico ø'+diam+'mm × '+prof+'mm</div>'+
       '<div style="font-size:.76rem;color:var(--muted)">'+cant+' puntos · '+data.volumen_total_cm3.toFixed(1)+' cm³ resina · '+data.tubos_calculados+' tubo(s) 300ml</div></div>'+
       '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+

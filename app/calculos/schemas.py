@@ -47,3 +47,12 @@ class AnclajeResponse(BaseModel):
     tubos_calculados: int
     materiales: list[MaterialAnclaje]
     total: float
+
+
+class MezclaMetaResponse(BaseModel):
+    id: str
+    tipo: str
+    nombre: str
+    proporcion: str
+    resistencia_psi: int | None = None
+    categoria: str | None = None
