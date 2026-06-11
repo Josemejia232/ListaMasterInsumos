@@ -260,8 +260,6 @@ def listar_materiales(user: Usuario = Depends(_get_user), db: Session = Depends(
     materiales: dict[str, dict] = {}
 
     for mezcla in MEZCLAS.values():
-        if mezcla.tipo not in ("concreto", "mortero"):
-            continue
         for mat in mezcla.materiales:
             nombre = mat.nombre
             if nombre not in materiales:
