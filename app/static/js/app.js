@@ -116,6 +116,7 @@ function buildSidebar(){
   items.push({label:'LISTA INSUMOS', header:true});
   items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
   items.push({label:'CÁLCULOS', header:true});
+  items.push({id:'insumos-calc', icon:'&#9679;', text:'Insumos'});
   items.push({id:'mezclas', icon:'&#9881;', text:'Mezclas'});
   items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
   items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
@@ -135,12 +136,13 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
+  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'insumos-calc':'Insumos', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
   if(section==='usuarios') cargarUsuarios();
   if(section==='pagos') cargarPagos();
+  if(section==='insumos-calc') cargarInsumosCalc();
   if(section==='mezclas') cargarSelectMezclas();
   if(section==='mamposteria') cargarSelectMamposteria();
 }
@@ -269,6 +271,60 @@ function recalcularMezcla(el){
   card.querySelector('.calc-total').textContent = '$'+Math.round(total).toLocaleString('es-CO');
   _renderVolumen(prefix);
   _saveOverrides();
+}
+
+// ─── Insumos Calculos ───────────────────────────────────
+async function cargarInsumosCalc(){
+  const wrap = document.getElementById('insumos-calc-wrap');
+  wrap.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)"><div class="loading-spinner" style="margin:0 auto 1rem;border-top-color:var(--accent)"></div>Cargando...</div>';
+  try {
+    const r = await apiFetch('/api/calculos/materiales');
+    if(!r.ok){ wrap.innerHTML = '<div style="padding:1rem;color:var(--muted)">Error al cargar materiales.</div>'; return; }
+    const data = await r.json();
+    if(!data.length){ wrap.innerHTML = '<div style="padding:1rem;color:var(--muted)">No hay materiales.</div>'; return; }
+    renderInsumosCalc(data);
+  } catch(e){}
+}
+
+function renderInsumosCalc(materiales){
+  const wrap = document.getElementById('insumos-calc-wrap');
+  const rows = materiales.map(m => {
+    var tipos = (m.tipos||[]).join(', ');
+    return '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem;font-weight:500">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+
+        '<input class="calc-vr-insumo" type="number" step="1" value="'+m.vr_unitario+'" data-nombre="'+escapeHtml(m.nombre)+'" onchange="guardarVrInsumo(this)" style="width:90px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;text-align:right;padding:.1rem .3rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\'" title="Editar valor unitario"></td>'+
+      '<td style="padding:.3rem .5rem;font-size:.72rem;color:var(--muted);text-align:center">'+escapeHtml(tipos)+'</td>'+
+      '</tr>';
+  }).join('');
+  wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr>'+
+    '<th style="padding:.4rem .5rem;font-size:.75rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2);min-width:180px">Material</th>'+
+    '<th style="padding:.4rem .3rem;font-size:.75rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Unidad</th>'+
+    '<th style="padding:.4rem .3rem;font-size:.75rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Vr Unit</th>'+
+    '<th style="padding:.4rem .5rem;font-size:.75rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Aparece en</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+async function guardarVrInsumo(el){
+  var nombre = el.dataset.nombre;
+  var vr = parseFloat(el.value) || 0;
+  // Guardar via API
+  try {
+    await apiFetch('/api/calculos/overrides', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify([{nombre: nombre, unidad: '', cantidad: 0, vr_unitario: vr}])
+    });
+    // Actualizar localStorage tambien
+    var overrides = {};
+    try { overrides = JSON.parse(localStorage.getItem('ls_materialOverrides') || '{}'); } catch(e) {}
+    overrides[nombre] = overrides[nombre] || {};
+    overrides[nombre].vr_unitario = vr;
+    try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
+  } catch(e) {}
 }
 
 async function cargarSelectMezclas(){

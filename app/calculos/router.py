@@ -252,6 +252,53 @@ def calcular_stats():
     }
 
 
+# ─── Materiales comunes (insumos repetidos en concretos y morteros) ──
+
+@router.get("/materiales")
+def listar_materiales(user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    """Retorna todos los materiales únicos de concretos y morteros con sus precios."""
+    materiales: dict[str, dict] = {}
+
+    for mezcla in MEZCLAS.values():
+        if mezcla.tipo not in ("concreto", "mortero"):
+            continue
+        for mat in mezcla.materiales:
+            nombre = mat.nombre
+            if nombre not in materiales:
+                vr = PRECIOS_FIJOS.get(nombre)
+                if vr is None:
+                    vr = _buscar_precio_bd(nombre, mat.keywords, db)
+                    if vr is None:
+                        vr = _FALLBACK_PRECIOS.get(nombre, 0.0)
+                materiales[nombre] = {
+                    "nombre": nombre,
+                    "unidad": mat.unidad,
+                    "vr_unitario": vr,
+                    "tipos": set(),
+                }
+            materiales[nombre]["tipos"].add(mezcla.tipo)
+
+    # Aplicar overrides del usuario
+    overrides = {
+        o.nombre: o for o in db.query(UserMaterialOverride).filter(
+            UserMaterialOverride.usuario_id == user.id
+        ).all()
+    }
+
+    result = []
+    for nombre, data in sorted(materiales.items()):
+        ov = overrides.get(nombre)
+        result.append({
+            "nombre": nombre,
+            "unidad": ov.unidad if ov else data["unidad"],
+            "vr_unitario": ov.vr_unitario if ov else data["vr_unitario"],
+            "cantidad": ov.cantidad if ov else 0.0,
+            "tipos": sorted(data["tipos"]),
+        })
+
+    return result
+
+
 # ─── User Material Overrides ─────────────────────────────────────
 
 from pydantic import BaseModel
