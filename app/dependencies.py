@@ -40,12 +40,34 @@ def _check_rate_limit_db(key: str, max_requests: int, db: Session) -> bool:
     db.commit()
     return True
 
-def rate_limit_login(request: Request, db: Session = Depends(get_db)):
+def rate_limit_login(request: Request, db: Session = None):
+    if db is None:
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            _rate_limit_login(request, db)
+        finally:
+            db.close()
+        return
+    _rate_limit_login(request, db)
+
+def _rate_limit_login(request: Request, db: Session):
     ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit_db(f"login:{ip}", 10, db):
         raise HTTPException(status_code=429, detail="Demasiados intentos. Intenta en 1 minuto.")
 
-def rate_limit_scrape(request: Request, db: Session = Depends(get_db)):
+def rate_limit_scrape(request: Request, db: Session = None):
+    if db is None:
+        from app.database import SessionLocal
+        db = SessionLocal()
+        try:
+            _rate_limit_scrape(request, db)
+        finally:
+            db.close()
+        return
+    _rate_limit_scrape(request, db)
+
+def _rate_limit_scrape(request: Request, db: Session):
     ip = request.client.host if request.client else "unknown"
     if not _check_rate_limit_db(f"scrape:{ip}", 5, db):
         raise HTTPException(status_code=429, detail="Demasiadas peticiones de scrape. Intenta en 1 minuto.")

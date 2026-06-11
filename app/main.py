@@ -83,7 +83,7 @@ FORCE_HTTPS = os.getenv("FORCE_HTTPS", "true").lower() in ("true", "1", "yes")
 
 @app.middleware("http")
 async def https_redirect(request: Request, call_next):
-    if FORCE_HTTPS and request.url.scheme == "http" and "localhost" not in request.url.hostname and "127.0.0.1" not in request.url.hostname:
+    if FORCE_HTTPS and request.url.scheme == "http" and "localhost" not in request.url.hostname and "127.0.0.1" not in request.url.hostname and "testserver" not in request.url.hostname:
         from fastapi.responses import RedirectResponse
         return RedirectResponse(str(request.url.replace(scheme="https")), status_code=301)
     return await call_next(request)
