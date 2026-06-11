@@ -335,8 +335,6 @@ def startup():
             admin_token = os.getenv("ADMIN_TOKEN")
             if not admin_email or not admin_token:
                 logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
-            elif len(admin_token) < 32:
-                logger.warning("ADMIN_TOKEN debe tener al menos 32 caracteres. Seed admin omitido por seguridad.")
             else:
                 db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
                 db.commit()
