@@ -26,7 +26,7 @@ let _calcCache = {};
 
 // Limpiar overrides si la version cambio (evita datos viejos)
 (function(){
-  var ver = 'v3';
+  var ver = 'v4';
   var stored = localStorage.getItem('ls_overridesVersion');
   if(stored !== ver){
     localStorage.removeItem('ls_materialOverrides');
@@ -237,6 +237,11 @@ function _convertir(nombre, cantidad){
   return { und:c.u, cant:Math.round(cantidad*100)/100, ent:ent };
 }
 
+function _precioTotal(nombre, cant, vr){
+  var factor = (_CONV[nombre] && _CONV[nombre].f) || 1;
+  return Math.round((cant / factor) * vr);
+}
+
 function recalcularMezcla(el){
   const card = el.closest('.calc-card');
   if(!card) return;
@@ -250,7 +255,7 @@ function recalcularMezcla(el){
     const elCant = tr.querySelector('.calc-cant');
     const cant = parseFloat(elCant.value) || 0;
     const vr = parseFloat(tr.querySelector('.calc-vr').value) || 0;
-    const vt = cant * vr;
+    const vt = _precioTotal(nom, cant, vr);
     total += vt;
     tr.querySelector('.calc-vt').textContent = '$'+Math.round(vt).toLocaleString('es-CO');
     if(_calcData && _calcData.materiales[i]){
@@ -362,7 +367,7 @@ async function _renderCard(id, wrap, rwrap, prefix){
       '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:center;white-space:nowrap"><input class="calc-und" value="'+escapeHtml(und)+'" oninput="recalcularMezcla(this)" style="width:40px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:center;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar unidad"></td>'+
       '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><input class="calc-cant" type="number" step="0.01" value="'+cant.toFixed(2)+'" oninput="recalcularMezcla(this)" style="width:60px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:right;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar cantidad"></td>'+
       '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><input class="calc-vr" type="number" step="1" value="'+vr+'" oninput="recalcularMezcla(this)" style="width:80px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:right;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar valor unitario"></td>'+
-      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap;font-weight:600" class="calc-vt">$'+Math.round(cant * vr).toLocaleString('es-CO')+'</td></tr>';
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap;font-weight:600" class="calc-vt">$'+_precioTotal(nom,cant,vr).toLocaleString('es-CO')+'</td></tr>';
     }).join('');
     wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
       '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
@@ -409,7 +414,7 @@ function _renderVolumen(prefix){
     const vr = mat.vr_unitario;
     const scaled = base * vol;
     const conv = _convertir(mat.nombre, scaled);
-    const total = mat.vr_total * vol;
+    const total = _precioTotal(mat.nombre, mat.cantidad, mat.vr_unitario) * vol;
     return '<tr>'+
       '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(mat.nombre)+'</td>'+
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(mat.unidad)+'</td>'+
@@ -419,7 +424,7 @@ function _renderVolumen(prefix){
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(vr).toLocaleString('es-CO')+'</td>'+
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(total).toLocaleString('es-CO')+'</td></tr>';
   }).join('');
-  const gTotal = _calcData.materiales.reduce((s,m) => s + m.vr_total * vol, 0);
+  const gTotal = _calcData.materiales.reduce((s,m) => s + _precioTotal(m.nombre, m.cantidad, m.vr_unitario) * vol, 0);
   // Build summary note
   const skipWords = ['mezcladora', 'agua'];
   const parts = _calcData.materiales.map(mat => {
