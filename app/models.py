@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, func, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, func, UniqueConstraint, Text
 from app.database import Base
 
 
@@ -90,6 +90,6 @@ class CacheEntry(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     key = Column(String(200), nullable=False, unique=True, index=True)
-    value = Column(String(5000), nullable=False)
+    value = Column(Text, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
     created_at = Column(DateTime, server_default=func.now())
