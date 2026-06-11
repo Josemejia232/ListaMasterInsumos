@@ -390,7 +390,7 @@ async function _renderCard(id, wrap, rwrap, prefix){
 }
 
 async function _loadOverrides(){
-  if(_user && _user.token){
+  if(_user){
     try {
       const r = await apiFetch('/api/calculos/overrides');
       if(r.ok){
@@ -415,7 +415,7 @@ async function _saveOverrides(){
   var map = {};
   overrides.forEach(function(o){ map[o.nombre] = o; });
   try { localStorage.setItem('ls_materialOverrides', JSON.stringify(map)); } catch(e) {}
-  if(_user && _user.token){
+  if(_user){
     try {
       await apiFetch('/api/calculos/overrides', {
         method: 'POST',
