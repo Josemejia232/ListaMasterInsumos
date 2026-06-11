@@ -80,6 +80,19 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 - **Fuente de datos:** Google Sheets (`gspread`)
 - **Hosting:** Render
 
+## Landing Page
+
+Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism:
+- **Hero:** Headline emocional, stats dinámicos en tiempo real (5+ tiendas, 12 mezclas, 37 mamposterías), card de precios en vivo
+- **El Dolor:** 3 pain points (precios cambian, cálculos fallan, horas perdidas)
+- **La Solución:** 3 pasos (consulta precios → calcula → elige plan)
+- **Funciones:** 6 cards (Insumos Actualizados, Consulta Precios, Gestión Usuarios, Panel Admin, Pagos Bold)
+- **Calculadoras:** 3 cards (Mezclas, Mampostería, Anclajes)
+- **Planes:** 3 cards (Free, Plus, Básico) con botones de compra unificados
+- **WhatsApp:** Botón flotante verde (+57 324 622 5685)
+- **Animaciones:** Scroll reveal, floating elements, hover effects
+- **Stats dinámicos:** Se cargan en tiempo real desde `/api/calculos/stats`
+
 ## Responsive Design
 
 - **Desktop:** Layout completo con tablas, formularios en línea y tarjetas de plan en fila
@@ -87,6 +100,7 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 - **Móvil (≤480px):** Inputs 100% ancho, tipografía reducida, anclajes en columna vertical
 - **Spinner de carga:** Indicador visual animado mientras se consultan datos del servidor
 - **Caché frontend:** `_calcCache` evita re-consultas innecesarias a la lista de mezclas/mampostería
+- **Login → Landing:** Link "Página de inicio" en el login para volver al marketing
 
 ## Endpoints Principales
 
@@ -121,6 +135,7 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | GET | `/api/calculos` | Listar mezclas/mampostería (filtro `?tipo=concreto\|mortero\|mamposteria`) |
+| GET | `/api/calculos/stats` | Estadísticas de cálculos (mezclas, mamposterías, tiendas) — público |
 | GET | `/api/calculos/{id}` | Obtener mezcla/mampostería por ID (Free limitado a 3 usos por tipo) |
 | POST | `/api/calculos/anclajes` | Calcular anclajes químicos (Sika AnchorFix) — Free limitado a 3 usos |
 
@@ -132,6 +147,12 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 | GET | `/api/pagos/{id}` | Ver detalle de pago |
 | PUT | `/api/pagos/sync/{id}` | Sincronizar estado desde Bold |
 | POST | `/api/webhooks/bold` | Webhook de Bold (actualización automática) |
+
+### Landing Page
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/landing` | Landing page premium (marketing) con stats dinámicos |
+| GET | `/` | Aplicación principal (SPA) |
 
 ## Variables de Entorno
 
@@ -172,6 +193,10 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 | **Auth por token** (`Usuario.token == token`) | Busca directo en BD en lugar de traer todos los usuarios | `router.py` |
 | **Queries unificadas** (`or_` en palabras clave) | Reduce de N queries a 2 por material (Insumo + Producto) | `router.py` |
 | **Sin carga automática** | Al cambiar filtro de tipo/categoría, no recarga la mezcla automáticamente | `index.html` |
+| **Landing page** | Página de marketing separada con stats dinámicos | `landing.html` |
+| **Botón WhatsApp** | Botón flotante verde en landing page | `landing.html` |
+| **Stats dinámicos** | `/api/calculos/stats` retorna conteos en tiempo real | `router.py` |
+| **UX Login** | Link a landing page desde el login | `index.html` |
 
 ### DNS / Localhost
 - En Windows, `localhost` puede tener delay de ~2s por resolución DNS
