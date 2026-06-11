@@ -22,7 +22,6 @@ function _limiteCalcMsg(detail){
 }
 
 let _calcData = null;
-let _editCant = false;
 let _calcCache = {};
 
 function _showLoading(elId){
@@ -239,7 +238,7 @@ function recalcularMezcla(el){
     const nom = tr.querySelector('.calc-nom').value;
     const und = tr.querySelector('.calc-und').value;
     const elCant = tr.querySelector('.calc-cant');
-    const cant = _editCant ? (parseFloat(elCant.value)||0) : (parseFloat(elCant.dataset.cant)||0);
+    const cant = parseFloat(elCant.value) || 0;
     const vr = parseFloat(tr.querySelector('.calc-vr').value) || 0;
     const vt = cant * vr;
     total += vt;
@@ -253,6 +252,7 @@ function recalcularMezcla(el){
   });
   card.querySelector('.calc-total').textContent = '$'+Math.round(total).toLocaleString('es-CO');
   _renderVolumen(prefix);
+  _saveOverrides();
 }
 
 async function cargarSelectMezclas(){
@@ -340,22 +340,25 @@ async function _renderCard(id, wrap, rwrap, prefix){
     if(!r.ok) return;
     const m = await r.json();
     _calcData = m;
-    _editCant = false;
-    const matRows = m.materiales.map(mat =>
-      '<tr class="calc-row">'+
-      '<td style="padding:.25rem .4rem;font-size:.76rem"><input class="calc-nom" value="'+escapeHtml(mat.nombre)+'" oninput="recalcularMezcla(this)" style="width:100%;border:1px solid transparent;background:transparent;font:inherit;color:inherit;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar nombre del material"></td>'+
-      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:center;white-space:nowrap"><input class="calc-und" value="'+escapeHtml(mat.unidad)+'" oninput="recalcularMezcla(this)" style="width:40px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:center;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar unidad"></td>'+
-      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><span class="calc-cant" data-cant="'+mat.cantidad+'">'+mat.cantidad.toFixed(2)+'</span></td>'+
-      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><input class="calc-vr" type="number" step="1" value="'+mat.vr_unitario+'" oninput="recalcularMezcla(this)" style="width:80px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:right;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"></td>'+
-      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap;font-weight:600" class="calc-vt">$'+Math.round(mat.vr_total).toLocaleString('es-CO')+'</td></tr>'
-    ).join('');
+    var overrides = _loadOverrides();
+    const matRows = m.materiales.map(mat => {
+      var ov = overrides[mat.nombre] || {};
+      var nom = ov.nombre || mat.nombre;
+      var und = ov.unidad || mat.unidad;
+      var cant = ov.cant !== undefined ? ov.cant : mat.cantidad;
+      var vr = ov.vr_unitario !== undefined ? ov.vr_unitario : mat.vr_unitario;
+      return '<tr class="calc-row">'+
+      '<td style="padding:.25rem .4rem;font-size:.76rem"><input class="calc-nom" value="'+escapeHtml(nom)+'" oninput="recalcularMezcla(this)" style="width:100%;border:1px solid transparent;background:transparent;font:inherit;color:inherit;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar nombre del material"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:center;white-space:nowrap"><input class="calc-und" value="'+escapeHtml(und)+'" oninput="recalcularMezcla(this)" style="width:40px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:center;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar unidad"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><input class="calc-cant" type="number" step="0.01" value="'+cant.toFixed(2)+'" oninput="recalcularMezcla(this)" style="width:60px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:right;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar cantidad"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><input class="calc-vr" type="number" step="1" value="'+vr+'" oninput="recalcularMezcla(this)" style="width:80px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:right;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar valor unitario"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap;font-weight:600" class="calc-vt">$'+Math.round(cant * vr).toLocaleString('es-CO')+'</td></tr>';
+    }).join('');
     wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
       '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
       '<div><div style="font-weight:600;font-size:.88rem">'+escapeHtml(m.nombre)+'</div>'+
       '<div style="font-size:.76rem;color:var(--muted)">'+escapeHtml(m.proporcion)+(m.resistencia_psi?' &middot; '+m.resistencia_psi+' psi':'')+'</div></div>'+
-      '<div style="display:flex;align-items:center;gap:.5rem">'+
-      '<button onclick="toggleEditCant()" id="btn-edit-cant" style="background:none;border:1px solid var(--border);border-radius:5px;padding:.2rem .5rem;font-size:.75rem;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:.25rem" title="Editar cantidades base">✎ Cant</button>'+
-      '<div style="font-size:1.1rem;font-weight:700;color:var(--accent);white-space:nowrap" class="calc-total">$'+Math.round(m.total).toLocaleString('es-CO')+'</div></div></div>'+
+      '<div style="font-size:1.1rem;font-weight:700;color:var(--accent);white-space:nowrap" class="calc-total">$'+Math.round(m.total).toLocaleString('es-CO')+'</div></div>'+
       '<div style="padding:.2rem .6rem .5rem">'+
       '<table style="width:100%;border-collapse:collapse">'+
       '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:52px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
@@ -369,41 +372,17 @@ async function _renderCard(id, wrap, rwrap, prefix){
   } catch(e){}
 }
 
-function toggleEditCant(){
-  _editCant = !_editCant;
-  const btn = document.getElementById('btn-edit-cant');
-  if(btn) btn.style.background = _editCant ? 'var(--accent)' : 'none';
-  if(btn) btn.style.color = _editCant ? '#fff' : 'var(--text2)';
-  if(btn) btn.style.borderColor = _editCant ? 'var(--accent)' : 'var(--border)';
-  const card = document.querySelector('.calc-card');
-  if(!card) return;
-  card.querySelectorAll('.calc-cant').forEach(el => {
-    const val = _editCant ? (parseFloat(el.dataset.cant)||0).toFixed(2) : el.textContent;
-    if(_editCant){
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.step = '0.01';
-      input.className = 'calc-cant';
-      input.placeholder = 'Ingresa la cantidad';
-      input.style.width = '60px';
-      input.style.border = '1px solid var(--accent)';
-      input.style.background = '#fff';
-      input.style.font = 'inherit';
-      input.style.color = 'inherit';
-      input.style.textAlign = 'right';
-      input.style.padding = '.1rem .2rem';
-      input.style.borderRadius = '3px';
-      input.oninput = function(){ recalcularMezcla(this); };
-      el.replaceWith(input);
-    } else {
-      const span = document.createElement('span');
-      span.className = 'calc-cant';
-      span.dataset.cant = parseFloat(el.value)||0;
-      span.textContent = Number(span.dataset.cant).toFixed(2);
-      el.replaceWith(span);
-      recalcularMezcla(span);
-    }
+function _loadOverrides(){
+  try { return JSON.parse(localStorage.getItem('ls_materialOverrides') || '{}'); } catch(e) { return {}; }
+}
+
+function _saveOverrides(){
+  if(!_calcData || !_calcData.materiales) return;
+  var overrides = _loadOverrides();
+  _calcData.materiales.forEach(function(mat){
+    overrides[mat.nombre] = { nombre: mat.nombre, unidad: mat.unidad, cant: mat.cantidad, vr_unitario: mat.vr_unitario };
   });
+  try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
 }
 
 function _renderVolumen(prefix){
