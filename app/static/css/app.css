@@ -104,7 +104,7 @@ body{
   transition:border-color .2s,box-shadow .2s;
 }
 .login-box input::placeholder{color:var(--muted)}
-.calc-cant::placeholder,#anc-cant::placeholder,#mez-vol::placeholder,#mamp-vol::placeholder,#anc-profundidad::placeholder{color:var(--muted)}
+.calc-cant::placeholder,#anc-cant::placeholder{color:var(--muted)}
 .login-box input:focus{
   outline:none;
   border-color:var(--accent);
