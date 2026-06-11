@@ -1290,3 +1290,11 @@ def root():
         from fastapi.responses import HTMLResponse
         return HTMLResponse(content=_index_html)
     return {"app": "ListaMasterInsumos", "status": "ok"}
+
+@app.get("/landing")
+def landing_page():
+    from fastapi.responses import HTMLResponse
+    landing = static_dir / "landing.html"
+    if landing.exists():
+        return HTMLResponse(content=landing.read_text(encoding="utf-8"))
+    return {"error": "landing.html not found"}
