@@ -26,7 +26,7 @@ let _calcCache = {};
 
 // Limpiar overrides si la version cambio (evita datos viejos)
 (function(){
-  var ver = 'v4';
+  var ver = 'v5';
   var stored = localStorage.getItem('ls_overridesVersion');
   if(stored !== ver){
     localStorage.removeItem('ls_materialOverrides');
@@ -208,7 +208,7 @@ const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Be
 
 // ─── Cálculos ──────────────────────────────────────────
 const _CONV = {
-  "Cemento": { u:"Bolsa", f:50 },
+  "Cemento": { u:"Bolsa", f:50, pf:50 },
   "Arena de rio": { u:"Viaje", f:1.05 },
   "Arena de pozo": { u:"Viaje", f:1.05 },
   "Arena de peña": { u:"Viaje", f:1.05 },
@@ -238,8 +238,9 @@ function _convertir(nombre, cantidad){
 }
 
 function _precioTotal(nombre, cant, vr){
-  var factor = (_CONV[nombre] && _CONV[nombre].f) || 1;
-  return Math.round((cant / factor) * vr);
+  var c = _CONV[nombre];
+  var pf = (c && c.pf) || 1;
+  return Math.round((cant / pf) * vr);
 }
 
 function recalcularMezcla(el){
