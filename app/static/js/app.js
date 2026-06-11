@@ -384,7 +384,7 @@ function toggleEditCant(){
       input.type = 'number';
       input.step = '0.01';
       input.className = 'calc-cant';
-      input.value = val;
+      input.placeholder = 'Ingresa la cantidad';
       input.style.width = '60px';
       input.style.border = '1px solid var(--accent)';
       input.style.background = '#fff';
