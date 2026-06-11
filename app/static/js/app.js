@@ -357,7 +357,8 @@ async function _renderCard(id, wrap, rwrap, prefix){
     wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
       '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
       '<div><div style="font-weight:600;font-size:.88rem">'+escapeHtml(m.nombre)+'</div>'+
-      '<div style="font-size:.76rem;color:var(--muted)">'+escapeHtml(m.proporcion)+(m.resistencia_psi?' &middot; '+m.resistencia_psi+' psi':'')+'</div></div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+escapeHtml(m.proporcion)+(m.resistencia_psi?' &middot; '+m.resistencia_psi+' psi':'')+'</div>'+
+      '<div style="font-size:.68rem;color:var(--muted);margin-top:2px">Personaliza los campos dando clic sobre ellos de acuerdo a tu necesidad</div></div>'+
       '<div style="font-size:1.1rem;font-weight:700;color:var(--accent);white-space:nowrap" class="calc-total">$'+Math.round(m.total).toLocaleString('es-CO')+'</div></div>'+
       '<div style="padding:.2rem .6rem .5rem">'+
       '<table style="width:100%;border-collapse:collapse">'+
