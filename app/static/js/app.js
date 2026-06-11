@@ -24,6 +24,16 @@ function _limiteCalcMsg(detail){
 let _calcData = null;
 let _calcCache = {};
 
+// Limpiar overrides si la version cambio (evita datos viejos)
+(function(){
+  var ver = 'v2';
+  var stored = localStorage.getItem('ls_overridesVersion');
+  if(stored !== ver){
+    localStorage.removeItem('ls_materialOverrides');
+    localStorage.setItem('ls_overridesVersion', ver);
+  }
+})();
+
 function _showLoading(elId){
   const el = document.getElementById(elId);
   if(el) el.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)"><div class="loading-spinner" style="margin:0 auto 1rem;border-top-color:var(--accent)"></div>Cargando...</div>';
