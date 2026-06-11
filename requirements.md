@@ -156,18 +156,21 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 
 ## Variables de Entorno
 
-| Variable | Descripción |
-|----------|-------------|
-| `DATABASE_URL` | URL de conexión a la base de datos |
-| `SHEET_URL` | URL del Google Sheet con las URLs a scrapear |
-| `ADMIN_EMAIL` | Email del administrador |
-| `ADMIN_TOKEN` | Token del administrador |
-| `DB_POOL_SIZE` | Tamaño del pool de conexiones |
-| `DB_MAX_OVERFLOW` | Conexiones extra máximas |
-| `DB_POOL_RECYCLE` | Tiempo de reciclaje de conexiones |
-| `BOLD_API_KEY` | API key de Bold |
-| `BOLD_SECRET_KEY` | Secret key de Bold |
-| `BOLD_BASE_URL` | URL base de la API de Bold |
+| Variable | Descripción | Requerido |
+|----------|-------------|-----------|
+| `DATABASE_URL` | URL de conexión a la base de datos | Si |
+| `SHEET_URL` | URL del Google Sheet con las URLs a scrapear | Si |
+| `ADMIN_EMAIL` | Email del administrador | Si |
+| `ADMIN_TOKEN` | Token del administrador (min 32 chars) | Si |
+| `DB_POOL_SIZE` | Tamaño del pool de conexiones | No |
+| `DB_MAX_OVERFLOW` | Conexiones extra máximas | No |
+| `DB_POOL_RECYCLE` | Tiempo de reciclaje de conexiones | No |
+| `BOLD_API_KEY` | API key de Bold | Si |
+| `BOLD_SECRET_KEY` | Secret key de Bold | Si |
+| `BOLD_BASE_URL` | URL base de la API de Bold | No |
+| `ALLOWED_ORIGINS` | Dominios permitidos para CORS (ej: `https://tudominio.com`) | Si |
+| `FORCE_HTTPS` | Forzar redirección HTTPS (`true`/`false`) | No |
+| `BOLD_WEBHOOK_IPS` | IPs permitidas para webhook Bold (ej: `1.2.3.4,5.6.7.8`) | No |
 
 ## Planes y Límites
 
@@ -178,6 +181,31 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 | Plus | $15,000 COP | 30 días | Ilimitados | ✅ Ilimitada |
 
 **Upgrade Básico → Plus:** prorrateo automático por días no usados del Básico. Pago mínimo $5,000 (día 0). Al pagar, reinicia a 30 días limpios de Plus.
+
+## Seguridad
+
+### Mejoras implementadas
+
+| Mejora | Descripción | Archivo |
+|--------|-------------|---------|
+| **CORS restrictivo** | Sin fallback a `*`; credenciales requieren origen explícito | `main.py` |
+| **SSRF prevention** | Validación de dominios permitidos en `/scrape/sync` | `main.py` |
+| **Rate limiting DB** | Límites por IP persistidos en base de datos (multi-worker) | `main.py` |
+| **Cache DB** | Caché de productos compartida entre workers vía BD | `main.py` |
+| **Tokens enmascarados** | Listado de usuarios solo muestra `****XXXX` | `main.py`, `index.html` |
+| **Reset token seguro** | Tokens de 32 chars; no se retornan en listados | `main.py` |
+| **Admin token min 32** | Validación en startup; rechaza tokens cortos | `main.py` |
+| **CSP headers** | Content-Security-Policy restrictivo | `main.py` |
+| **HTTPS redirect** | Redirección automática HTTP → HTTPS en producción | `main.py` |
+| **Webhook IP whitelist** | Validación de IPs de origen para webhook Bold | `main.py` |
+| **No logs de tokens** | Eliminación de logs de autenticación con prefijos de tokens | `main.py` |
+| **Auth por índice** | Búsqueda directa `Usuario.token == token` en lugar de full scan | `main.py` |
+
+### Post-configuración obligatoria
+1. Configurar `ALLOWED_ORIGINS` en Render con el dominio de producción.
+2. Configurar `BOLD_WEBHOOK_IPS` con las IPs oficiales de Bold (consultar documentación Bold).
+3. Rotar `ADMIN_TOKEN` y `BOLD_API_KEY` / `BOLD_SECRET_KEY` si estuvieron expuestos.
+4. Limpiar historial de Git con `git filter-repo` si se cometieron credenciales.
 
 ## Performance
 

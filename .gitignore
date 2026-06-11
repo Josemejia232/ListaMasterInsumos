@@ -4,9 +4,13 @@ __pycache__/
 .venv/
 venv/
 *.db
+*.sqlite
+*.sqlite3
 
 # Entorno activo (se genera desde config/.env.develop o config/.env.production)
 .env
+.env.*
+config/.env.develop
 config/.env.production
 
 node_modules/

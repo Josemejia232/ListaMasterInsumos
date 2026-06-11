@@ -51,14 +51,28 @@ function getConfig() {
   var token  = sheet.getRange('I2').getValue();
   return {
     apiUrl: (apiUrl && apiUrl.toString().trim() && apiUrl.toString().trim().indexOf('http') === 0) ? apiUrl.toString().trim() : 'https://listamasterinsumos.onrender.com',
-    token:  (token && token.toString().trim())  ? token.toString().trim()  : 'REDACTED_ADMIN_TOKEN'
+    token:  (token && token.toString().trim())  ? token.toString().trim()  : ''
   };
+}
+
+function _requiereToken(cfg) {
+  if (cfg && cfg.token) return true;
+  var msg = 'Seguridad: Configura el token de admin en la celda I2 del sheet';
+  Logger.log('ERROR: Token no configurado en celda I2 del sheet');
+  try {
+    SpreadsheetApp.getUi().alert(msg);
+  } catch (e) {
+    // Time-driven triggers no tienen UI
+    Logger.log('Alert UI no disponible en trigger: ' + e);
+  }
+  return false;
 }
 
 // ─── Principal ────────────────────────────────────────────
 
 function syncPrices() {
   var cfg = getConfig();
+  if (!_requiereToken(cfg)) return;
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data  = sheet.getDataRange().getValues();
   if (data.length < 2) { Logger.log('Sin datos'); return; }
@@ -360,6 +374,7 @@ function syncPrices() {
 
 function syncCategoriesOnly() {
   var cfg = getConfig();
+  if (!_requiereToken(cfg)) return;
   try {
     var resp = UrlFetchApp.fetch(cfg.apiUrl + '/sync/categories', {
       method: 'post',
@@ -387,6 +402,8 @@ function syncCategoriesOnly() {
 // ─── Menú: Forzar scrape completo ──────────────────────────
 
 function forceFullScrape() {
+  var cfg = getConfig();
+  if (!_requiereToken(cfg)) return;
   var ui = SpreadsheetApp.getUi();
   var respuesta = ui.alert(
     '⚠️ Forzar scrape completo',

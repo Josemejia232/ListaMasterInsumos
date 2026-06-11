@@ -73,3 +73,23 @@ class UsoCalculo(Base):
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
     tipo = Column(String(20), nullable=False)  # 'mezcla', 'mamposteria', 'anclajes'
     created_at = Column(DateTime, server_default=func.now())
+
+
+class RateLimit(Base):
+    __tablename__ = "rate_limits"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(200), nullable=False, index=True)
+    window_start = Column(DateTime, nullable=False, index=True)
+    request_count = Column(Integer, default=1, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class CacheEntry(Base):
+    __tablename__ = "cache_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    key = Column(String(200), nullable=False, unique=True, index=True)
+    value = Column(String(5000), nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, server_default=func.now())

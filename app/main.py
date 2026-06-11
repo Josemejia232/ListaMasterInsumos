@@ -6,7 +6,7 @@ import time
 import random
 import hmac
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 from collections import defaultdict
@@ -22,7 +22,7 @@ from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 from app.database import engine, get_db, SessionLocal, Base, IS_SQLITE
-from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo
+from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo, RateLimit, CacheEntry
 from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
 from app import bold as bold_client
@@ -40,8 +40,10 @@ app = FastAPI(
 # ─── CORS ─────────────────────────────────────────────────────
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "").split(",")
 ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS if o.strip()]
+
 if not ALLOWED_ORIGINS:
-    ALLOWED_ORIGINS = ["*"]
+    logger.warning("ALLOWED_ORIGINS no configurado. CORS deshabilitado (solo origen del mismo sitio).")
+    ALLOWED_ORIGINS = []
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,43 +55,92 @@ app.add_middleware(
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
+# ─── HTTPS Redirect ───────────────────────────────────────────
+FORCE_HTTPS = os.getenv("FORCE_HTTPS", "true").lower() in ("true", "1", "yes")
+
+@app.middleware("http")
+async def https_redirect(request: Request, call_next):
+    if FORCE_HTTPS and request.url.scheme == "http" and "localhost" not in request.url.hostname and "127.0.0.1" not in request.url.hostname:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(str(request.url.replace(scheme="https")), status_code=301)
+    return await call_next(request)
+
 # ─── Security Headers ─────────────────────────────────────────
+CSP_HEADER = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src https://fonts.gstatic.com; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self';"
+)
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = CSP_HEADER
     return response
 
-# ─── Rate Limiting ────────────────────────────────────────────
-_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+# ─── Rate Limiting (DB-based) ─────────────────────────────────
 RATE_LIMIT_WINDOW = 60  # seconds
 
-def _check_rate_limit(key: str, max_requests: int) -> bool:
-    now = time.time()
-    _rate_limit_store[key] = [t for t in _rate_limit_store[key] if now - t < RATE_LIMIT_WINDOW]
-    if len(_rate_limit_store[key]) >= max_requests:
+def _check_rate_limit_db(key: str, max_requests: int, db: Session) -> bool:
+    now = datetime.utcnow()
+    window_start = now - timedelta(seconds=RATE_LIMIT_WINDOW)
+    db.query(RateLimit).filter(RateLimit.window_start < window_start).delete(synchronize_session=False)
+    db.commit()
+    entry = db.query(RateLimit).filter(RateLimit.key == key, RateLimit.window_start >= window_start).first()
+    if not entry:
+        entry = RateLimit(key=key, window_start=now, request_count=1)
+        db.add(entry)
+        db.commit()
+        return True
+    if entry.request_count >= max_requests:
         return False
-    _rate_limit_store[key].append(now)
+    entry.request_count += 1
+    db.commit()
     return True
 
-def rate_limit_login(request: Request):
+def rate_limit_login(request: Request, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "unknown"
-    if not _check_rate_limit(f"login:{ip}", 10):
+    if not _check_rate_limit_db(f"login:{ip}", 10, db):
         raise HTTPException(status_code=429, detail="Demasiados intentos. Intenta en 1 minuto.")
 
-def rate_limit_scrape(request: Request):
+def rate_limit_scrape(request: Request, db: Session = Depends(get_db)):
     ip = request.client.host if request.client else "unknown"
-    if not _check_rate_limit(f"scrape:{ip}", 5):
+    if not _check_rate_limit_db(f"scrape:{ip}", 5, db):
         raise HTTPException(status_code=429, detail="Demasiadas peticiones de scrape. Intenta en 1 minuto.")
 
-# Simple in-memory cache
-_cache = {}
-_cache_time = 0
+# ─── Cache (DB-based) ─────────────────────────────────────────
 CACHE_TTL = 10  # seconds
+
+def _get_cache(key: str, db: Session) -> str | None:
+    now = datetime.utcnow()
+    entry = db.query(CacheEntry).filter(CacheEntry.key == key, CacheEntry.expires_at > now).first()
+    return entry.value if entry else None
+
+def _set_cache(key: str, value: str, db: Session):
+    now = datetime.utcnow()
+    expires_at = now + timedelta(seconds=CACHE_TTL)
+    entry = db.query(CacheEntry).filter(CacheEntry.key == key).first()
+    if entry:
+        entry.value = value
+        entry.expires_at = expires_at
+    else:
+        entry = CacheEntry(key=key, value=value, expires_at=expires_at)
+        db.add(entry)
+    db.commit()
+
+def _invalidate_cache(key: str, db: Session):
+    db.query(CacheEntry).filter(CacheEntry.key == key).delete(synchronize_session=False)
+    db.commit()
 
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
@@ -232,6 +283,13 @@ class UsuarioResponse(BaseModel):
     created_at: datetime | None = None
     model_config = {"from_attributes": True}
 
+    @field_validator("token", mode="before")
+    @classmethod
+    def mask_token(cls, v):
+        if v and len(str(v)) > 8:
+            return "****" + str(v)[-4:]
+        return v
+
 
 class CrearLinkRequest(BaseModel):
     usuario_id: int
@@ -303,19 +361,14 @@ class PlanInfo(BaseModel):
 # ─── Auth ─────────────────────────────────────────────────────
 
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
-    logger.info(f"[AUTH] Authorization header: {repr(authorization[:50]) if authorization else 'NONE'}")
     if not authorization:
         raise HTTPException(status_code=401, detail="Token requerido")
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Formato invalido")
     token = authorization[7:]
-    users = db.query(Usuario).filter(Usuario.activo == True).all()
-    logger.info(f"[AUTH] Token from header: {token[:20]}... | Active users in DB: {len(users)}")
-    for user in users:
-        if user.token:
-            logger.info(f"[AUTH] Comparing with user {user.email}: token_prefix={user.token[:8]}...")
-        if hmac.compare_digest(token, user.token or ""):
-            return user
+    user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token).first()
+    if user and hmac.compare_digest(token, user.token or ""):
+        return user
     raise HTTPException(status_code=401, detail="Token invalido o usuario inactivo")
 
 def require_admin(user: Usuario = Depends(get_current_user)):
@@ -327,16 +380,32 @@ def require_admin(user: Usuario = Depends(get_current_user)):
 # ─── URL Validation (SSRF prevention) ────────────────────────
 
 ALLOWED_SHEET_DOMAINS = ["docs.google.com", "sheets.google.com"]
+ALLOWED_SCRAPE_DOMAINS = [
+    "easy.com", "easy.com.co", "easy.com.ar",
+    "homecenter.com.co", "homecenter.com.pe",
+    "maestro.com.pe",
+    "promart.pe",
+    "sodimac.com.pe", "sodimac.com.co", "sodimac.com.cl",
+    "falabella.com.pe", "falabella.com.cl",
+]
 
-def _validate_sheet_url(url: str):
+def _validate_domain(url: str, allowed_domains: list[str]):
     try:
         parsed = urlparse(url)
         if parsed.scheme != "https":
             raise ValueError("URL debe ser HTTPS")
-        if parsed.hostname not in ALLOWED_SHEET_DOMAINS:
+        hostname = parsed.hostname or ""
+        allowed = any(hostname == d or hostname.endswith("." + d) for d in allowed_domains)
+        if not allowed:
             raise ValueError(f"Dominio no permitido: {parsed.hostname}")
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+def _validate_sheet_url(url: str):
+    _validate_domain(url, ALLOWED_SHEET_DOMAINS)
+
+def _validate_scrape_url(url: str):
+    _validate_domain(url, ALLOWED_SCRAPE_DOMAINS)
 
 
 # ─── Upsert ───────────────────────────────────────────────────
@@ -639,9 +708,9 @@ def resetear_token(usuario_id: int, _admin: Usuario = Depends(require_admin), db
     if not item:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     import secrets
-    item.token = secrets.token_hex(16)
+    item.token = secrets.token_hex(32)
     db.commit()
-    return {"token": item.token}
+    return {"ok": True, "message": "Token reseteado. El usuario debe iniciar sesion nuevamente."}
 
 
 # ─── Scraping ─────────────────────────────────────────────────
@@ -769,10 +838,9 @@ async def scrape_daily(request: Request, _admin: Usuario = Depends(require_admin
             continue
         await asyncio.sleep(random.uniform(0.5, 1.5))
     db.commit()
-    global _cache_time
-    _cache_time = 0  # invalidate cache
+    _invalidate_cache("productos", db)
     return ScrapeResponse(
-        total=len(urls), nuevos=nuevos, actualizados=actualizados,
+        total=len(entries), nuevos=nuevos, actualizados=actualizados,
         sin_cambio=sin_cambio, fallidos=fallidos,
         mensaje=f"Nuevos: {nuevos} | Actualizados: {actualizados} | Sin cambio: {sin_cambio} | Fallidos: {fallidos}",
     )
@@ -816,8 +884,7 @@ async def sync_categories(request: Request, _admin: Usuario = Depends(require_ad
             no_encontrados += 1
             urls_no_encontradas.append(url)
     db.commit()
-    global _cache_time
-    _cache_time = 0
+    _invalidate_cache("productos", db)
     sin_cambio = len(entries) - actualizados - no_encontrados - sin_categoria
     return SyncResponse(
         total=len(entries), actualizados=actualizados, sin_cambio=sin_cambio,
@@ -837,8 +904,6 @@ def listar_productos(
     _user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    global _cache, _cache_time
-
     if not _plan_activo(_user):
         total = db.query(func.count(Producto.id)).scalar() or 0
         prods = db.query(Producto).filter(
@@ -858,19 +923,18 @@ def listar_productos(
         response.headers["X-Free-Cats"] = str(len(cats))
         return response
 
-    now = time.time()
-    if (now - _cache_time) < CACHE_TTL and not tienda:
-        return JSONResponse(content=json.loads(_cache["data"]), headers={"X-Cache":"HIT","ETag":_cache["etag"]})
+    cached = _get_cache("productos", db) if not tienda else None
+    if cached:
+        return JSONResponse(content=json.loads(cached), headers={"X-Cache":"HIT"})
 
     query = db.query(Producto)
     if tienda:
         query = query.filter(Producto.tienda.ilike(f"%{tienda}%"))
     result = query.order_by(Producto.created_at.desc()).offset(skip).limit(limit).all()
     data = json.dumps(jsonable_encoder(result))
-    etag = f'W/"prod-{hash(data)}"'
-    _cache = {"data": data, "etag": etag}
-    _cache_time = now
-    return JSONResponse(content=json.loads(data), headers={"X-Cache":"MISS","ETag":etag})
+    if not tienda:
+        _set_cache("productos", data, db)
+    return JSONResponse(content=json.loads(data), headers={"X-Cache":"MISS"})
 
 @app.get("/productos/{producto_id}", response_model=ProductoResponse)
 def obtener_producto(producto_id: int, db: Session = Depends(get_db)):
@@ -903,13 +967,7 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin: Us
 @app.get("/scrape/sync", response_model=ProductoResponse)
 def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, n02: str | None = None, n03: str | None = None, proveedor: str | None = None, request: Request = None, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
     rate_limit_scrape(request)
-    # Validar que la URL sea HTTPS (SSRF prevention)
-    try:
-        parsed = urlparse(url)
-        if parsed.scheme != "https":
-            raise ValueError("URL debe ser HTTPS")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    _validate_scrape_url(url)
     scraper = get_scraper(url)
     if not scraper:
         raise HTTPException(status_code=400, detail="URL no soportada")
@@ -919,8 +977,7 @@ def scrape_sync(url: str, categoria: str | None = None, n01: str | None = None, 
         raise HTTPException(status_code=500, detail="Error al scrapear URL")
     _upsert_producto(db, producto, origen="sheet", categoria=categoria, n01=n01, n02=n02, n03=n03, proveedor=proveedor)
     db.commit()
-    global _cache_time
-    _cache_time = 0
+    _invalidate_cache("productos", db)
     existente = (
         db.query(Producto)
         .filter(Producto.codigo == producto.codigo, Producto.tienda == producto.tienda)
@@ -1061,10 +1118,21 @@ def eliminar_pago(pago_id: int, _admin: Usuario = Depends(require_admin), db: Se
     return {"status": "ok"}
 
 
+BOLD_WEBHOOK_IPS = os.getenv("BOLD_WEBHOOK_IPS", "").split(",")
+BOLD_WEBHOOK_IPS = [ip.strip() for ip in BOLD_WEBHOOK_IPS if ip.strip()]
+
 @app.post("/api/webhooks/bold")
 async def webhook_bold(request: Request, db: Session = Depends(get_db)):
     import hashlib
     import base64
+
+    # Validar IP de origen (si está configurada)
+    if BOLD_WEBHOOK_IPS:
+        client_ip = request.headers.get("x-forwarded-for", request.client.host or "")
+        client_ip = client_ip.split(",")[0].strip()
+        if client_ip not in BOLD_WEBHOOK_IPS:
+            logger.warning(f"[Webhook] IP no autorizada: {client_ip}")
+            raise HTTPException(status_code=403, detail="IP no autorizada")
 
     body = await request.body()
     signature = request.headers.get("x-bold-signature", "")
@@ -1262,6 +1330,8 @@ def startup():
             admin_token = os.getenv("ADMIN_TOKEN")
             if not admin_email or not admin_token:
                 logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
+            elif len(admin_token) < 32:
+                logger.warning("ADMIN_TOKEN debe tener al menos 32 caracteres. Seed admin omitido por seguridad.")
             else:
                 db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
                 db.commit()

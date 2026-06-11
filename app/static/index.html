@@ -1466,7 +1466,7 @@ async function cargarUsuarios(){
       <td style="font-weight:500">${escapeHtml(u.email)}</td>
       <td><span style="background:${u.activo?'var(--green-light)':'var(--red-light)'};color:${u.activo?'var(--green)':'var(--red)'};padding:.2rem .55rem;border-radius:1rem;font-size:.73rem;font-weight:600">${u.activo?'Activo':'Bloqueado'}</span></td>
       <td style="color:var(--muted)">${escapeHtml(u.tipo)}</td>
-      <td><code style="font-size:0.73rem;word-break:break-all;background:#f4f5ff;padding:.15rem .4rem;border-radius:.3rem;color:var(--accent2)">${escapeHtml(u.token.substring(0,16))}…</code> <button class="btn btn-sm btn-outline" onclick="copiarToken('${escapeHtml(u.token)}')">Copiar</button> <button class="btn btn-sm btn-outline" onclick="resetearToken(${u.id})" title="Resetear token">⟳</button></td>
+      <td><code style="font-size:0.73rem;word-break:break-all;background:#f4f5ff;padding:.15rem .4rem;border-radius:.3rem;color:var(--accent2)">${escapeHtml(u.token)}</code> <button class="btn btn-sm btn-outline" onclick="resetearToken(${u.id})" title="Resetear token">⟳</button></td>
       <td style="color:var(--muted)">${fp?fp.toLocaleDateString('es-CO'):'-'}</td>
       <td style="color:${colorDias};font-weight:500">${vence?vence.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'2-digit'}):'-'}</td>
       <td style="color:${colorDias};font-weight:700">${dias!=null?dias:'-'}</td>
@@ -1527,9 +1527,12 @@ async function resetearToken(id){
   if(!confirm('¿Resetear el token de este usuario? Debera usar el nuevo token para iniciar sesion.')) return;
   try{
     var r = await apiFetch('/api/usuarios/'+id+'/reset-token', {method:'POST'});
-    var d = await r.json();
-    alert('Nuevo token: ' + d.token + '\n\nCopialo y compartilo con el usuario.');
-    await cargarUsuarios();
+    if(r.ok){
+      alert('Token reseteado. El usuario debera iniciar sesion nuevamente.');
+      await cargarUsuarios();
+    } else {
+      alert('Error al resetear token.');
+    }
   }catch(e){ alert('Error: '+e.message); }
 }
 
