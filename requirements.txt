@@ -10,3 +10,10 @@ google-auth==2.37.0
 python-dotenv==1.0.1
 pydantic==2.10.3
 brotli==1.1.0
+alembic==1.13.3
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+respx==0.22.0

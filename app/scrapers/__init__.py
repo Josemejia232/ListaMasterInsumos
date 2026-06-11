@@ -1,4 +1,5 @@
 from app.scrapers.base import GenericScraper
+from app.scrapers.vtex import VTEXScraper
 from app.scrapers.sodimac import SodimacScraper
 from app.scrapers.maestro import MaestroScraper
 from app.scrapers.promart import PromartScraper

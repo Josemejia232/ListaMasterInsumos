@@ -14,3 +14,9 @@ config/.env.develop
 config/.env.production
 
 node_modules/
+
+# Logs y archivos de desarrollo
+*.log
+*.xls
+*.xlsx
+CALCULOS/

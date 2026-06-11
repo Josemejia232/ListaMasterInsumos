@@ -172,6 +172,8 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 | `FORCE_HTTPS` | Forzar redirección HTTPS (`true`/`false`) | No |
 | `BOLD_WEBHOOK_IPS` | IPs permitidas para webhook Bold (ej: `1.2.3.4,5.6.7.8`) | No |
 
+**Nota:** Nunca commitear archivos `.env` con credenciales reales. El archivo `config/.env.develop` fue eliminado del control de versiones y ahora está en `.gitignore`.
+
 ## Planes y Límites
 
 | Plan | Precio | Duración | Productos | Calculadora |
@@ -193,19 +195,32 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 | **Rate limiting DB** | Límites por IP persistidos en base de datos (multi-worker) | `main.py` |
 | **Cache DB** | Caché de productos compartida entre workers vía BD | `main.py` |
 | **Tokens enmascarados** | Listado de usuarios solo muestra `****XXXX` | `main.py`, `index.html` |
-| **Reset token seguro** | Tokens de 32 chars; no se retornan en listados | `main.py` |
+| **Reset token seguro** | Tokens de 64 chars; no se retornan en listados | `main.py` |
 | **Admin token min 32** | Validación en startup; rechaza tokens cortos | `main.py` |
 | **CSP headers** | Content-Security-Policy restrictivo | `main.py` |
 | **HTTPS redirect** | Redirección automática HTTP → HTTPS en producción | `main.py` |
 | **Webhook IP whitelist** | Validación de IPs de origen para webhook Bold | `main.py` |
 | **No logs de tokens** | Eliminación de logs de autenticación con prefijos de tokens | `main.py` |
 | **Auth por índice** | Búsqueda directa `Usuario.token == token` en lugar de full scan | `main.py` |
+| **Limpieza Git** | Historial de Git purgado de credenciales con `git filter-branch` | `repo` |
+| **Git cleanup script** | Script automatizado para sanitización de historial | `_git_cleanup.py` |
+| **Token validation GAS** | Validación de token en Apps Script (triggers + manual) | `syncPrices.gs` |
 
-### Post-configuración obligatoria
-1. Configurar `ALLOWED_ORIGINS` en Render con el dominio de producción.
-2. Configurar `BOLD_WEBHOOK_IPS` con las IPs oficiales de Bold (consultar documentación Bold).
-3. Rotar `ADMIN_TOKEN` y `BOLD_API_KEY` / `BOLD_SECRET_KEY` si estuvieron expuestos.
-4. Limpiar historial de Git con `git filter-repo` si se cometieron credenciales.
+### Post-configuración obligatoria (Pendiente)
+1. ✅ ~~Eliminar credenciales de archivos de desarrollo~~ — Completado
+2. ✅ ~~Limpiar historial de Git~~ — Completado con `git filter-branch` (commits reescritos)
+3. ⚠️ **Rotar credenciales** en Bold (API key y Secret key) — **URGENTE**
+4. ⚠️ **Generar nuevo `ADMIN_TOKEN`** (mínimo 32 caracteres) — **URGENTE**
+5. Configurar `ALLOWED_ORIGINS` en Render con el dominio de producción.
+6. Configurar `BOLD_WEBHOOK_IPS` con las IPs oficiales de Bold (consultar documentación Bold).
+7. Actualizar celda I2 del Google Sheet con el nuevo admin token.
+8. Ejecutar `git push origin --force --all` para sincronizar el historial limpio con GitHub.
+
+### Notas sobre la limpieza de Git
+- **Commits eliminados del historial:** `64861c1`, `ff9e85d`, `bf08c29`, `129eed8` (contenían credenciales expuestas)
+- **Backup creado:** `../ListaMasterInsumos-backup.git` (copia del repo original antes de la limpieza)
+- **Verificación:** `git log -S` confirma que ninguna credencial expuesta permanece en el historial
+- **Todos los hashes de commits cambiaron** — se requiere `git push --force` para actualizar el remoto
 
 ## Performance
 

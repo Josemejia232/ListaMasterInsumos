@@ -289,37 +289,49 @@ function syncPrices() {
     actualizados++;
   }
 
-  // ⑤ Escribir batch de precios/fechas/nombres
-  if (batchAnteriorUpdates.length > 0) {
-    for (var b = 0; b < batchAnteriorUpdates.length; b++) {
-      var ab = batchAnteriorUpdates[b];
-      sheet.getRange(ab.row, ab.col).setValue(ab.value);
+  // ⑤ Escribir batch de precios/fechas/nombres/anterior con setValues
+  function _batchWrite(sheet, updates) {
+    if (!updates || updates.length === 0) return;
+    // Agrupar por columna
+    var byCol = {};
+    for (var i = 0; i < updates.length; i++) {
+      var u = updates[i];
+      if (!byCol[u.col]) byCol[u.col] = [];
+      byCol[u.col].push(u);
+    }
+    var cols = Object.keys(byCol);
+    for (var c = 0; c < cols.length; c++) {
+      var col = parseInt(cols[c]);
+      var colUpdates = byCol[col];
+      // Determinar min/max row
+      var minRow = colUpdates[0].row;
+      var maxRow = colUpdates[0].row;
+      for (var i = 1; i < colUpdates.length; i++) {
+        if (colUpdates[i].row < minRow) minRow = colUpdates[i].row;
+        if (colUpdates[i].row > maxRow) maxRow = colUpdates[i].row;
+      }
+      // Leer rango de una vez
+      var numRows = maxRow - minRow + 1;
+      var range = sheet.getRange(minRow, col, numRows, 1);
+      var values = range.getValues();
+      // Aplicar updates en el array
+      for (var i = 0; i < colUpdates.length; i++) {
+        var idx = colUpdates[i].row - minRow;
+        values[idx][0] = colUpdates[i].value;
+      }
+      // Escribir de una vez
+      range.setValues(values);
     }
   }
 
-  if (batchPrecioUpdates.length > 0) {
-    for (var b = 0; b < batchPrecioUpdates.length; b++) {
-      var up = batchPrecioUpdates[b];
-      sheet.getRange(up.row, up.col).setValue(up.value);
-    }
-  }
-
-  if (batchFechaUpdates.length > 0) {
-    for (var d = 0; d < batchFechaUpdates.length; d++) {
-      var du = batchFechaUpdates[d];
-      sheet.getRange(du.row, du.col).setValue(du.value);
-    }
-  }
-
-  if (batchNombreUpdates.length > 0) {
-    for (var n = 0; n < batchNombreUpdates.length; n++) {
-      var nu = batchNombreUpdates[n];
-      sheet.getRange(nu.row, nu.col).setValue(nu.value);
-    }
-  }
+  _batchWrite(sheet, batchAnteriorUpdates);
+  _batchWrite(sheet, batchPrecioUpdates);
+  _batchWrite(sheet, batchFechaUpdates);
+  _batchWrite(sheet, batchNombreUpdates);
 
   // ⑤.½ Semilla col J: BATCH read F y J, BATCH write solo donde J vacía
   var lastRow = sheet.getLastRow();
+  var semilla = 0;
   if (lastRow >= 2) {
     // Leer toda la columna F de una vez
     var fRange = sheet.getRange(2, precioCol + 1, lastRow - 1, 1);
@@ -328,7 +340,6 @@ function syncPrices() {
     var jRange = sheet.getRange(2, anteriorCol + 1, lastRow - 1, 1);
     var jValues = jRange.getValues();
 
-    var semilla = 0;
     for (var r = 0; r < fValues.length; r++) {
       var fv = fValues[r][0];
       var jv = jValues[r][0];
