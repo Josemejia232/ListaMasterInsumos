@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, func, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, func, UniqueConstraint
 from app.database import Base
 
 
@@ -46,6 +46,7 @@ class Usuario(Base):
     token = Column(String(200), nullable=False)
     activo = Column(Boolean, default=True, nullable=False)
     tipo = Column(String(20), default="usuario", nullable=False)  # admin | usuario
+    plan = Column(String(10), nullable=True)  # NULL=free, 'basico', 'plus'
     fecha_pago = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -63,3 +64,12 @@ class Pago(Base):
     transaction_id = Column(String(50), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class UsoCalculo(Base):
+    __tablename__ = "uso_calculos"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    tipo = Column(String(20), nullable=False)  # 'mezcla', 'mamposteria', 'anclajes'
+    created_at = Column(DateTime, server_default=func.now())

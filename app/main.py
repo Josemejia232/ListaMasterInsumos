@@ -22,10 +22,11 @@ from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 from app.database import engine, get_db, SessionLocal, Base, IS_SQLITE
-from app.models import Producto, Insumo, Usuario, Pago
+from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo
 from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
 from app import bold as bold_client
+from app.calculos import router as calculos_router
 
 load_dotenv()
 
@@ -96,6 +97,7 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 SHEET_URL = os.getenv("SHEET_URL", "")
 
+app.include_router(calculos_router)
 
 # ─── Schemas ──────────────────────────────────────────────────
 
@@ -190,6 +192,7 @@ class LoginResponse(BaseModel):
     email: str
     token: str = ""
     tipo: str
+    plan: str | None = None
     fecha_pago: datetime | None = None
     plan_activo: bool = False
 
@@ -268,6 +271,33 @@ class ComprarPlanResponse(BaseModel):
     url: str
     amount: float
     status: str
+
+
+class ComprarPlanRequest(BaseModel):
+    plan: str  # "basico" | "plus"
+    @field_validator("plan")
+    @classmethod
+    def validate_plan(cls, v):
+        if v not in ("basico", "plus"):
+            raise ValueError("Plan debe ser 'basico' o 'plus'")
+        return v
+
+
+class UpgradePlanResponse(BaseModel):
+    id: int
+    url: str
+    amount: float
+    monto_original: float = 15000.0
+    credito_basico: float = 0.0
+    status: str
+
+
+class PlanInfo(BaseModel):
+    plan: str  # "free" | "basico" | "plus"
+    activo: bool
+    dias_restantes: int | None = None
+    puede_upgradear: bool = False
+    upgrade: dict | None = None
 
 
 # ─── Auth ─────────────────────────────────────────────────────
@@ -398,6 +428,18 @@ def _upsert_producto(db: Session, producto, origen: str = "manual", categoria: s
 
 # ─── Auth endpoints ───────────────────────────────────────────
 
+def _plan_info(user: Usuario) -> dict:
+    if user.tipo == "admin":
+        return {"plan": "plus", "activo": True, "dias_restantes": 9999}
+    if not user.fecha_pago:
+        return {"plan": "free", "activo": True, "dias_restantes": None}
+    delta = (datetime.utcnow() - user.fecha_pago).days
+    if delta >= 30:
+        return {"plan": "free", "activo": True, "dias_restantes": None}
+    plan = user.plan or "plus"
+    return {"plan": plan, "activo": True, "dias_restantes": 30 - delta}
+
+
 def _plan_activo(user: Usuario) -> bool:
     if user.tipo == "admin":
         return True
@@ -418,7 +460,8 @@ def register(req: LoginRequest, request: Request, db: Session = Depends(get_db))
     db.add(user)
     db.commit()
     db.refresh(user)
-    return LoginResponse(id=user.id, email=user.email, token=user.token, tipo=user.tipo, fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    info = _plan_info(user)
+    return LoginResponse(id=user.id, email=user.email, token=user.token, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
@@ -429,26 +472,51 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     ).first()
     if not user or not hmac.compare_digest(req.token, user.token or ""):
         raise HTTPException(status_code=401, detail="Credenciales invalidas")
-
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    info = _plan_info(user)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
 
 @app.get("/api/auth/me", response_model=LoginResponse)
 def auth_me(user: Usuario = Depends(get_current_user)):
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    info = _plan_info(user)
+    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+
+@app.get("/api/auth/planes", response_model=PlanInfo)
+def ver_planes(user: Usuario = Depends(get_current_user)):
+    info = _plan_info(user)
+    result = {"plan": info["plan"], "activo": info["activo"], "dias_restantes": info["dias_restantes"]}
+    if info["plan"] == "free":
+        result["puede_upgradear"] = True
+        result["upgrade"] = {"basico": 10000, "plus": 15000}
+    elif info["plan"] == "basico":
+        result["puede_upgradear"] = True
+        dias_rest = info["dias_restantes"] or 0
+        credito = round((10000 * dias_rest) / 30, 0)
+        a_pagar = max(5000, round(15000 - credito, 0))
+        result["upgrade"] = {"a_pagar": a_pagar, "credito": credito, "plus_full": 15000, "formula": f"$15.000 - ($10.000 × {dias_rest}/30) = ${a_pagar:,.0f}"}
+    else:
+        result["puede_upgradear"] = False
+    return result
+
 
 @app.post("/api/auth/comprar-plan", response_model=ComprarPlanResponse)
 async def comprar_plan(
+    req: ComprarPlanRequest,
     request: Request,
     user: Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     rate_limit_scrape(request)
-    amount = 10000
-    reference = f"usr_{user.id}_{int(time.time())}"
+    info = _plan_info(user)
+    if info["plan"] != "free":
+        raise HTTPException(status_code=400, detail="Ya tienes un plan activo. Usa /upgrade-plan para mejorar.")
+    amounts = {"basico": 10000, "plus": 15000}
+    amount = amounts.get(req.plan, 10000)
+    desc = {"basico": "Plan Basico - Insumos ilimitados", "plus": "Plan Plus - Acceso completo"}
+    reference = f"{req.plan}_usr_{user.id}_{int(time.time())}"
     try:
         payload = await bold_client.create_payment_link(
             amount_total=amount,
-            description="Plan ListaMasterInsumos - 30 dias",
+            description=desc.get(req.plan, "Plan ListaMasterInsumos"),
             reference=reference,
             payer_email=user.email,
             expiration_minutes=120,
@@ -456,7 +524,6 @@ async def comprar_plan(
     except Exception as e:
         logger.error(f"[comprar-plan] Error Bold: {e}")
         raise HTTPException(status_code=502, detail=f"Error en pasarela de pago: {str(e)}")
-
     pago = Pago(
         usuario_id=user.id,
         payment_link=payload["payment_link"],
@@ -468,10 +535,50 @@ async def comprar_plan(
     db.add(pago)
     db.commit()
     db.refresh(pago)
-    return ComprarPlanResponse(
-        id=pago.id,
-        url=pago.url,
-        amount=pago.amount,
+    return ComprarPlanResponse(id=pago.id, url=pago.url, amount=pago.amount, status=pago.status)
+
+
+@app.post("/api/auth/upgrade-plan", response_model=UpgradePlanResponse)
+async def upgrade_plan(
+    request: Request,
+    user: Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    rate_limit_scrape(request)
+    info = _plan_info(user)
+    if info["plan"] != "basico":
+        raise HTTPException(status_code=400, detail="Solo puedes hacer upgrade desde el plan Basico.")
+    dias_rest = info["dias_restantes"] or 0
+    if dias_rest <= 0:
+        raise HTTPException(status_code=400, detail="Tu plan Basico ya vencio. Compra Plus directamente.")
+    credito = round((10000 * dias_rest) / 30, 0)
+    amount = max(5000, round(15000 - credito, 0))
+    reference = f"upgrade_usr_{user.id}_{int(time.time())}"
+    try:
+        payload = await bold_client.create_payment_link(
+            amount_total=amount,
+            description="Upgrade a Plan Plus - Acceso completo",
+            reference=reference,
+            payer_email=user.email,
+            expiration_minutes=120,
+        )
+    except Exception as e:
+        logger.error(f"[upgrade-plan] Error Bold: {e}")
+        raise HTTPException(status_code=502, detail=f"Error en pasarela de pago: {str(e)}")
+    pago = Pago(
+        usuario_id=user.id,
+        payment_link=payload["payment_link"],
+        url=payload["url"],
+        reference=reference,
+        amount=amount,
+        status="ACTIVE",
+    )
+    db.add(pago)
+    db.commit()
+    db.refresh(pago)
+    return UpgradePlanResponse(
+        id=pago.id, url=pago.url, amount=amount,
+        monto_original=15000.0, credito_basico=credito,
         status=pago.status,
     )
 @app.get("/api/usuarios", response_model=list[UsuarioResponse])
@@ -932,6 +1039,11 @@ async def sync_pago(pago_id: int, _admin: Usuario = Depends(require_admin), db: 
             usuario = db.query(Usuario).filter(Usuario.id == pago.usuario_id).first()
             if usuario:
                 usuario.fecha_pago = func.now()
+                ref = pago.reference or ""
+                if ref.startswith("basico_"):
+                    usuario.plan = "basico"
+                elif ref.startswith("upgrade_") or ref.startswith("plus_"):
+                    usuario.plan = "plus"
         db.commit()
         db.refresh(pago)
         return pago
@@ -997,6 +1109,11 @@ async def webhook_bold(request: Request, db: Session = Depends(get_db)):
         usuario = db.query(Usuario).filter(Usuario.id == pago.usuario_id).first()
         if usuario:
             usuario.fecha_pago = func.now()
+            ref = pago.reference or ""
+            if ref.startswith("basico_"):
+                usuario.plan = "basico"
+            elif ref.startswith("upgrade_") or ref.startswith("plus_"):
+                usuario.plan = "plus"
     else:
         pago.status = "REJECTED"
         pago.transaction_id = data.get("payment_id", "")
@@ -1097,11 +1214,25 @@ def startup():
                     "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='productos' AND column_name='n03') THEN "
                     "ALTER TABLE productos ADD COLUMN n03 VARCHAR(200); "
                     "END IF; "
+                    "IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='plan') THEN "
+                    "ALTER TABLE usuarios ADD COLUMN plan VARCHAR(10); "
+                    "END IF; "
                     "END $$;"
                 ))
                 conn.commit()
             except Exception:
                 conn.rollback()
+    else:
+        with engine.connect() as conn:
+            try:
+                result = conn.execute(text("PRAGMA table_info(usuarios)")).fetchall()
+                cols = [r[1] for r in result]
+                if "plan" not in cols:
+                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN plan VARCHAR(10)"))
+                    conn.commit()
+                    logger.info("[Migration] Added plan column to usuarios (SQLite)")
+            except Exception as e:
+                logger.warning(f"[Migration] plan column skipped: {e}")
 
     global _index_html, _index_mtime
     index_path = static_dir / "index.html"
@@ -1111,6 +1242,20 @@ def startup():
 
     db = SessionLocal()
     try:
+        # Migrar usuarios legacy (con fecha_pago pero sin plan) → Plus
+        from datetime import timedelta
+        ahora = datetime.utcnow()
+        legacy = db.query(Usuario).filter(
+            Usuario.fecha_pago.isnot(None),
+            Usuario.plan.is_(None),
+            Usuario.tipo != "admin",
+        ).all()
+        for u in legacy:
+            u.plan = "plus"
+            logger.info(f"[Migration] Legacy user {u.email} → plan=plus")
+        if legacy:
+            db.commit()
+
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
         if not admin:
             admin_email = os.getenv("ADMIN_EMAIL")

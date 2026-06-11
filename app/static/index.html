@@ -421,6 +421,14 @@ h2::before{
 }
 .whatsapp-btn:hover{transform:scale(1.11);box-shadow:0 6px 24px rgba(37,211,102,0.55)}
 .whatsapp-btn svg{width:28px;height:28px;fill:#fff}
+.calc-vr::-webkit-outer-spin-button,.calc-vr::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.calc-vr[type=number]{-moz-appearance:textfield}
+#mez-vol::-webkit-outer-spin-button,#mez-vol::-webkit-inner-spin-button,#mamp-vol::-webkit-outer-spin-button,#mamp-vol::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#mez-vol[type=number],#mamp-vol[type=number]{-moz-appearance:textfield}
+.calc-cant::-webkit-outer-spin-button,.calc-cant::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.calc-cant[type=number]{-moz-appearance:textfield}
+#section-anclajes input[type=number]::-webkit-outer-spin-button,#section-anclajes input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+#section-anclajes input[type=number]{-moz-appearance:textfield}
 
 /* Scrollbar */
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -496,15 +504,36 @@ h2::before{
     <!-- Lista Insumos -->
     <div class="section active" id="section-ver-insumos">
       <h2>Lista de Insumos</h2>
-      <div id="plan-banner" class="section-card" style="display:none;margin-bottom:1rem;border:2px solid var(--accent);background:linear-gradient(135deg,#f0f4ff,#e8f0fe)">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem">
+      <div id="plan-banner" class="section-card" style="display:none;margin-bottom:1rem;padding:0;overflow:hidden;border:1px solid var(--border)">
+        <div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
           <div>
-            <span style="font-weight:600;color:var(--accent)">&#127991; Mi Plan</span>
-            <span id="plan-status" style="margin-left:.5rem;font-size:.78rem;color:var(--muted)"></span>
+            <span style="font-weight:600;color:var(--accent)">Mi Plan</span>
+            <span id="plan-status" style="margin-left:.5rem;font-size:.78rem"></span>
           </div>
-          <button id="plan-btn" class="btn btn-green" onclick="comprarPlan()">Comprar plan - $10.000 COP</button>
+          <span id="plan-vencimiento" style="font-size:.76rem;color:var(--muted)"></span>
         </div>
-        <div id="plan-msg" style="margin-top:.5rem;font-size:.77rem;color:var(--text2)"></div>
+        <div id="plan-msg" style="padding:.6rem 1rem;font-size:.77rem;color:var(--text2);border-bottom:1px solid var(--border)"></div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;padding:.6rem 1rem">
+          <div id="plan-card-free" class="plan-card" style="flex:1;min-width:150px;padding:.5rem .7rem;background:var(--card2);border-radius:.5rem;border:1px solid var(--border)">
+            <div style="font-weight:700;font-size:.82rem">Free</div>
+            <div style="font-size:.72rem;color:var(--muted)">10 insumos · 3 cálculos/tipo</div>
+            <div id="plan-tag-free" style="font-size:.7rem;margin-top:.3rem;color:var(--accent);font-weight:600">Plan actual</div>
+          </div>
+          <div id="plan-card-basico" class="plan-card" style="flex:1;min-width:150px;padding:.5rem .7rem;background:var(--card2);border-radius:.5rem;border:1px solid var(--border)">
+            <div style="font-weight:700;font-size:.82rem">Básico</div>
+            <div style="font-size:.72rem;color:var(--muted)">Insumos ilimitados · Sin calculadora</div>
+            <div style="font-size:.7rem;margin-top:.3rem;color:var(--accent);font-weight:600">$10.000/mes</div>
+          </div>
+          <div id="plan-card-plus" class="plan-card" style="flex:1;min-width:150px;padding:.5rem .7rem;background:var(--card2);border-radius:.5rem;border:1px solid var(--border)">
+            <div style="font-weight:700;font-size:.82rem">Plus</div>
+            <div style="font-size:.72rem;color:var(--muted)">Todo ilimitado · Calculadora completa</div>
+            <div style="font-size:.7rem;margin-top:.3rem;color:var(--accent);font-weight:600">$15.000/mes</div>
+          </div>
+        </div>
+        <div style="padding:.4rem 1rem .6rem;display:flex;flex-wrap:wrap;gap:.4rem">
+          <button id="plan-btn" class="btn btn-green" style="font-size:.78rem;padding:.35rem .8rem" onclick="accionPlan()"></button>
+          <span id="plan-upgrade-info" style="font-size:.72rem;color:var(--muted);display:flex;align-items:center"></span>
+        </div>
       </div>
       <div class="form-row">
         <input type="text" id="ver-filtro" placeholder="Filtrar por descripción o categoría..." oninput="filtrarVerDebounced()">
@@ -580,6 +609,83 @@ h2::before{
       </div>
     </div>
 
+    <!-- Cálculos -->
+    <div class="section" id="section-mezclas">
+      <h2>Mezclas</h2>
+      <div class="form-row">
+        <select id="mez-tipo" onchange="cargarSelectMezclas()" style="flex:0 0 150px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+          <option value="">Todas</option>
+          <option value="concreto">Concretos</option>
+          <option value="mortero">Morteros</option>
+        </select>
+        <select id="mez-select" onchange="cargarMezcla()" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+          <option value="">Seleccione una mezcla...</option>
+        </select>
+        <input type="number" id="mez-vol" value="1" min="0.1" step="0.1" oninput="_renderVolumen('mez')" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+        <span style="display:flex;align-items:center;color:var(--text2);font-weight:600;font-size:.88rem;padding-right:.2rem">m³</span>
+      </div>
+      <div id="mez-card-wrap" style="margin-top:.5rem"></div>
+      <div id="mez-result-wrap" style="margin-top:.5rem;display:none"></div>
+    </div>
+
+    <div class="section" id="section-mamposteria">
+      <h2>Mampostería</h2>
+      <div class="form-row">
+        <select id="mamp-cat" onchange="cargarSelectMamposteria()" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+          <option value="">Todas las categorías</option>
+          <option value="Adoquines">Adoquines</option>
+          <option value="Estructurales">Estructurales</option>
+          <option value="Fachadas">Fachadas</option>
+          <option value="Divisorios">Divisorios</option>
+          <option value="Placafacil">Placafácil</option>
+        </select>
+        <select id="mamp-select" onchange="cargarMamposteria()" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+          <option value="">Seleccione un tipo de muro...</option>
+        </select>
+        <input type="number" id="mamp-vol" value="1" min="0.1" step="0.1" oninput="_renderVolumen('mamp')" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+        <span style="display:flex;align-items:center;color:var(--text2);font-weight:600;font-size:.88rem;padding-right:.2rem">m²</span>
+      </div>
+      <div id="mamp-card-wrap" style="margin-top:.5rem"></div>
+      <div id="mamp-result-wrap" style="margin-top:.5rem;display:none"></div>
+    </div>
+
+    <div class="section" id="section-anclajes">
+      <h2>Anclajes Químicos</h2>
+      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">ø Varilla (mm)
+          <select id="anc-diam" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="10" selected>10</option>
+            <option value="12">12</option>
+            <option value="14">14</option>
+            <option value="16">16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="22">22</option>
+            <option value="25">25</option>
+            <option value="28">28</option>
+            <option value="30">30</option>
+            <option value="32">32</option>
+          </select>
+        </label>
+        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Profundidad (mm)
+          <input type="number" id="anc-profundidad" value="100" min="20" max="500" step="5" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+        </label>
+        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Cant. Puntos
+          <input type="number" id="anc-cant" value="10" min="1" step="1" style="width:70px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+        </label>
+        <select id="anc-base" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+          <option value="concreto">Concreto</option>
+          <option value="ladrillo_macizo">Ladrillo Macizo</option>
+          <option value="piedra">Piedra</option>
+        </select>
+        <button onclick="calcularAnclajes()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+      </div>
+      <div id="anc-card-wrap" style="margin-top:.5rem"></div>
+      <div id="anc-result-wrap" style="margin-top:.5rem;display:none"></div>
+    </div>
+
   </div>
 </div>
 
@@ -603,6 +709,16 @@ let _verProds = [];
 let _viewMode = null;
 let _debounceTimer = null;
 let _freeTierInfo = null;
+function _limiteCalcMsg(detail){
+  return '<div class="section-card" style="padding:1rem;text-align:center">'+
+    '<div style="font-size:1.2rem;margin-bottom:.5rem">🔒</div>'+
+    '<div style="font-weight:600;color:var(--text);margin-bottom:.3rem">Limite alcanzado</div>'+
+    '<div style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem">'+escapeHtml(detail||'Actualiza a Plus para acceder a la calculadora completa.')+'</div>'+
+    '<button class="btn btn-green" onclick="accionPlan()" style="font-size:.8rem">Actualizar a Plus</button></div>';
+}
+
+let _calcData = null;
+let _editCant = false;
 
 function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
 var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
@@ -680,6 +796,10 @@ function buildSidebar(){
   }
   items.push({label:'LISTA INSUMOS', header:true});
   items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
+  items.push({label:'CÁLCULOS', header:true});
+  items.push({id:'mezclas', icon:'&#9881;', text:'Mezclas'});
+  items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
+  items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -696,12 +816,14 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos'};
+  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
   if(section==='usuarios') cargarUsuarios();
   if(section==='pagos') cargarPagos();
+  if(section==='mezclas') cargarSelectMezclas();
+  if(section==='mamposteria') cargarSelectMamposteria();
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
@@ -764,6 +886,295 @@ function descripcionAjustada(desc, id, ajustada){
   return desc + sufijos[idx];
 }
 const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Bearer '+t : ''; };
+
+// ─── Cálculos ──────────────────────────────────────────
+const _CONV = {
+  "Cemento": { u:"Bolsa", f:50 },
+  "Arena de rio": { u:"Viaje", f:1.05 },
+  "Arena de pozo": { u:"Viaje", f:1.05 },
+  "Arena de peña": { u:"Viaje", f:1.05 },
+  "Material de rio (gravilla)": { u:"Viaje", f:1.05 },
+  "Agua": { u:"lt", f:1 },
+  "M.O. CUADRILLA AG 1:2": { u:"hc", f:1 },
+  "M.O. CUADRILLA AG 0:2": { u:"hc", f:1 },
+  "Mezcladora a gasolina 1 1/2 bulto": { u:"hr", f:1 },
+  "Bloque #4 (10x20x40)": { u:"und", f:1 },
+  "Bloque #5 (10x20x40)": { u:"und", f:1 },
+  "Ladrillo tolete (5x10x20)": { u:"und", f:1 },
+  "Ladrillo farol (10x20x30)": { u:"und", f:1 },
+  "Ladrillo tablete (4x10x20)": { u:"und", f:1 },
+  "Mortero de pega": { u:"m³", f:1 },
+  "M.O. Mampostería": { u:"m²", f:1 },
+  "Arena de Base": { u:"Viaje", f:1.05 },
+  "Arena de Sello": { u:"Viaje", f:1.05 },
+  "Adhesivo cementicio": { u:"Saco", f:1 },
+};
+
+function _convertir(nombre, cantidad){
+  const c = _CONV[nombre];
+  if(!c) return { und:null, cant:Math.round(cantidad*100)/100, ent:Math.round(cantidad*100)/100 };
+  if(c.f<=1) return { und:c.u, cant:Math.round(cantidad*100)/100, ent:Math.round(cantidad*100)/100 };
+  const ent = Math.ceil(cantidad / c.f);
+  return { und:c.u, cant:Math.round(cantidad*100)/100, ent:ent };
+}
+
+function recalcularMezcla(el){
+  const card = el.closest('.calc-card');
+  if(!card) return;
+  const rows = card.querySelectorAll('.calc-row');
+  let total = 0;
+  let prefix = 'mez';
+  if(document.getElementById('mamp-card-wrap') && document.getElementById('mamp-card-wrap').contains(card)) prefix = 'mamp';
+  rows.forEach((tr,i) => {
+    const nom = tr.querySelector('.calc-nom').value;
+    const und = tr.querySelector('.calc-und').value;
+    const elCant = tr.querySelector('.calc-cant');
+    const cant = _editCant ? (parseFloat(elCant.value)||0) : (parseFloat(elCant.dataset.cant)||0);
+    const vr = parseFloat(tr.querySelector('.calc-vr').value) || 0;
+    const vt = cant * vr;
+    total += vt;
+    tr.querySelector('.calc-vt').textContent = '$'+Math.round(vt).toLocaleString('es-CO');
+    if(_calcData && _calcData.materiales[i]){
+      _calcData.materiales[i].nombre = nom;
+      _calcData.materiales[i].unidad = und;
+      _calcData.materiales[i].cantidad = cant;
+      _calcData.materiales[i].vr_unitario = vr;
+    }
+  });
+  card.querySelector('.calc-total').textContent = '$'+Math.round(total).toLocaleString('es-CO');
+  _renderVolumen(prefix);
+}
+
+async function cargarSelectMezclas(){
+  const tipo = document.getElementById('mez-tipo').value || '';
+  const params = [];
+  if(tipo) params.push('tipo='+tipo);
+  const path = '/api/calculos' + (params.length ? '?'+params.join('&') : '');
+  try {
+    const r = await apiFetch(path);
+    if(r.status === 403){ const me = await r.json(); document.getElementById('mez-card-wrap').innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok) return;
+    const data = await r.json();
+    const sel = document.getElementById('mez-select');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Seleccione una mezcla...</option>'+
+      data.map(m => '<option value="'+m.id+'">'+escapeHtml(m.nombre)+'</option>').join('');
+    if(current && data.some(m => m.id===current)) sel.value = current;
+    cargarMezcla();
+  } catch(e){}
+}
+
+async function cargarMezcla(){
+  const id = document.getElementById('mez-select').value;
+  const wrap = document.getElementById('mez-card-wrap');
+  const rwrap = document.getElementById('mez-result-wrap');
+  rwrap.style.display = 'none';
+  if(!id){ wrap.innerHTML=''; _calcData=null; return; }
+  await _renderCard(id, wrap, rwrap, 'mez');
+}
+
+async function cargarSelectMamposteria(){
+  const cat = document.getElementById('mamp-cat').value;
+  try {
+    const r = await apiFetch('/api/calculos?tipo=mamposteria');
+    if(!r.ok) return;
+    const data = await r.json();
+    const sel = document.getElementById('mamp-select');
+    const current = sel.value;
+    const filtered = cat ? data.filter(m => m.categoria === cat) : data;
+    sel.innerHTML = '<option value="">Seleccione un tipo de muro...</option>'+
+      filtered.map(m => '<option value="'+m.id+'" data-categoria="'+(m.categoria||'')+'">'+escapeHtml(m.nombre)+'</option>').join('');
+    if(current && data.some(m => m.id===current)) sel.value = current;
+    cargarMamposteria();
+  } catch(e){}
+}
+
+async function cargarMamposteria(){
+  const id = document.getElementById('mamp-select').value;
+  const wrap = document.getElementById('mamp-card-wrap');
+  const rwrap = document.getElementById('mamp-result-wrap');
+  rwrap.style.display = 'none';
+  if(!id){ wrap.innerHTML=''; _calcData=null; return; }
+  await _renderCard(id, wrap, rwrap, 'mamp');
+}
+
+async function _renderCard(id, wrap, rwrap, prefix){
+  try {
+  const r = await apiFetch('/api/calculos/'+id);
+    if(r.status === 403){ const e = await r.json(); wrap.innerHTML = _limiteCalcMsg(e.detail||'Sin acceso'); return; }
+    if(!r.ok) return;
+    const m = await r.json();
+    _calcData = m;
+    _editCant = false;
+    const matRows = m.materiales.map(mat =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.25rem .4rem;font-size:.76rem"><input class="calc-nom" value="'+escapeHtml(mat.nombre)+'" oninput="recalcularMezcla(this)" style="width:100%;border:1px solid transparent;background:transparent;font:inherit;color:inherit;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar nombre del material"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:center;white-space:nowrap"><input class="calc-und" value="'+escapeHtml(mat.unidad)+'" oninput="recalcularMezcla(this)" style="width:40px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:center;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" title="Editar unidad"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><span class="calc-cant" data-cant="'+mat.cantidad+'">'+mat.cantidad.toFixed(2)+'</span></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap"><input class="calc-vr" type="number" step="1" value="'+mat.vr_unitario+'" oninput="recalcularMezcla(this)" style="width:80px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;text-align:right;padding:.1rem .2rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\';this.style.background=\'#fff\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'"></td>'+
+      '<td style="padding:.25rem .2rem;font-size:.76rem;text-align:right;white-space:nowrap;font-weight:600" class="calc-vt">$'+Math.round(mat.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+      '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.88rem">'+escapeHtml(m.nombre)+'</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+escapeHtml(m.proporcion)+(m.resistencia_psi?' &middot; '+m.resistencia_psi+' psi':'')+'</div></div>'+
+      '<div style="display:flex;align-items:center;gap:.5rem">'+
+      '<button onclick="toggleEditCant()" id="btn-edit-cant" style="background:none;border:1px solid var(--border);border-radius:5px;padding:.2rem .5rem;font-size:.75rem;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:.25rem" title="Editar cantidades base">✎ Cant</button>'+
+      '<div style="font-size:1.1rem;font-weight:700;color:var(--accent);white-space:nowrap" class="calc-total">$'+Math.round(m.total).toLocaleString('es-CO')+'</div></div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col><col style="width:48px"><col style="width:52px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Unidad</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div></div>';
+    _renderVolumen(prefix);
+  } catch(e){}
+}
+
+function toggleEditCant(){
+  _editCant = !_editCant;
+  const btn = document.getElementById('btn-edit-cant');
+  if(btn) btn.style.background = _editCant ? 'var(--accent)' : 'none';
+  if(btn) btn.style.color = _editCant ? '#fff' : 'var(--text2)';
+  if(btn) btn.style.borderColor = _editCant ? 'var(--accent)' : 'var(--border)';
+  const card = document.querySelector('.calc-card');
+  if(!card) return;
+  card.querySelectorAll('.calc-cant').forEach(el => {
+    const val = _editCant ? (parseFloat(el.dataset.cant)||0).toFixed(2) : el.textContent;
+    if(_editCant){
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.step = '0.01';
+      input.className = 'calc-cant';
+      input.value = val;
+      input.style.width = '60px';
+      input.style.border = '1px solid var(--accent)';
+      input.style.background = '#fff';
+      input.style.font = 'inherit';
+      input.style.color = 'inherit';
+      input.style.textAlign = 'right';
+      input.style.padding = '.1rem .2rem';
+      input.style.borderRadius = '3px';
+      input.oninput = function(){ recalcularMezcla(this); };
+      el.replaceWith(input);
+    } else {
+      const span = document.createElement('span');
+      span.className = 'calc-cant';
+      span.dataset.cant = parseFloat(el.value)||0;
+      span.textContent = Number(span.dataset.cant).toFixed(2);
+      el.replaceWith(span);
+      recalcularMezcla(span);
+    }
+  });
+}
+
+function _renderVolumen(prefix){
+  const rwrap = document.getElementById(prefix+'-result-wrap');
+  const volInput = document.getElementById(prefix+'-vol');
+  if(!_calcData || !rwrap || !volInput){ if(rwrap) rwrap.style.display='none'; return; }
+  const vol = parseFloat(volInput.value) || 0;
+  if(vol <= 0){ rwrap.style.display='none'; return; }
+  rwrap.style.display = 'block';
+  const unitLabel = prefix==='mamp' ? 'm²' : 'm³';
+  const rows = _calcData.materiales.map(mat => {
+    const base = mat.cantidad;
+    const vr = mat.vr_unitario;
+    const scaled = base * vol;
+    const conv = _convertir(mat.nombre, scaled);
+    const total = scaled * vr;
+    return '<tr>'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(mat.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(mat.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(scaled).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+conv.ent+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(conv.und||mat.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(vr).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(total).toLocaleString('es-CO')+'</td></tr>';
+  }).join('');
+  const gTotal = _calcData.materiales.reduce((s,m) => s + m.cantidad * m.vr_unitario * vol, 0);
+  // Build summary note
+  const skipWords = ['mezcladora', 'agua'];
+  const parts = _calcData.materiales.map(mat => {
+    const scaled = mat.cantidad * vol;
+    const conv = _convertir(mat.nombre, scaled);
+    const name = mat.nombre;
+    const isLabor = skipWords.some(w => name.toLowerCase().includes(w));
+    if(isLabor) return null;
+    if(conv.und && conv.und !== mat.unidad) {
+      return conv.ent+' '+conv.und+' de '+name;
+    }
+    return Number(scaled).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(mat.unidad)+' de '+escapeHtml(name);
+  }).filter(Boolean);
+  const note = parts.length ? '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>' : '';
+  rwrap.innerHTML = '<div class="section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.6rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+    '<div style="font-weight:600;font-size:.85rem">Resultado para <span style="color:var(--accent)">'+Number(vol).toLocaleString('es-CO',{minimumFractionDigits:1,maximumFractionDigits:1})+' '+unitLabel+'</span></div>'+
+    '<div style="font-size:1.05rem;font-weight:700;color:var(--accent)">$'+Math.round(gTotal).toLocaleString('es-CO')+'</div></div>'+
+    '<div style="padding:.2rem .6rem .5rem">'+
+    '<table style="width:100%;border-collapse:collapse">'+
+    '<colgroup><col><col style="width:48px"><col style="width:72px"><col style="width:55px"><col style="width:50px"><col style="width:72px"><col style="width:80px"></colgroup><thead><tr>'+
+    '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Material</th>'+
+    '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+    '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant Necesaria</th>'+
+    '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Und Enteras</th>'+
+    '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Tipo Und</th>'+
+    '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+    '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+note+'</div>';
+}
+
+async function calcularAnclajes(){
+  const diam = parseInt(document.getElementById('anc-diam').value) || 0;
+  const prof = parseInt(document.getElementById('anc-profundidad').value) || 0;
+  const cant = parseInt(document.getElementById('anc-cant').value) || 0;
+  const base = document.getElementById('anc-base').value;
+  const wrap = document.getElementById('anc-card-wrap');
+  const rwrap = document.getElementById('anc-result-wrap');
+  rwrap.style.display = 'none';
+  if(diam < 4 || prof < 20 || cant < 1){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Verifique los valores ingresados</div>'; return; }
+  try {
+    const r = await apiFetch('/api/calculos/anclajes', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({diametro_mm:diam, profundidad_mm:prof, cantidad:cant, material_base:base})
+    });
+    if(!r.ok) return;
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="section-card" style="padding:0;overflow:hidden">'+
+      '<div style="padding:.6rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Anclaje Químico ø'+diam+'mm × '+prof+'mm</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+cant+' puntos · '+data.volumen_total_cm3.toFixed(1)+' cm³ resina · '+data.tubos_calculados+' tubo(s) 300ml</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
 
 async function apiFetch(url, opts){
   opts = opts || {};
@@ -1051,62 +1462,135 @@ async function resetearToken(id){
   }catch(e){ alert('Error: '+e.message); }
 }
 
+var _planData = null;
 function renderPlanBanner(){
   var banner = document.getElementById('plan-banner');
   if(!banner) return;
-  var isAdmin = _user && _user.tipo === 'admin';
-  if(isAdmin){ banner.style.display = 'none'; return; }
+  if(_user && _user.tipo === 'admin'){ banner.style.display = 'none'; return; }
   banner.style.display = 'block';
+
+  var plan = _user.plan || 'free';
   var fp = _user && _user.fecha_pago ? new Date(_user.fecha_pago) : null;
   var vence = fp ? new Date(fp.getTime() + 30*24*60*60*1000) : null;
   var dias = fp ? Math.ceil((vence.getTime()-Date.now())/(1000*60*60*24)) : null;
+  var activo = fp && dias > 0;
+
   var statusEl = document.getElementById('plan-status');
+  var vencEl = document.getElementById('plan-vencimiento');
   var msgEl = document.getElementById('plan-msg');
   var btn = document.getElementById('plan-btn');
-  if(fp && dias > 0){
-    statusEl.textContent = 'Activo ('+dias+' dias restantes)';
+  var upInfo = document.getElementById('plan-upgrade-info');
+  var tagFree = document.getElementById('plan-tag-free');
+  var cardFree = document.getElementById('plan-card-free');
+  var cardBasico = document.getElementById('plan-card-basico');
+  var cardPlus = document.getElementById('plan-card-plus');
+
+  [cardFree, cardBasico, cardPlus].forEach(function(c){ c.style.border = '1px solid var(--border)'; });
+
+  if(activo && plan === 'plus'){
+    statusEl.textContent = 'Plus activo';
     statusEl.style.color = 'var(--green)';
-    msgEl.textContent = '✅ Tu plan vence el '+vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})+'. Acceso completo a toda la base de datos.';
-    btn.textContent = 'Renovar plan - $10.000 COP';
-    banner.style.borderColor = 'var(--green)';
-  } else if(fp && dias <= 0){
-    statusEl.textContent = 'Vencido';
-    statusEl.style.color = 'var(--red)';
-    var fi = _freeTierInfo;
-    msgEl.textContent = '⚠️ Tu plan vencio el '+vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'})+'.'+(fi?' Solo ves 10 insumos x '+fi.categorias+' categorias ('+_verProds.length+' de '+fi.total+' productos). Compra el plan completo.':'');
-    btn.textContent = 'Comprar plan - $10.000 COP';
-    banner.style.borderColor = 'var(--red)';
+    vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
+    msgEl.textContent = 'Tienes acceso ilimitado a productos y calculadora (mezclas, mamposteria, anclajes).';
+    btn.textContent = 'Renovar Plus — $15.000';
+    btn.onclick = function(){ comprarPlan('plus'); };
+    upInfo.textContent = '';
+    cardPlus.style.border = '2px solid var(--green)';
+    tagFree.textContent = '';
+  } else if(activo && plan === 'basico'){
+    statusEl.textContent = 'Basico activo';
+    statusEl.style.color = 'var(--accent)';
+    vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
+    msgEl.textContent = 'Productos ilimitados pero sin acceso a la calculadora.';
+    btn.textContent = 'Actualizar a Plus — desde $5.000';
+    btn.style.background = '#7c3aed';
+    btn.onclick = function(){ upgradePlan(); };
+    upInfo.textContent = dias ? 'Prorrateo: $15.000 - credito por '+dias+' dias restantes' : '';
+    cardBasico.style.border = '2px solid var(--accent)';
+    tagFree.textContent = '';
+  } else if(activo){
+    statusEl.textContent = 'Plan activo (legacy)';
+    statusEl.style.color = 'var(--green)';
+    vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
+    msgEl.textContent = 'Acceso completo. Renueva tu plan.';
+    btn.textContent = 'Renovar — $10.000';
+    btn.onclick = function(){ comprarPlan('basico'); };
+    upInfo.textContent = '';
   } else {
-    statusEl.textContent = 'Sin plan';
+    statusEl.textContent = 'Plan Free';
     statusEl.style.color = '#f59e0b';
-    var fi2 = _freeTierInfo;
-    msgEl.textContent = '💡 Ves 10 insumos por categoria ('+_verProds.length+' de '+fi2.total+' productos en '+fi2.categorias+' categorias). Paga $10.000 COP para acceder a toda la base.';
-    btn.textContent = 'Comprar plan - $10.000 COP';
-    banner.style.borderColor = '#f59e0b';
+    vencEl.textContent = '';
+    var fi = _freeTierInfo;
+    msgEl.textContent = 'Ves 10 insumos por categoria y 3 calculos por tipo. Actualiza para acceso completo.';
+    btn.textContent = 'Comprar Basico — $10.000';
+    btn.style.background = '';
+    btn.onclick = function(){ comprarPlan('basico'); };
+    upInfo.innerHTML = 'o <a href="#" style="color:var(--accent);font-weight:600" onclick="event.preventDefault();comprarPlan(\'plus\')">Comprar Plus directamente — $15.000</a>';
+    cardFree.style.border = '2px solid #f59e0b';
+    tagFree.textContent = 'Plan actual';
   }
 }
 
-async function comprarPlan(){
+var _planPrice = {'basico':10000,'plus':15000};
+async function accionPlan(){
+  var plan = _user.plan || 'free';
+  var fp = _user && _user.fecha_pago ? new Date(_user.fecha_pago) : null;
+  var dias = fp ? Math.ceil((new Date(fp.getTime()+30*24*60*60*1000)-Date.now())/(1000*60*60*24)) : 0;
+  if(dias > 0 && (plan === 'plus' || plan === 'basico')){
+    if(plan === 'basico') upgradePlan();
+    else comprarPlan(plan);
+  } else {
+    comprarPlan('basico');
+  }
+}
+
+async function comprarPlan(tipo){
   var btn = document.getElementById('plan-btn');
   btn.disabled = true;
   btn.textContent = 'Creando link...';
   try {
-    var r = await apiFetch('/api/auth/comprar-plan', {method:'POST'});
+    var r = await apiFetch('/api/auth/comprar-plan', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({plan:tipo})});
     if(!r.ok){
       var d = await r.json();
-      alert('Error: ' + (d.detail || 'No se pudo crear el link de pago'));
+      alert('Error: ' + (d.detail || 'No se pudo crear el link'));
+      btn.disabled = false;
       renderPlanBanner();
       return;
     }
     var pago = await r.json();
     window.open(pago.url, '_blank');
-    btn.textContent = 'Link creado - continuar al pago';
-    setTimeout(function(){ renderPlanBanner(); }, 3000);
+    btn.textContent = 'Link creado — continuar al pago';
+    setTimeout(function(){ btn.disabled = false; renderPlanBanner(); }, 4000);
   } catch(e){
     alert('Error: ' + e.message);
+    btn.disabled = false;
     renderPlanBanner();
   }
-  btn.disabled = false;
+}
+
+async function upgradePlan(){
+  var btn = document.getElementById('plan-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creando upgrade...';
+  try {
+    var r = await apiFetch('/api/auth/upgrade-plan', {method:'POST'});
+    var d = await r.json();
+    if(!r.ok){
+      alert('Error: ' + (d.detail || 'No se pudo crear el upgrade'));
+      btn.disabled = false;
+      renderPlanBanner();
+      return;
+    }
+    if(confirm('Upgrade a Plus por $'+Number(d.amount).toLocaleString('es-CO')+' (credito Basico: $'+Number(d.credito_basico).toLocaleString('es-CO')+'). Al pagar, el ciclo se reinicia por 30 dias.')){
+      window.open(d.url, '_blank');
+    }
+    btn.disabled = false;
+    renderPlanBanner();
+  } catch(e){
+    alert('Error: ' + e.message);
+    btn.disabled = false;
+    renderPlanBanner();
+  }
 }
 
 var _pagosUsuariosCache = [];

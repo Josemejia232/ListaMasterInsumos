@@ -7,14 +7,49 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 ### Usuario Free
 - Registro gratuito con email
 - Acceso a 10 insumos por categoría de primer nivel (n01)
+- **3 cálculos por tipo** (mezclas, mampostería, anclajes) — luego se bloquea
 - Filtro por descripción o categoría
 - Vista pública con descripción, unidad, valor y proveedor
 
-### Usuario Pago (Plan Activo)
-- Acceso completo a toda la base de datos de insumos
-- Plan de $10,000 COP por 30 días
+### Usuario Básico (Plan Activo)
+- Acceso **ilimitado a productos** (toda la base de datos)
+- **Sin calculadora** (no incluye mezclas, mampostería ni anclajes)
+- Plan de **$10,000 COP por 30 días**
+- Pasarela de pago integrada con Bold
+
+### Usuario Plus (Plan Activo)
+- Acceso **ilimitado a todo** (productos + calculadora completa)
+- Plan de **$15,000 COP por 30 días**
 - Pasarela de pago integrada con Bold
 - Renovación automática al pagar
+
+### Upgrade Básico → Plus (prorrateo)
+- Se calcula el crédito por los días **no usados** del Básico: `$10,000 × días_restantes / 30`
+- El usuario paga: `$15,000 - crédito`
+- Al pagar, el ciclo **reinicia por 30 días limpios** de Plus
+
+### Módulo Cálculos
+
+| Sección | Tipos | Unidades | Precios |
+|---------|-------|----------|---------|
+| **Mezclas** | 6 concretos (3.500–1.800 psi) + 6 morteros (1:10–1:6) | m³ | Cemento/arena/gravilla desde BD; agua, MO, mezcladora fijos |
+| **Mampostería** | 37 ítems (5 legacy + 32 Ladrillera Santafé) | m² | Fallback por ítem; Arena Base/Sello para adoquines; Mortero para estructurales/fachadas/divisorios |
+| **Anclajes** | Calculadora Sika AnchorFix | ø varilla (mm), profundidad (mm), cantidad puntos | Tubos 300ml, varilla, tuercas, broca, kit limpieza, MO |
+
+- **Plan Free**: 3 usos por tipo (mezclas, mampostería, anclajes). Bloqueo con mensaje de upgrade.
+- **Plan Básico**: Sin acceso a calculadora (403).
+- **Plan Plus**: Uso ilimitado.
+- Selector desplegable para elegir la mezcla/mampostería/anclaje a calcular
+- Campos editables en la interfaz: Material, Unidad y Vr Unitario
+- Recalculo automático del total al modificar valores
+- Input de volumen (m³ mezclas / m² mampostería / puntos anclajes) para escalar
+- Conversión automática a unidades enteras prácticas:
+  - Cemento → Bolsas de 50 kg
+  - Arena / Gravilla → Viajes de 1.05 m³
+  - Agua → Litros
+  - Mano de obra → Horas cuadrilla (hc)
+  - Mezcladora → Horas (hr)
+- **Nota final** en lista con resumen de cantidades a comprar (excluye MO/mezcladora/agua)
 
 ### Admin
 - Vista completa de productos con datos originales (código, URL, tienda)
@@ -50,8 +85,10 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 |--------|------|-------------|
 | POST | `/api/auth/register` | Registro de usuario free |
 | POST | `/api/auth/login` | Login con email + token |
-| GET | `/api/auth/me` | Datos del usuario actual |
-| POST | `/api/auth/comprar-plan` | Crear link de pago Bold ($10,000 COP) |
+| GET | `/api/auth/me` | Datos del usuario actual (incluye `plan`) |
+| GET | `/api/auth/planes` | Ver plan actual + opciones de upgrade |
+| POST | `/api/auth/comprar-plan` | Crear link de pago Bold (`{plan: "basico" \| "plus"}`) |
+| POST | `/api/auth/upgrade-plan` | Upgrade Básico → Plus (prorrateo automático) |
 
 ### Productos
 | Método | Ruta | Descripción |
@@ -69,6 +106,13 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 | PUT | `/api/usuarios/{id}` | Editar usuario |
 | PUT | `/api/usuarios/{id}/renovar` | Renovar pago (30 días desde ahora) |
 | POST | `/api/usuarios/{id}/reset-token` | Resetear token de acceso |
+
+### Cálculos
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/calculos` | Listar mezclas/mampostería (filtro `?tipo=concreto\|mortero\|mamposteria`) |
+| GET | `/api/calculos/{id}` | Obtener mezcla/mampostería por ID (Free limitado a 3 usos por tipo) |
+| POST | `/api/calculos/anclajes` | Calcular anclajes químicos (Sika AnchorFix) — Free limitado a 3 usos |
 
 ### Pagos Bold (Admin)
 | Método | Ruta | Descripción |
@@ -96,10 +140,37 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 
 ## Planes y Límites
 
-| Plan | Precio | Duración | Acceso |
-|------|--------|----------|--------|
-| Free | Gratis | Ilimitado | 10 insumos por categoría (n01) |
-| Pago | $10,000 COP | 30 días | Acceso completo a toda la base |
+| Plan | Precio | Duración | Productos | Calculadora |
+|------|--------|----------|-----------|-------------|
+| Free | Gratis | Ilimitado | 10 insumos por categoría (n01) | 3 cálculos por tipo (mezcla, mampostería, anclajes) |
+| Básico | $10,000 COP | 30 días | Ilimitados | ❌ Sin calculadora |
+| Plus | $15,000 COP | 30 días | Ilimitados | ✅ Ilimitada |
+
+**Upgrade Básico → Plus:** prorrateo automático por días no usados del Básico. Pago mínimo $5,000 (día 0). Al pagar, reinicia a 30 días limpios de Plus.
+
+## Módulo Cálculos — Datos
+
+Las recetas de concretos y morteros provienen del archivo `20191013 Base De Datos JM.xls` (hoja "Conc-Mort"), con rendimientos basados en Construdata 2014.
+
+### Estructura del módulo
+
+```
+app/calculos/
+├── __init__.py              → Re-exporta componentes
+├── schemas.py               → Pydantic models (MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse)
+├── data.py                  → 12 recetas (6 concretos + 6 morteros)
+├── data_mamposteria.py      → 37 recetas de mampostería (5 legacy + 32 Ladrillera Santafé)
+├── data_anclajes.py         → Lógica volumétrica de anclajes (cilindro πr²h, factor 20%, tubos 300ml)
+└── router.py                → Endpoints FastAPI + lógica de búsqueda en BD + control de planes
+```
+
+### Lógica de precios (3 fuentes)
+
+| Fuente | Descripción |
+|--------|-------------|
+| `db` | Precio obtenido de la tabla `insumos` o `productos` (búsqueda por palabras clave) |
+| `fijo` | Agua ($57/LT), M.O. ($19,888/$11,288 hc), Mezcladora ($4,125/hr) |
+| `fallback` | Precios del Excel cuando la BD está vacía (cemento $546/kl, arena $38–45K/m³, etc.) |
 
 ## Estructura de Categorías
 
