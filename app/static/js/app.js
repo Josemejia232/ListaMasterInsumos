@@ -26,7 +26,7 @@ let _calcCache = {};
 
 // Limpiar overrides si la version cambio (evita datos viejos)
 (function(){
-  var ver = 'v2';
+  var ver = 'v3';
   var stored = localStorage.getItem('ls_overridesVersion');
   if(stored !== ver){
     localStorage.removeItem('ls_materialOverrides');
@@ -208,7 +208,7 @@ const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Be
 
 // ─── Cálculos ──────────────────────────────────────────
 const _CONV = {
-  "Cemento": { u:"Bolsa", f:1 },
+  "Cemento": { u:"Bolsa", f:50 },
   "Arena de rio": { u:"Viaje", f:1.05 },
   "Arena de pozo": { u:"Viaje", f:1.05 },
   "Arena de peña": { u:"Viaje", f:1.05 },
@@ -409,7 +409,7 @@ function _renderVolumen(prefix){
     const vr = mat.vr_unitario;
     const scaled = base * vol;
     const conv = _convertir(mat.nombre, scaled);
-    const total = scaled * vr;
+    const total = mat.vr_total * vol;
     return '<tr>'+
       '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(mat.nombre)+'</td>'+
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(mat.unidad)+'</td>'+
@@ -419,7 +419,7 @@ function _renderVolumen(prefix){
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(vr).toLocaleString('es-CO')+'</td>'+
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(total).toLocaleString('es-CO')+'</td></tr>';
   }).join('');
-  const gTotal = _calcData.materiales.reduce((s,m) => s + m.cantidad * m.vr_unitario * vol, 0);
+  const gTotal = _calcData.materiales.reduce((s,m) => s + m.vr_total * vol, 0);
   // Build summary note
   const skipWords = ['mezcladora', 'agua'];
   const parts = _calcData.materiales.map(mat => {

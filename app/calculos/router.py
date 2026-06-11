@@ -170,14 +170,14 @@ def _calcular_mezcla(mezcla_id: str, db: Session) -> MezclaResponse:
                 fuente = "fallback"
 
         factor = _CONVERSION.get(mat.nombre, 1.0)
-        cantidad_compra = round(mat.cantidad / factor, 4)
+        cantidad_compra = mat.cantidad / factor
         vr_total = round(cantidad_compra * vr_unitario, 2)
         total += vr_total
 
         materiales_calc.append(MaterialCalculado(
             nombre=mat.nombre,
-            unidad=mat.unidad if factor == 1.0 else ("Saco" if mat.nombre == "Cemento" else mat.unidad),
-            cantidad=cantidad_compra,
+            unidad=mat.unidad,
+            cantidad=mat.cantidad,
             vr_unitario=vr_unitario,
             vr_total=vr_total,
             fuente=fuente,
