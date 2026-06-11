@@ -232,6 +232,19 @@ def listar_mezclas(
     return resultados
 
 
+@router.get("/stats")
+def calcular_stats():
+    """Retorna estadísticas de los módulos de cálculo."""
+    from app.scrapers import get_scraper
+    mezclas = [m for m in MEZCLAS.values() if m.tipo in ("concreto", "mortero")]
+    mamposterias = [m for m in MEZCLAS.values() if m.tipo == "mamposteria"]
+    return {
+        "mezclas": len(mezclas),
+        "mamposterias": len(mamposterias),
+        "tiendas": 5,
+    }
+
+
 @router.get("/{mezcla_id}", response_model=MezclaResponse)
 def obtener_mezcla(mezcla_id: str, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
     check_tipo = "mamposteria" if ("mamp" in mezcla_id.lower() or "santafe" in mezcla_id.lower()) else "mezcla"
