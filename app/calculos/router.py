@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import hmac
 
 from app.database import get_db
-from app.models import Insumo, Producto, Usuario, UsoCalculo
+from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverride
 from app.calculos.data import MEZCLAS, PRECIOS_FIJOS
 from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse
 from app.calculos.data_anclajes import calcular_anclaje
@@ -250,6 +250,61 @@ def calcular_stats():
         "mamposterias": len(mamposterias),
         "tiendas": 5,
     }
+
+
+# ─── User Material Overrides ─────────────────────────────────────
+
+from pydantic import BaseModel
+
+
+class MaterialOverrideIn(BaseModel):
+    nombre: str
+    unidad: str = ""
+    cantidad: float = 0.0
+    vr_unitario: float = 0.0
+
+
+class MaterialOverrideOut(MaterialOverrideIn):
+    id: int
+    usuario_id: int
+    model_config = {"from_attributes": True}
+
+
+@router.get("/overrides", response_model=list[MaterialOverrideOut])
+def get_overrides(user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    return db.query(UserMaterialOverride).filter(
+        UserMaterialOverride.usuario_id == user.id
+    ).order_by(UserMaterialOverride.nombre).all()
+
+
+@router.post("/overrides")
+def save_overrides(
+    overrides: list[MaterialOverrideIn],
+    user: Usuario = Depends(_get_user),
+    db: Session = Depends(get_db),
+):
+    existing = {
+        o.nombre: o
+        for o in db.query(UserMaterialOverride).filter(
+            UserMaterialOverride.usuario_id == user.id
+        ).all()
+    }
+    for ov in overrides:
+        entry = existing.get(ov.nombre)
+        if entry:
+            entry.unidad = ov.unidad
+            entry.cantidad = ov.cantidad
+            entry.vr_unitario = ov.vr_unitario
+        else:
+            db.add(UserMaterialOverride(
+                usuario_id=user.id,
+                nombre=ov.nombre,
+                unidad=ov.unidad,
+                cantidad=ov.cantidad,
+                vr_unitario=ov.vr_unitario,
+            ))
+    db.commit()
+    return {"ok": True, "saved": len(overrides)}
 
 
 @router.get("/{mezcla_id}", response_model=MezclaResponse)

@@ -356,7 +356,7 @@ async function _renderCard(id, wrap, rwrap, prefix){
     if(!r.ok) return;
     const m = await r.json();
     _calcData = m;
-    var overrides = _loadOverrides();
+    var overrides = await _loadOverrides();
     const matRows = m.materiales.map(mat => {
       var ov = overrides[mat.nombre] || {};
       var nom = ov.nombre || mat.nombre;
@@ -389,17 +389,41 @@ async function _renderCard(id, wrap, rwrap, prefix){
   } catch(e){}
 }
 
-function _loadOverrides(){
+async function _loadOverrides(){
+  if(_user && _user.token){
+    try {
+      const r = await apiFetch('/api/calculos/overrides');
+      if(r.ok){
+        const data = await r.json();
+        var overrides = {};
+        data.forEach(function(o){
+          overrides[o.nombre] = { nombre: o.nombre, unidad: o.unidad, cant: o.cantidad, vr_unitario: o.vr_unitario };
+        });
+        try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
+        return overrides;
+      }
+    } catch(e) {}
+  }
   try { return JSON.parse(localStorage.getItem('ls_materialOverrides') || '{}'); } catch(e) { return {}; }
 }
 
-function _saveOverrides(){
+async function _saveOverrides(){
   if(!_calcData || !_calcData.materiales) return;
-  var overrides = _loadOverrides();
-  _calcData.materiales.forEach(function(mat){
-    overrides[mat.nombre] = { nombre: mat.nombre, unidad: mat.unidad, cant: mat.cantidad, vr_unitario: mat.vr_unitario };
+  var overrides = _calcData.materiales.map(function(mat){
+    return { nombre: mat.nombre, unidad: mat.unidad, cant: mat.cantidad, vr_unitario: mat.vr_unitario };
   });
-  try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
+  var map = {};
+  overrides.forEach(function(o){ map[o.nombre] = o; });
+  try { localStorage.setItem('ls_materialOverrides', JSON.stringify(map)); } catch(e) {}
+  if(_user && _user.token){
+    try {
+      await apiFetch('/api/calculos/overrides', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(overrides)
+      });
+    } catch(e) {}
+  }
 }
 
 function _renderVolumen(prefix){

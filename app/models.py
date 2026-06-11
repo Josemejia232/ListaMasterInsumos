@@ -93,3 +93,16 @@ class CacheEntry(Base):
     value = Column(Text, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class UserMaterialOverride(Base):
+    __tablename__ = "user_material_overrides"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    nombre = Column(String(200), nullable=False)
+    unidad = Column(String(50), nullable=False, default="")
+    cantidad = Column(Float, nullable=False, default=0.0)
+    vr_unitario = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
