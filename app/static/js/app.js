@@ -26,10 +26,17 @@ let _calcCache = {};
 
 // Limpiar overrides si la version cambio (evita datos viejos)
 (function(){
-  var ver = 'v5';
+  var ver = 'v6';
   var stored = localStorage.getItem('ls_overridesVersion');
   if(stored !== ver){
     localStorage.removeItem('ls_materialOverrides');
+    // Limpiar todos los keys viejos de overrides
+    for(var i=localStorage.length-1; i>=0; i--){
+      var k = localStorage.key(i);
+      if(k && k.indexOf('ls_overrides_v2_') === 0){
+        localStorage.removeItem(k);
+      }
+    }
     localStorage.setItem('ls_overridesVersion', ver);
   }
 })();
@@ -269,7 +276,7 @@ function recalcularMezcla(el){
   });
   card.querySelector('.calc-total').textContent = '$'+Math.round(total).toLocaleString('es-CO');
   _renderVolumen(prefix);
-  _saveOverrides();
+  _saveOverrides(_currentMezclaId);
 }
 
 // ─── Insumos Calculos ───────────────────────────────────
@@ -495,7 +502,8 @@ async function _renderCard(id, wrap, rwrap, prefix){
     if(!r.ok) return;
     const m = await r.json();
     _calcData = m;
-    var overrides = await _loadOverrides();
+    _currentMezclaId = id;
+    var overrides = await _loadOverrides(id);
     const matRows = m.materiales.map(mat => {
       var ov = overrides[mat.nombre] || {};
       var nom = ov.nombre || mat.nombre;
@@ -528,32 +536,35 @@ async function _renderCard(id, wrap, rwrap, prefix){
   } catch(e){}
 }
 
-async function _loadOverrides(){
+async function _loadOverrides(mezclaId){
+  var key = 'ls_overrides_v2_' + (mezclaId || 'global');
   if(_user){
     try {
-      const r = await apiFetch('/api/calculos/overrides');
+      const path = mezclaId ? '/api/calculos/overrides?mezcla_id='+encodeURIComponent(mezclaId) : '/api/calculos/overrides';
+      const r = await apiFetch(path);
       if(r.ok){
         const data = await r.json();
         var overrides = {};
         data.forEach(function(o){
           overrides[o.nombre] = { nombre: o.nombre, unidad: o.unidad, cant: o.cantidad, vr_unitario: o.vr_unitario };
         });
-        try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
+        try { localStorage.setItem(key, JSON.stringify(overrides)); } catch(e) {}
         return overrides;
       }
     } catch(e) {}
   }
-  try { return JSON.parse(localStorage.getItem('ls_materialOverrides') || '{}'); } catch(e) { return {}; }
+  try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) { return {}; }
 }
 
-async function _saveOverrides(){
+async function _saveOverrides(mezclaId){
   if(!_calcData || !_calcData.materiales) return;
   var overrides = _calcData.materiales.map(function(mat){
-    return { nombre: mat.nombre, unidad: mat.unidad, cantidad: mat.cantidad, vr_unitario: mat.vr_unitario };
+    return { nombre: mat.nombre, mezcla_id: mezclaId || '', unidad: mat.unidad, cantidad: mat.cantidad, vr_unitario: mat.vr_unitario };
   });
+  var key = 'ls_overrides_v2_' + (mezclaId || 'global');
   var map = {};
   overrides.forEach(function(o){ map[o.nombre] = o; });
-  try { localStorage.setItem('ls_materialOverrides', JSON.stringify(map)); } catch(e) {}
+  try { localStorage.setItem(key, JSON.stringify(map)); } catch(e) {}
   if(_user){
     try {
       await apiFetch('/api/calculos/overrides', {

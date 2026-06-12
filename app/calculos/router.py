@@ -304,6 +304,7 @@ from pydantic import BaseModel
 
 class MaterialOverrideIn(BaseModel):
     nombre: str
+    mezcla_id: str = ""
     unidad: str = ""
     cantidad: float = 0.0
     vr_unitario: float = 0.0
@@ -316,22 +317,33 @@ class MaterialOverrideOut(MaterialOverrideIn):
 
 
 @router.get("/overrides", response_model=list[MaterialOverrideOut])
-def get_overrides(user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
-    return db.query(UserMaterialOverride).filter(
+def get_overrides(
+    mezcla_id: str = "",
+    user: Usuario = Depends(_get_user),
+    db: Session = Depends(get_db),
+):
+    q = db.query(UserMaterialOverride).filter(
         UserMaterialOverride.usuario_id == user.id
-    ).order_by(UserMaterialOverride.nombre).all()
+    )
+    if mezcla_id:
+        q = q.filter(UserMaterialOverride.mezcla_id == mezcla_id)
+    return q.order_by(UserMaterialOverride.nombre).all()
 
 
 @router.delete("/overrides/{nombre}")
 def delete_override(
     nombre: str,
+    mezcla_id: str = "",
     user: Usuario = Depends(_get_user),
     db: Session = Depends(get_db),
 ):
-    entry = db.query(UserMaterialOverride).filter(
+    q = db.query(UserMaterialOverride).filter(
         UserMaterialOverride.usuario_id == user.id,
         UserMaterialOverride.nombre == nombre,
-    ).first()
+    )
+    if mezcla_id:
+        q = q.filter(UserMaterialOverride.mezcla_id == mezcla_id)
+    entry = q.first()
     if entry:
         db.delete(entry)
         db.commit()
@@ -345,13 +357,14 @@ def save_overrides(
     db: Session = Depends(get_db),
 ):
     existing = {
-        o.nombre: o
+        (o.nombre, o.mezcla_id): o
         for o in db.query(UserMaterialOverride).filter(
             UserMaterialOverride.usuario_id == user.id
         ).all()
     }
     for ov in overrides:
-        entry = existing.get(ov.nombre)
+        key = (ov.nombre, ov.mezcla_id)
+        entry = existing.get(key)
         if entry:
             entry.unidad = ov.unidad
             entry.cantidad = ov.cantidad
@@ -359,6 +372,7 @@ def save_overrides(
         else:
             db.add(UserMaterialOverride(
                 usuario_id=user.id,
+                mezcla_id=ov.mezcla_id,
                 nombre=ov.nombre,
                 unidad=ov.unidad,
                 cantidad=ov.cantidad,
@@ -372,7 +386,35 @@ def save_overrides(
 def obtener_mezcla(mezcla_id: str, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
     check_tipo = "mamposteria" if ("mamp" in mezcla_id.lower() or "santafe" in mezcla_id.lower()) else "mezcla"
     _requiere_plan_calculo(check_tipo, user, db)
-    return _calcular_mezcla(mezcla_id, db)
+    result = _calcular_mezcla(mezcla_id, db)
+
+    # Aplicar overrides del usuario para esta mezcla
+    overrides = {
+        o.nombre: o
+        for o in db.query(UserMaterialOverride).filter(
+            UserMaterialOverride.usuario_id == user.id,
+            UserMaterialOverride.mezcla_id == mezcla_id,
+        ).all()
+    }
+    if overrides:
+        total = 0.0
+        for mat in result.materiales:
+            ov = overrides.get(mat.nombre)
+            if ov:
+                if ov.unidad:
+                    mat.unidad = ov.unidad
+                if ov.vr_unitario:
+                    mat.vr_unitario = ov.vr_unitario
+                if ov.cantidad:
+                    mat.cantidad = ov.cantidad
+            # Recalcular total con valores potencialmente modificados
+            factor = _CONVERSION.get(mat.nombre, 1.0)
+            cantidad_compra = mat.cantidad / factor
+            mat.vr_total = round(cantidad_compra * mat.vr_unitario, 2)
+            total += mat.vr_total
+        result.total = round(total, 2)
+
+    return result
 
 
 @router.post("/anclajes", response_model=AnclajeResponse)

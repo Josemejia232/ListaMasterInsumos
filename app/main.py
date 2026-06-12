@@ -303,6 +303,15 @@ def startup():
                     logger.info("[Migration] Added material column to productos (SQLite)")
             except Exception as e:
                 logger.warning(f"[Migration] material column skipped: {e}")
+            try:
+                result = conn.execute(text("PRAGMA table_info(user_material_overrides)")).fetchall()
+                cols = [r[1] for r in result]
+                if "mezcla_id" not in cols:
+                    conn.execute(text("ALTER TABLE user_material_overrides ADD COLUMN mezcla_id VARCHAR(100) DEFAULT ''"))
+                    conn.commit()
+                    logger.info("[Migration] Added mezcla_id column to user_material_overrides (SQLite)")
+            except Exception as e:
+                logger.warning(f"[Migration] mezcla_id column skipped: {e}")
     else:
         try:
             from alembic.config import Config

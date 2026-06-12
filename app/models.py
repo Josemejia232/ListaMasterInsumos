@@ -101,6 +101,7 @@ class UserMaterialOverride(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    mezcla_id = Column(String(100), nullable=False, default="")
     nombre = Column(String(200), nullable=False)
     unidad = Column(String(50), nullable=False, default="")
     cantidad = Column(Float, nullable=False, default=0.0)
