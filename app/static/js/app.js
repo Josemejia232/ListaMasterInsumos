@@ -113,7 +113,7 @@ function buildSidebar(){
     items.push({id:'pagos', icon:'&#128179;', text:'Pagos'});
   }
   items.push({label:'INSUMOS', header:true});
-  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode: isAdmin ? 'raw' : 'adjusted'});
+  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
   items.push({label:'CÁLCULOS', header:true});
   items.push({id:'insumos-calc', icon:'&#9679;', text:'InsCal'});
   items.push({id:'mezclas', icon:'&#9881;', text:'Mezclas'});
@@ -779,8 +779,6 @@ function renderVer(){
     (p.descripcion||'').toLowerCase().includes(q)||(p.categoria||'').toLowerCase().includes(q)
   );
 
-  const totalCount = document.getElementById('total-count');
-  const adminWrap = document.getElementById('admin-table-wrap');
   const userWrap = document.getElementById('user-table-wrap');
 
   totalCount.style.display = 'inline-flex';
@@ -791,67 +789,48 @@ function renderVer(){
   }
   document.getElementById('btn-sync').style.display = isAdmin ? '' : 'none';
 
-  if(isAdmin && _viewMode === 'raw'){
-    adminWrap.style.display = 'block'; userWrap.style.display = 'none';
-    const tbody = document.getElementById('admin-ins-tbody');
-    const empty = document.getElementById('admin-ins-empty');
-    if(!filtrados.length){ tbody.innerHTML=''; empty.style.display='block'; }
-    else {
-      empty.style.display='none';
-      tbody.innerHTML = filtrados.map(p => `<tr>
-        <td>${escapeHtml(p.descripcion)}</td>
-        <td>${escapeHtml(descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada))}</td>
-        <td>${escapeHtml(p.unidad)}</td>
-        <td style="font-weight:600;color:var(--accent)">$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})}${diffHtml(p)}</td>
-        <td style="font-weight:600;color:var(--text2)">$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-        <td>${escapeHtml(p.proveedor||'')}</td>
-      </tr>`).join('');
+  userWrap.style.display = 'block';
+  var table = document.getElementById('ver-ins-table');
+  var empty = document.getElementById('ver-ins-empty');
+  if(!filtrados.length){ table.innerHTML=''; empty.style.display='block'; }
+  else {
+    empty.style.display='none';
+    var tree = {};
+    for(var i=0;i<filtrados.length;i++){
+      var p = filtrados[i];
+      var n1=p.n01||'', n2=p.n02||'', n3=p.n03||'';
+      if(!n1&&!n2&&!n3) n1='Sin clasificar';
+      if(!tree[n1]) tree[n1]={};
+      if(!tree[n1][n2]) tree[n1][n2]={};
+      if(!tree[n1][n2][n3]) tree[n1][n2][n3]=[];
+      tree[n1][n2][n3].push(p);
     }
-  } else {
-    adminWrap.style.display = 'none';
-    userWrap.style.display = 'block';
-    var table = document.getElementById('ver-ins-table');
-    var empty = document.getElementById('ver-ins-empty');
-    if(!filtrados.length){ table.innerHTML=''; empty.style.display='block'; }
-    else {
-      empty.style.display='none';
-      var tree = {};
-      for(var i=0;i<filtrados.length;i++){
-        var p = filtrados[i];
-        var n1=p.n01||'', n2=p.n02||'', n3=p.n03||'';
-        if(!n1&&!n2&&!n3) n1='Sin clasificar';
-        if(!tree[n1]) tree[n1]={};
-        if(!tree[n1][n2]) tree[n1][n2]={};
-        if(!tree[n1][n2][n3]) tree[n1][n2][n3]=[];
-        tree[n1][n2][n3].push(p);
-      }
-      function countN2(m){ var t=0,ks=Object.keys(m); for(var i=0;i<ks.length;i++){ var ns=Object.keys(m[ks[i]]); for(var j=0;j<ns.length;j++){ t+=m[ks[i]][ns[j]].length; } } return t; }
-      function countN3(m){ var t=0,ks=Object.keys(m); for(var i=0;i<ks.length;i++) t+=m[ks[i]].length; return t; }
-      var thead = table.querySelector('thead');
-      var html = thead ? thead.outerHTML : '';
-      var gid = 0;
-      var n1keys = Object.keys(tree).sort();
-      for(var a=0;a<n1keys.length;a++){
-        var n1=n1keys[a], n2map=tree[n1], n2keys=Object.keys(n2map).sort(), n1total=countN2(n2map);
-        html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="4"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+escapeHtml(n1)+' <span style="font-weight:400;color:var(--muted);font-size:.73rem">('+n1total+')</span></td></tr></tbody>';
-        html += '<tbody class="cat-body" id="cat-body-g'+gid+'">';
-        gid++;
-        for(var b=0;b<n2keys.length;b++){
-          var n2=n2keys[b], n3map=n2map[n2], n3keys=Object.keys(n3map).sort(), n2total=countN3(n3map);
-          if(n2) html += '<tr class="cat-header cat-l2"><td colspan="4" style="padding-left:1.4rem;font-weight:600;color:var(--accent2)">'+escapeHtml(n2)+' <span style="font-weight:400;color:var(--muted);font-size:.73rem">('+n2total+')</span></td></tr>';
-          for(var c=0;c<n3keys.length;c++){
-            var n3=n3keys[c], items=n3map[n3];
-            if(n3) html += '<tr class="cat-header cat-l3"><td colspan="4" style="padding-left:2.2rem;font-weight:500;color:var(--muted)">'+escapeHtml(n3)+' <span style="font-weight:400;font-size:.73rem">('+items.length+')</span></td></tr>';
-            for(var d=0;d<items.length;d++){
-              var p=items[d];
-              html += '<tr><td style="padding-left:'+(n3?'3rem':n2?'2.2rem':'1.4rem')+'">'+escapeHtml(p.descripcion)+'</td><td style="color:var(--muted)">'+escapeHtml(p.unidad)+'</td><td style="font-weight:600;color:var(--accent)">$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td style="color:var(--text2)">'+escapeHtml(p.proveedor||'')+'</td></tr>';
-            }
+    function countN2(m){ var t=0,ks=Object.keys(m); for(var i=0;i<ks.length;i++){ var ns=Object.keys(m[ks[i]]); for(var j=0;j<ns.length;j++){ t+=m[ks[i]][ns[j]].length; } } return t; }
+    function countN3(m){ var t=0,ks=Object.keys(m); for(var i=0;i<ks.length;i++) t+=m[ks[i]].length; return t; }
+    var thead = table.querySelector('thead');
+    var html = thead ? thead.outerHTML : '';
+    var gid = 0;
+    var n1keys = Object.keys(tree).sort();
+    for(var a=0;a<n1keys.length;a++){
+      var n1=n1keys[a], n2map=tree[n1], n2keys=Object.keys(n2map).sort(), n1total=countN2(n2map);
+      html += '<tbody class="cat-group"><tr class="cat-header cat-l1" onclick="toggleGrupo(this,\'g'+gid+'\')"><td colspan="4"><span class="arrow" id="arrow-g'+gid+'">&#9660;</span> '+escapeHtml(n1)+' <span style="font-weight:400;color:var(--muted);font-size:.73rem">('+n1total+')</span></td></tr></tbody>';
+      html += '<tbody class="cat-body" id="cat-body-g'+gid+'">';
+      gid++;
+      for(var b=0;b<n2keys.length;b++){
+        var n2=n2keys[b], n3map=n2map[n2], n3keys=Object.keys(n3map).sort(), n2total=countN3(n3map);
+        if(n2) html += '<tr class="cat-header cat-l2"><td colspan="4" style="padding-left:1.4rem;font-weight:600;color:var(--accent2)">'+escapeHtml(n2)+' <span style="font-weight:400;color:var(--muted);font-size:.73rem">('+n2total+')</span></td></tr>';
+        for(var c=0;c<n3keys.length;c++){
+          var n3=n3keys[c], items=n3map[n3];
+          if(n3) html += '<tr class="cat-header cat-l3"><td colspan="4" style="padding-left:2.2rem;font-weight:500;color:var(--muted)">'+escapeHtml(n3)+' <span style="font-weight:400;font-size:.73rem">('+items.length+')</span></td></tr>';
+          for(var d=0;d<items.length;d++){
+            var p=items[d];
+            html += '<tr><td style="padding-left:'+(n3?'3rem':n2?'2.2rem':'1.4rem')+'">'+escapeHtml(p.descripcion)+'</td><td style="color:var(--muted)">'+escapeHtml(p.unidad)+'</td><td style="font-weight:600;color:var(--accent)">$'+Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})+diffHtml(p)+'</td><td style="color:var(--text2)">'+escapeHtml(p.proveedor||'')+'</td></tr>';
           }
         }
-        html += '</tbody>';
       }
-      table.innerHTML = html;
+      html += '</tbody>';
     }
+    table.innerHTML = html;
   }
 }
 function filtrarVer(){ renderVer(); }
