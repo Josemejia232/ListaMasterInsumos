@@ -42,10 +42,10 @@ PRECIOS_FIJOS: dict[str, float] = {
 # Palabras clave para buscar en BD por cada material
 KEYWORDS_BD: dict[str, list[str]] = {
     "Cemento": ["cemento", "gris"],
-    "Arena de rio": ["arena", "rio", "lavada"],
-    "Arena de peña": ["arena", "peña", "peña"],
-    "Arena de pozo": ["arena", "pozo"],
-    "Material de rio (gravilla)": ["gravilla", "agregado", "triturada", "canto", "rodado", "grava"],
+    "Arena De peña": ["arena", "peña"],
+    "Arena Lavada De Rio": ["arena", "rio", "lavada"],
+    "Arena Lavada De Peña": ["arena", "peña", "lavada"],
+    "Agregado grueso": ["gravilla", "agregado", "triturada", "canto", "rodado", "grava", "grueso"],
 }
 
 
@@ -60,8 +60,9 @@ _CONCRETOS = [
         resistencia_psi=3500,
         materiales=[
             MaterialReceta("Cemento", "kl", 441.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de rio", "m3", 0.74, keywords=["arena", "rio", "lavada"]),
-            MaterialReceta("Material de rio (gravilla)", "m3", 0.74, keywords=["gravilla", "grava", "triturada"]),
+            MaterialReceta("Arena De peña", "m3", 0.74, keywords=["arena", "peña"]),
+            MaterialReceta("Arena Lavada De Rio", "m3", 0.74, keywords=["arena", "rio", "lavada"]),
+            MaterialReceta("Agregado grueso", "m3", 0.74, keywords=["gravilla", "agregado", "triturada"]),
             MaterialReceta("Agua", "lt", 230.0),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.52),
@@ -75,8 +76,9 @@ _CONCRETOS = [
         resistencia_psi=3100,
         materiales=[
             MaterialReceta("Cemento", "kl", 367.5, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de rio", "m3", 0.92, keywords=["arena", "rio", "lavada"]),
-            MaterialReceta("Material de rio (gravilla)", "m3", 0.92, keywords=["gravilla", "grava", "triturada"]),
+            MaterialReceta("Arena De peña", "m3", 0.92, keywords=["arena", "peña"]),
+            MaterialReceta("Arena Lavada De Rio", "m3", 0.61, keywords=["arena", "rio", "lavada"]),
+            MaterialReceta("Agregado grueso", "m3", 0.92, keywords=["gravilla", "agregado", "triturada"]),
             MaterialReceta("Agua", "lt", 210.0),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.52),
@@ -90,8 +92,9 @@ _CONCRETOS = [
         resistencia_psi=2900,
         materiales=[
             MaterialReceta("Cemento", "kl", 315.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de rio", "m3", 0.48, keywords=["arena", "rio", "lavada"]),
-            MaterialReceta("Material de rio (gravilla)", "m3", 1.05, keywords=["gravilla", "grava", "triturada"]),
+            MaterialReceta("Arena De peña", "m3", 0.48, keywords=["arena", "peña"]),
+            MaterialReceta("Arena Lavada De Rio", "m3", 0.53, keywords=["arena", "rio", "lavada"]),
+            MaterialReceta("Agregado grueso", "m3", 1.05, keywords=["gravilla", "agregado", "triturada"]),
             MaterialReceta("Agua", "lt", 305.0),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.52),
@@ -105,8 +108,9 @@ _CONCRETOS = [
         resistencia_psi=2500,
         materiales=[
             MaterialReceta("Cemento", "kl", 315.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de rio", "m3", 0.79, keywords=["arena", "rio", "lavada"]),
-            MaterialReceta("Material de rio (gravilla)", "m3", 0.79, keywords=["gravilla", "grava", "triturada"]),
+            MaterialReceta("Arena De peña", "m3", 0.79, keywords=["arena", "peña"]),
+            MaterialReceta("Arena Lavada De Rio", "m3", 0.79, keywords=["arena", "rio", "lavada"]),
+            MaterialReceta("Agregado grueso", "m3", 0.79, keywords=["gravilla", "agregado", "triturada"]),
             MaterialReceta("Agua", "lt", 200.0),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.52),
@@ -120,8 +124,9 @@ _CONCRETOS = [
         resistencia_psi=2300,
         materiales=[
             MaterialReceta("Cemento", "kl", 273.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de rio", "m3", 0.69, keywords=["arena", "rio", "lavada"]),
-            MaterialReceta("Material de rio (gravilla)", "m3", 0.92, keywords=["gravilla", "grava", "triturada"]),
+            MaterialReceta("Arena De peña", "m3", 0.69, keywords=["arena", "peña"]),
+            MaterialReceta("Arena Lavada De Rio", "m3", 0.69, keywords=["arena", "rio", "lavada"]),
+            MaterialReceta("Agregado grueso", "m3", 0.92, keywords=["gravilla", "agregado", "triturada"]),
             MaterialReceta("Agua", "lt", 198.0),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.52),
@@ -135,9 +140,10 @@ _CONCRETOS = [
         resistencia_psi=1800,
         materiales=[
             MaterialReceta("Cemento", "kl", 230.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de rio", "m3", 0.0, keywords=["arena", "rio", "lavada"]),
-            MaterialReceta("Material de rio (gravilla)", "m3", 0.92, keywords=["gravilla", "grava", "triturada"]),
-            MaterialReceta("Agua", "lt", 122.0),
+            MaterialReceta("Arena De peña", "m3", 0.0, keywords=["arena", "peña"]),
+            MaterialReceta("Arena Lavada De Rio", "m3", 0.56, keywords=["arena", "rio", "lavada"]),
+            MaterialReceta("Agregado grueso", "m3", 0.92, keywords=["gravilla", "agregado", "triturada"]),
+            MaterialReceta("Agua", "lt", 121.6),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.56),
         ],
@@ -154,7 +160,7 @@ _MORTEROS = [
         proporcion="1:10",
         materiales=[
             MaterialReceta("Cemento", "kl", 174.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de pozo", "m3", 1.38, keywords=["arena", "pozo"]),
+            MaterialReceta("Arena Lavada De Peña", "m3", 1.38, keywords=["arena", "peña", "lavada"]),
             MaterialReceta("Agua", "lt", 230.0),
             MaterialReceta("M.O. CUADRILLA AG 0:2", "hc", 2.26),
         ],
@@ -166,7 +172,7 @@ _MORTEROS = [
         proporcion="1:2",
         materiales=[
             MaterialReceta("Cemento", "kl", 640.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de pozo", "m3", 1.09, keywords=["arena", "pozo"]),
+            MaterialReceta("Arena Lavada De Peña", "m3", 1.09, keywords=["arena", "peña", "lavada"]),
             MaterialReceta("Agua", "lt", 250.0),
             MaterialReceta("M.O. CUADRILLA AG 0:2", "hc", 2.26),
         ],
@@ -178,7 +184,7 @@ _MORTEROS = [
         proporcion="1:3",
         materiales=[
             MaterialReceta("Cemento", "kl", 450.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de pozo", "m3", 1.0, keywords=["arena", "pozo"]),
+            MaterialReceta("Arena Lavada De Peña", "m3", 1.00, keywords=["arena", "peña", "lavada"]),
             MaterialReceta("Agua", "lt", 200.0),
             MaterialReceta("M.O. CUADRILLA AG 0:2", "hc", 2.26),
         ],
@@ -190,7 +196,7 @@ _MORTEROS = [
         proporcion="1:4",
         materiales=[
             MaterialReceta("Cemento", "kl", 363.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de pozo", "m3", 1.16, keywords=["arena", "pozo"]),
+            MaterialReceta("Arena Lavada De Peña", "m3", 1.16, keywords=["arena", "peña", "lavada"]),
             MaterialReceta("Agua", "lt", 200.0),
             MaterialReceta("M.O. CUADRILLA AG 0:2", "hc", 2.26),
         ],
@@ -202,7 +208,7 @@ _MORTEROS = [
         proporcion="1:5",
         materiales=[
             MaterialReceta("Cemento", "kl", 317.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de pozo", "m3", 1.32, keywords=["arena", "pozo"]),
+            MaterialReceta("Arena Lavada De Peña", "m3", 1.32, keywords=["arena", "peña", "lavada"]),
             MaterialReceta("Agua", "lt", 240.0),
             MaterialReceta("M.O. CUADRILLA AG 0:2", "hc", 2.26),
         ],
@@ -214,7 +220,7 @@ _MORTEROS = [
         proporcion="1:6",
         materiales=[
             MaterialReceta("Cemento", "kl", 274.0, keywords=["cemento", "gris"]),
-            MaterialReceta("Arena de pozo", "m3", 1.32, keywords=["arena", "pozo"]),
+            MaterialReceta("Arena Lavada De Peña", "m3", 1.32, keywords=["arena", "peña", "lavada"]),
             MaterialReceta("Agua", "lt", 235.0),
             MaterialReceta("M.O. CUADRILLA AG 0:2", "hc", 2.26),
         ],
