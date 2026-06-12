@@ -327,6 +327,16 @@ def startup():
                 logger.info("[Alembic] Stamped as head to prevent future failures")
             except Exception as stamp_e:
                 logger.info(f"[Alembic] Stamp skipped: {stamp_e}")
+        # Verificar si mezcla_id existe en PostgreSQL (por si la migración falló parcialmente)
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'user_material_overrides' AND column_name = 'mezcla_id'")).fetchall()
+                if not result:
+                    conn.execute(text("ALTER TABLE user_material_overrides ADD COLUMN mezcla_id VARCHAR(100) DEFAULT ''"))
+                    conn.commit()
+                    logger.info("[Migration] Added mezcla_id column to user_material_overrides (PostgreSQL)")
+        except Exception as e:
+            logger.warning(f"[Migration] PostgreSQL mezcla_id check skipped: {e}")
 
     global _index_html, _index_mtime
     index_path = static_dir / "index.html"
