@@ -24,7 +24,7 @@ def upgrade() -> None:
                existing_type=sa.VARCHAR(length=5000),
                type_=sa.Text(),
                existing_nullable=False)
-    op.add_column('user_material_overrides', sa.Column('mezcla_id', sa.String(length=100), nullable=False))
+    op.add_column('user_material_overrides', sa.Column('mezcla_id', sa.String(length=100), nullable=True, server_default=''))
     # ### end Alembic commands ###
 
 
