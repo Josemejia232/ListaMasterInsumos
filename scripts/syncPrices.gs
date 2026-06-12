@@ -160,10 +160,14 @@ function syncPrices() {
           muteHttpExceptions: true,
         });
         if (scrapeResp.getResponseCode() >= 300) {
-          Logger.log('  FAIL [' + (n+1) + '/' + nuevas.length + ']: ' + scrapeResp.getResponseCode());
+          failCount++;
+          failedUrls.push(rowUrl);
+          Logger.log('  FAIL [' + (n+1) + '/' + nuevas.length + ']: ' + scrapeResp.getResponseCode() + ' | ' + rowUrl);
         }
       } catch (e) {
-        Logger.log('  ERROR [' + (n+1) + '/' + nuevas.length + ']: ' + e);
+        failCount++;
+        failedUrls.push(rowUrl);
+        Logger.log('  ERROR [' + (n+1) + '/' + nuevas.length + ']: ' + e + ' | ' + rowUrl);
       }
       // Pausa 1-2s entre scrapes para evitar baneo
       Utilities.sleep(1000 + Math.floor(Math.random() * 1000));
@@ -225,6 +229,8 @@ function syncPrices() {
   var matches = 0;
   var sinMatch = 0;
   var preciosInvalidos = 0;
+  var failCount = 0;
+  var failedUrls = [];
 
   for (var k = 1; k < data.length; k++) {
     var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
@@ -376,8 +382,12 @@ function syncPrices() {
     'Matches: ' + matches + ' | Sin match: ' + sinMatch + ' | ' +
     'Precios act: ' + cambios + ' | Backups: ' + backups + ' | ' +
     'Nombres: ' + batchNombreUpdates.length + ' | ' +
-    'Semilla J: ' + (typeof semilla !== 'undefined' ? semilla : 0)
+    'Semilla J: ' + (typeof semilla !== 'undefined' ? semilla : 0) + ' | ' +
+    'Fails: ' + failCount + ' | Precios inválidos: ' + preciosInvalidos
   );
+  if (failedUrls.length > 0) {
+    Logger.log('URLs con fallo: ' + failedUrls.join(', '));
+  }
 }
 
 

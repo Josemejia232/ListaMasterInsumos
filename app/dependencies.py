@@ -20,6 +20,7 @@ ALLOWED_SCRAPE_DOMAINS = [
     "promart.pe",
     "sodimac.com.pe", "sodimac.com.co", "sodimac.com.cl",
     "falabella.com.pe", "falabella.com.cl",
+    "ferricentro.com",
 ]
 
 # ─── Rate Limiting ───────────────────────────────────────────
