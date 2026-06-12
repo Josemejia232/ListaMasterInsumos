@@ -780,6 +780,7 @@ function renderVer(){
   );
 
   const userWrap = document.getElementById('user-table-wrap');
+  const totalCount = document.getElementById('total-count');
 
   totalCount.style.display = 'inline-flex';
   if(_freeTierInfo && !isAdmin){
