@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timezone
 import hmac
+import logging
 
 from app.database import get_db
 from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverride
@@ -389,30 +390,34 @@ def obtener_mezcla(mezcla_id: str, user: Usuario = Depends(_get_user), db: Sessi
     result = _calcular_mezcla(mezcla_id, db)
 
     # Aplicar overrides del usuario para esta mezcla
-    overrides = {
-        o.nombre: o
-        for o in db.query(UserMaterialOverride).filter(
-            UserMaterialOverride.usuario_id == user.id,
-            UserMaterialOverride.mezcla_id == mezcla_id,
-        ).all()
-    }
-    if overrides:
-        total = 0.0
-        for mat in result.materiales:
-            ov = overrides.get(mat.nombre)
-            if ov:
-                if ov.unidad:
-                    mat.unidad = ov.unidad
-                if ov.vr_unitario:
-                    mat.vr_unitario = ov.vr_unitario
-                if ov.cantidad:
-                    mat.cantidad = ov.cantidad
-            # Recalcular total con valores potencialmente modificados
-            factor = _CONVERSION.get(mat.nombre, 1.0)
-            cantidad_compra = mat.cantidad / factor
-            mat.vr_total = round(cantidad_compra * mat.vr_unitario, 2)
-            total += mat.vr_total
-        result.total = round(total, 2)
+    try:
+        overrides = {
+            o.nombre: o
+            for o in db.query(UserMaterialOverride).filter(
+                UserMaterialOverride.usuario_id == user.id,
+                UserMaterialOverride.mezcla_id == mezcla_id,
+            ).all()
+        }
+        if overrides:
+            total = 0.0
+            for mat in result.materiales:
+                ov = overrides.get(mat.nombre)
+                if ov:
+                    if ov.unidad:
+                        mat.unidad = ov.unidad
+                    if ov.vr_unitario:
+                        mat.vr_unitario = ov.vr_unitario
+                    if ov.cantidad:
+                        mat.cantidad = ov.cantidad
+                # Recalcular total con valores potencialmente modificados
+                factor = _CONVERSION.get(mat.nombre, 1.0)
+                cantidad_compra = mat.cantidad / factor
+                mat.vr_total = round(cantidad_compra * mat.vr_unitario, 2)
+                total += mat.vr_total
+            result.total = round(total, 2)
+    except Exception as e:
+        logger = logging.getLogger("app")
+        logger.warning(f"[Overrides] Error aplicando overrides para mezcla {mezcla_id}: {e}")
 
     return result
 
