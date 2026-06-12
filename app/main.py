@@ -50,6 +50,7 @@ from app.routers import users as users_router
 from app.routers import products as products_router
 from app.routers import payments as payments_router
 from app.routers import scraping as scraping_router
+from app.routers import materiales as materiales_router
 
 load_dotenv()
 
@@ -122,6 +123,7 @@ app.include_router(users_router.router, prefix="/api/usuarios", tags=["usuarios"
 app.include_router(products_router.router, prefix="/productos", tags=["productos"])
 app.include_router(payments_router.router, prefix="/api/pagos", tags=["pagos"])
 app.include_router(scraping_router.router, prefix="", tags=["scraping"])
+app.include_router(materiales_router.router)
 
 # ─── Debug ────────────────────────────────────────────────────
 
@@ -292,6 +294,15 @@ def startup():
                     logger.info("[Migration] Added plan column to usuarios (SQLite)")
             except Exception as e:
                 logger.warning(f"[Migration] plan column skipped: {e}")
+            try:
+                result = conn.execute(text("PRAGMA table_info(productos)")).fetchall()
+                cols = [r[1] for r in result]
+                if "material" not in cols:
+                    conn.execute(text("ALTER TABLE productos ADD COLUMN material VARCHAR(200)"))
+                    conn.commit()
+                    logger.info("[Migration] Added material column to productos (SQLite)")
+            except Exception as e:
+                logger.warning(f"[Migration] material column skipped: {e}")
     else:
         try:
             from alembic.config import Config

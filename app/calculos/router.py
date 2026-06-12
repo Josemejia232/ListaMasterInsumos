@@ -322,6 +322,22 @@ def get_overrides(user: Usuario = Depends(_get_user), db: Session = Depends(get_
     ).order_by(UserMaterialOverride.nombre).all()
 
 
+@router.delete("/overrides/{nombre}")
+def delete_override(
+    nombre: str,
+    user: Usuario = Depends(_get_user),
+    db: Session = Depends(get_db),
+):
+    entry = db.query(UserMaterialOverride).filter(
+        UserMaterialOverride.usuario_id == user.id,
+        UserMaterialOverride.nombre == nombre,
+    ).first()
+    if entry:
+        db.delete(entry)
+        db.commit()
+    return {"ok": True}
+
+
 @router.post("/overrides")
 def save_overrides(
     overrides: list[MaterialOverrideIn],

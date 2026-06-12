@@ -44,6 +44,7 @@ class ProductoResponse(BaseModel):
     n02: str | None = None
     n03: str | None = None
     proveedor: str | None = None
+    material: str | None = None
     tienda: str
     url_origen: str
     created_at: datetime | None = None
@@ -104,6 +105,19 @@ class UpdateAjustadaRequest(BaseModel):
     n02: str | None = None
     n03: str | None = None
     proveedor: str | None = None
+    material: str | None = None
+
+class MaterialInscalRequest(BaseModel):
+    material: str
+
+class MaterialInscalResponse(BaseModel):
+    id: int
+    codigo: str
+    descripcion: str
+    tienda: str
+    material: str | None = None
+    categoria: str | None = None
+    model_config = {"from_attributes": True}
 
 class UsuarioRequest(BaseModel):
     email: str

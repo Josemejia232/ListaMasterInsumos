@@ -135,8 +135,9 @@ _CONCRETOS = [
         resistencia_psi=1800,
         materiales=[
             MaterialReceta("Cemento", "kl", 230.0, keywords=["cemento", "gris"]),
+            MaterialReceta("Arena de rio", "m3", 0.0, keywords=["arena", "rio", "lavada"]),
             MaterialReceta("Material de rio (gravilla)", "m3", 0.92, keywords=["gravilla", "grava", "triturada"]),
-            MaterialReceta("Agua", "lt", 121.6),
+            MaterialReceta("Agua", "lt", 122.0),
             MaterialReceta("M.O. CUADRILLA AG 1:2", "hc", 0.28),
             MaterialReceta("Mezcladora a gasolina 1 1/2 bulto", "hr", 0.56),
         ],

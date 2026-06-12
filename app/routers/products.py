@@ -78,6 +78,8 @@ def actualizar_ajustada(producto_id: int, req: UpdateAjustadaRequest, _admin = D
         prod.n03 = req.n03
     if req.proveedor is not None:
         prod.proveedor = req.proveedor
+    if req.material is not None:
+        prod.material = req.material
     db.commit()
     db.refresh(prod)
     return prod

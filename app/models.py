@@ -21,6 +21,7 @@ class Producto(Base):
     n03 = Column(String(200), nullable=True)
     proveedor = Column(String(200), nullable=True)
     descripcion_ajustada = Column(String(500), nullable=True)
+    material = Column(String(200), nullable=True)
     tienda = Column(String(200), nullable=False)
     url_origen = Column(String(1000), nullable=False)
     created_at = Column(DateTime, server_default=func.now())

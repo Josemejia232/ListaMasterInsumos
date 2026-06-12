@@ -109,14 +109,13 @@ function buildSidebar(){
   const items = [];
   if(isAdmin){
     items.push({label:'ADMIN', header:true});
-    items.push({id:'ver-insumos', icon:'&#9632;', text:'Productos', mode:'raw'});
     items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
     items.push({id:'pagos', icon:'&#128179;', text:'Pagos'});
   }
-  items.push({label:'LISTA INSUMOS', header:true});
-  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
+  items.push({label:'INSUMOS', header:true});
+  items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode: isAdmin ? 'raw' : 'adjusted'});
   items.push({label:'CÁLCULOS', header:true});
-  items.push({id:'insumos-calc', icon:'&#9679;', text:'Insumos'});
+  items.push({id:'insumos-calc', icon:'&#9679;', text:'InsCal'});
   items.push({id:'mezclas', icon:'&#9881;', text:'Mezclas'});
   items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
   items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
@@ -136,7 +135,7 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': _viewMode === 'raw' ? 'Productos' : 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'insumos-calc':'Insumos', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
+  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
@@ -288,37 +287,119 @@ async function cargarInsumosCalc(){
 
 function renderInsumosCalc(materiales){
   const wrap = document.getElementById('insumos-calc-wrap');
-  const rows = materiales.map(m => {
+  const rows = materiales.map((m, i) => {
     var tipos = (m.tipos||[]).join(', ');
-    return '<tr class="calc-row">'+
-      '<td style="padding:.3rem .5rem;font-size:.8rem;font-weight:500">'+escapeHtml(m.nombre)+'</td>'+
-      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+    var nombre = escapeHtml(m.nombre);
+    var unidad = escapeHtml(m.unidad);
+    return '<tr class="calc-row" data-idx="'+i+'">'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem">'+
+        '<input class="calc-nom-insumo" type="text" value="'+nombre+'" data-original="'+nombre+'" data-nom="'+nombre+'" style="width:100%;min-width:140px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;padding:.15rem .4rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\';guardarFilaInsumo(this)">'+
+      '</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+
+        '<input class="calc-und-insumo" type="text" value="'+unidad+'" style="width:60px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;text-align:center;padding:.15rem .3rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\';guardarFilaInsumo(this)">'+
+      '</td>'+
       '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+
-        '<input class="calc-vr-insumo" type="number" step="1" value="'+m.vr_unitario+'" data-nombre="'+escapeHtml(m.nombre)+'" onchange="guardarVrInsumo(this)" style="width:90px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;text-align:right;padding:.1rem .3rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\'" title="Editar valor unitario"></td>'+
-      '<td style="padding:.3rem .5rem;font-size:.72rem;color:var(--muted);text-align:center">'+escapeHtml(tipos)+'</td>'+
+        '<input class="calc-vr-insumo" type="number" step="1" value="'+m.vr_unitario+'" style="width:90px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;text-align:right;padding:.15rem .3rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\';guardarFilaInsumo(this)">'+
+      '</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.72rem;color:var(--muted);text-align:center">'+
+        escapeHtml(tipos)+
+      '</td>'+
+      '<td style="padding:.3rem .3rem;text-align:center;width:30px">'+
+        '<button onclick="eliminarFilaInsumo(this)" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem" title="Eliminar material">✕</button>'+
+      '</td>'+
       '</tr>';
   }).join('');
   wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
     '<table style="width:100%;border-collapse:collapse">'+
     '<thead><tr>'+
-    '<th style="padding:.4rem .5rem;font-size:.75rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2);min-width:180px">Material</th>'+
+    '<th style="padding:.4rem .5rem;font-size:.75rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Material</th>'+
     '<th style="padding:.4rem .3rem;font-size:.75rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Unidad</th>'+
     '<th style="padding:.4rem .3rem;font-size:.75rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Vr Unit</th>'+
-    '<th style="padding:.4rem .5rem;font-size:.75rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Aparece en</th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>';
+    '<th style="padding:.4rem .3rem;font-size:.75rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2)">Aparece en</th>'+
+    '<th style="padding:.4rem .3rem;font-size:.75rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);background:var(--card2);width:30px"></th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div style="padding:.5rem;border-top:1px solid var(--border);text-align:center">'+
+      '<button onclick="agregarFilaInsumo()" style="background:var(--accent);color:#fff;border:none;border-radius:.3rem;padding:.35rem 1rem;font-family:inherit;font-size:.78rem;font-weight:600;cursor:pointer">+ Agregar material</button>'+
+    '</div></div>';
+}
+
+async function guardarFilaInsumo(el){
+  var tr = el.closest('tr');
+  if(!tr) return;
+  var nomInput = tr.querySelector('.calc-nom-insumo');
+  var undInput = tr.querySelector('.calc-und-insumo');
+  var vrInput = tr.querySelector('.calc-vr-insumo');
+  var nombre = (nomInput.value||'').trim();
+  var unidad = (undInput.value||'').trim();
+  var vr = parseFloat(vrInput.value) || 0;
+  var original = nomInput.dataset.original;
+  if(!nombre) return;
+  // Si el nombre cambió, eliminar el override anterior (si existe)
+  if(original && original !== nombre){
+    try { await apiFetch('/api/calculos/overrides/'+encodeURIComponent(original), {method:'DELETE'}); } catch(e){}
+    nomInput.dataset.original = nombre;
+  }
+  try {
+    await apiFetch('/api/calculos/overrides', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify([{nombre: nombre, unidad: unidad, cantidad: 0, vr_unitario: vr}])
+    });
+    var overrides = {};
+    try { overrides = JSON.parse(localStorage.getItem('ls_materialOverrides') || '{}'); } catch(e) {}
+    overrides[nombre] = overrides[nombre] || {};
+    overrides[nombre].vr_unitario = vr;
+    overrides[nombre].unidad = unidad;
+    try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
+  } catch(e){}
+}
+
+async function eliminarFilaInsumo(btn){
+  var tr = btn.closest('tr');
+  if(!tr) return;
+  var nomInput = tr.querySelector('.calc-nom-insumo');
+  var nombre = nomInput ? nomInput.dataset.original : '';
+  if(nombre && !confirm('¿Eliminar "'+nombre+'"?')) return;
+  if(nombre){
+    try {
+      await apiFetch('/api/calculos/overrides/'+encodeURIComponent(nombre), {method:'DELETE'});
+    } catch(e){}
+  }
+  tr.remove();
+}
+
+async function agregarFilaInsumo(){
+  var tbody = document.querySelector('#insumos-calc-wrap table tbody');
+  if(!tbody) return;
+  var tr = document.createElement('tr');
+  tr.className = 'calc-row';
+  tr.innerHTML =
+    '<td style="padding:.3rem .3rem;font-size:.78rem">'+
+      '<input class="calc-nom-insumo" type="text" placeholder="Nuevo material" data-original="" style="width:100%;min-width:140px;border:1px solid var(--accent);background:#fff;font:inherit;font-size:.78rem;color:inherit;padding:.15rem .4rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\';guardarFilaInsumo(this)">'+
+    '</td>'+
+    '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+
+      '<input class="calc-und-insumo" type="text" value="Unidad" style="width:60px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;text-align:center;padding:.15rem .3rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\';guardarFilaInsumo(this)">'+
+    '</td>'+
+    '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+
+      '<input class="calc-vr-insumo" type="number" step="1" value="0" style="width:90px;border:1px solid var(--border);background:#fff;font:inherit;font-size:.78rem;color:inherit;text-align:right;padding:.15rem .3rem;border-radius:3px" onfocus="this.style.borderColor=\'var(--accent)\'" onblur="this.style.borderColor=\'var(--border)\';guardarFilaInsumo(this)">'+
+    '</td>'+
+    '<td style="padding:.3rem .3rem;font-size:.72rem;color:var(--muted);text-align:center">personalizado</td>'+
+    '<td style="padding:.3rem .3rem;text-align:center;width:30px">'+
+      '<button onclick="eliminarFilaInsumo(this)" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem" title="Eliminar material">✕</button>'+
+    '</td>';
+  tbody.appendChild(tr);
+  tr.querySelector('.calc-nom-insumo').focus();
 }
 
 async function guardarVrInsumo(el){
   var nombre = el.dataset.nombre;
   var vr = parseFloat(el.value) || 0;
-  // Guardar via API
   try {
     await apiFetch('/api/calculos/overrides', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify([{nombre: nombre, unidad: '', cantidad: 0, vr_unitario: vr}])
     });
-    // Actualizar localStorage tambien
     var overrides = {};
     try { overrides = JSON.parse(localStorage.getItem('ls_materialOverrides') || '{}'); } catch(e) {}
     overrides[nombre] = overrides[nombre] || {};
@@ -326,6 +407,8 @@ async function guardarVrInsumo(el){
     try { localStorage.setItem('ls_materialOverrides', JSON.stringify(overrides)); } catch(e) {}
   } catch(e) {}
 }
+
+
 
 async function cargarSelectMezclas(){
   const tipo = document.getElementById('mez-tipo').value || '';
@@ -466,7 +549,7 @@ async function _loadOverrides(){
 async function _saveOverrides(){
   if(!_calcData || !_calcData.materiales) return;
   var overrides = _calcData.materiales.map(function(mat){
-    return { nombre: mat.nombre, unidad: mat.unidad, cant: mat.cantidad, vr_unitario: mat.vr_unitario };
+    return { nombre: mat.nombre, unidad: mat.unidad, cantidad: mat.cantidad, vr_unitario: mat.vr_unitario };
   });
   var map = {};
   overrides.forEach(function(o){ map[o.nombre] = o; });
@@ -717,11 +800,11 @@ function renderVer(){
       empty.style.display='none';
       tbody.innerHTML = filtrados.map(p => `<tr>
         <td>${escapeHtml(p.descripcion)}</td>
-        <td contenteditable="true" onblur="guardarAjustada(${p.id},this.textContent)" style="cursor:text;outline:2px dashed var(--border2);border-radius:3px;padding:2px 5px">${escapeHtml(descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada))}</td>
+        <td>${escapeHtml(descripcionAjustada(p.descripcion,p.id,p.descripcion_ajustada))}</td>
         <td>${escapeHtml(p.unidad)}</td>
         <td style="font-weight:600;color:var(--accent)">$${Number(p.valor).toLocaleString('es-CO',{minimumFractionDigits:0})}${diffHtml(p)}</td>
         <td style="font-weight:600;color:var(--text2)">$${precioAjustado(p.valor,p.id).toLocaleString('es-CO')}${diffHtml(p)}</td>
-        <td contenteditable="true" onblur="guardarProveedor(${p.id},this.textContent)" style="cursor:text;outline:2px dashed var(--border2);border-radius:3px;padding:2px 5px">${escapeHtml(p.proveedor||'')}</td>
+        <td>${escapeHtml(p.proveedor||'')}</td>
       </tr>`).join('');
     }
   } else {
