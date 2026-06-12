@@ -20,10 +20,10 @@ _CONVERSION: dict[str, float] = {
 # Fallback cuando no se encuentra en BD ni en fijos
 _FALLBACK_PRECIOS: dict[str, float] = {
     "Cemento": 546.0,
-    "Arena de rio": 45000.0,
-    "Arena de peña": 42000.0,
-    "Arena de pozo": 38000.0,
-    "Material de rio (gravilla)": 55000.0,
+    "Arena De peña": 42000.0,
+    "Arena Lavada De Rio": 45000.0,
+    "Arena Lavada De Peña": 42000.0,
+    "Agregado grueso": 55000.0,
     "Bloque #4 (10x20x40)": 2500.0,
     "Bloque #5 (10x20x40)": 3200.0,
     "Ladrillo tolete (5x10x20)": 800.0,

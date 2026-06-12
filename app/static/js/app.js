@@ -210,10 +210,10 @@ const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Be
 // ─── Cálculos ──────────────────────────────────────────
 const _CONV = {
   "Cemento": { u:"Bolsa", f:50, pf:50 },
-  "Arena de rio": { u:"Viaje", f:1.05 },
-  "Arena de pozo": { u:"Viaje", f:1.05 },
-  "Arena de peña": { u:"Viaje", f:1.05 },
-  "Material de rio (gravilla)": { u:"Viaje", f:1.05 },
+  "Arena De peña": { u:"Viaje", f:1.05 },
+  "Arena Lavada De Rio": { u:"Viaje", f:1.05 },
+  "Arena Lavada De Peña": { u:"Viaje", f:1.05 },
+  "Agregado grueso": { u:"Viaje", f:1.05 },
   "Agua": { u:"lt", f:1 },
   "M.O. CUADRILLA AG 1:2": { u:"hc", f:1 },
   "M.O. CUADRILLA AG 0:2": { u:"hc", f:1 },
