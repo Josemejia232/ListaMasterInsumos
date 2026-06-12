@@ -369,6 +369,11 @@ def root():
         return HTMLResponse(content=landing.read_text(encoding="utf-8"))
     return {"app": "ListaMasterInsumos", "status": "ok"}
 
+@app.get("/landing")
+def landing():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/", status_code=301)
+
 @app.get("/app")
 def app_page():
     global _index_html, _index_mtime
