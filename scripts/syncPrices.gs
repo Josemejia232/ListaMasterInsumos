@@ -125,6 +125,8 @@ function syncPrices() {
   // ① Clasificar filas: nuevas vs existentes
   var nuevas = [];      // filas sin ÚLTIMO PRECIO
   var existentes = [];  // filas con ÚLTIMO PRECIO → comparar
+  var failCount = 0;
+  var failedUrls = [];
 
   for (var i = 1; i < data.length; i++) {
     var url = data[i][urlCol] ? data[i][urlCol].toString().trim() : '';
@@ -229,8 +231,6 @@ function syncPrices() {
   var matches = 0;
   var sinMatch = 0;
   var preciosInvalidos = 0;
-  var failCount = 0;
-  var failedUrls = [];
 
   for (var k = 1; k < data.length; k++) {
     var sUrl = data[k][urlCol] ? data[k][urlCol].toString().trim() : '';
