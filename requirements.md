@@ -40,7 +40,10 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 - **Plan Básico**: Sin acceso a calculadora (403).
 - **Plan Plus**: Uso ilimitado.
 - Selector desplegable para elegir la mezcla/mampostería/anclaje a calcular
-- Campos editables en la interfaz: Material, Unidad y Vr Unitario
+- Campos editables en la interfaz: **Material, Unidad y Vr Unitario** (tabla InsCal)
+- CRUD completo de materiales en InsCal: agregar filas (`+ Agregar material`), editar en línea, eliminar (`✕`)
+- **Auto-clasificación** de categoría desde el nombre del material (keyword mapping)
+- Overrides de materiales por usuario (`UserMaterialOverride`) — cada usuario guarda sus propios ajustes
 - Recalculo automático del total al modificar valores
 - Input de volumen (m³ mezclas / m² mampostería / puntos anclajes) para escalar
 - Conversión automática a unidades enteras prácticas:
@@ -53,8 +56,16 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 - **Indicadores de carga** con spinner animado en todas las consultas de calculadora
 - **Caché frontend** (`_calcCache`) para evitar re-consultas al servidor al cambiar filtros
 
+### Insumos (Vista Unificada)
+- **Todos los usuarios** (free, básico, plus, admin) ven la misma vista de insumos
+- Estructura de **árbol categorizado** (n01 → n02 → n03) con expand/colapsar
+- **Solo lectura** — no se permite editar desde esta vista (el CRUD está en InsCal)
+- Eliminada la tabla cruda admin-only; ahora hay una única interfaz consistente
+- El admin gestiona los productos vía la sección **InsCal** (añadir/editar/eliminar materiales)
+
 ### Admin
 - Vista completa de productos con datos originales (código, URL, tienda)
+- **InsCal:** Gestión de materiales de calculadora con tabla editable (Material, Unidad, Vr Unit, Cantidad)
 - Gestión de usuarios (crear, editar, activar/bloquear, renovar pago)
 - Gestión de pagos Bold (crear links, sincronizar estados)
 - Sincronización manual de categorías desde Google Sheets
@@ -138,6 +149,16 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 | GET | `/api/calculos/stats` | Estadísticas de cálculos (mezclas, mamposterías, tiendas) — público |
 | GET | `/api/calculos/{id}` | Obtener mezcla/mampostería por ID (Free limitado a 3 usos por tipo) |
 | POST | `/api/calculos/anclajes` | Calcular anclajes químicos (Sika AnchorFix) — Free limitado a 3 usos |
+| DELETE | `/api/calculos/overrides/{nombre}` | Eliminar override de material por nombre |
+
+### Materiales (InsCal)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/materiales/inscal` | Listar todos los materiales de InsCal |
+| GET | `/api/materiales/inscal/{id}` | Obtener un material de InsCal por ID |
+| PUT | `/api/materiales/inscal/{id}` | Actualizar material de InsCal (Material, Unidad, Vr Unit, Cantidad, Categoría) |
+| DELETE | `/api/materiales/inscal/{id}` | Eliminar material de InsCal |
+| POST | `/api/materiales/inscal/clasificar` | Auto-clasificar categoría desde nombre de material |
 
 ### Pagos Bold (Admin)
 | Método | Ruta | Descripción |
@@ -151,7 +172,7 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 ### Landing Page
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| GET | `/landing` | Landing page premium (marketing) con stats dinámicos |
+| GET | `/landing` | **Redirige 301 a `/`** — la landing page ya no existe como ruta separada |
 | GET | `/` | Aplicación principal (SPA) |
 
 ## Variables de Entorno
@@ -252,13 +273,18 @@ Las recetas de concretos y morteros provienen del archivo `20191013 Base De Dato
 ### Estructura del módulo
 
 ```
-app/calculos/
-├── __init__.py              → Re-exporta componentes
-├── schemas.py               → Pydantic models (MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse)
-├── data.py                  → 12 recetas (6 concretos + 6 morteros)
-├── data_mamposteria.py      → 37 recetas de mampostería (5 legacy + 32 Ladrillera Santafé)
-├── data_anclajes.py         → Lógica volumétrica de anclajes (cilindro πr²h, factor 20%, tubos 300ml)
-└── router.py                → Endpoints FastAPI + lógica de búsqueda en BD + control de planes
+app/
+├── calculos/
+│   ├── __init__.py          → Re-exporta componentes
+│   ├── schemas.py           → Pydantic models (MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse)
+│   ├── data.py              → 12 recetas (6 concretos + 6 morteros)
+│   ├── data_mamposteria.py  → 37 recetas de mampostería (5 legacy + 32 Ladrillera Santafé)
+│   ├── data_anclajes.py     → Lógica volumétrica de anclajes (cilindro πr²h, factor 20%, tubos 300ml)
+│   └── router.py            → Endpoints FastAPI + lógica de búsqueda en BD + control de planes
+├── routers/
+│   └── materiales.py        → CRUD de materiales InsCal + auto-clasificación
+├── models.py                → Producto (con columna `material`), UserMaterialOverride
+└── schemas.py               → MaterialInscalRequest, MaterialInscalResponse, UpdateAjustadaRequest
 ```
 
 ### Lógica de precios (3 fuentes)
@@ -275,6 +301,25 @@ Los productos se organizan en 3 niveles jerárquicos:
 - `n01` — Categoría principal (ej: Materiales, Herramientas, Acabados)
 - `n02` — Subcategoría
 - `n03` — Sub-subcategoría
+
+### Campo `material` en Producto
+
+- Nueva columna `material` (VARCHAR 200, nullable) en la tabla `productos`
+- Se usa para la tabla **InsCal** — cada fila de la calculadora corresponde a un `Producto` con `material` asignado
+- **Auto-clasificación:** el backend mapea keywords del nombre del material a categorías (`categoria`):
+  - `arena`, `gravilla`, `agregado` → `Materiales`
+  - `cemento` → `Materiales`
+  - `agua` → `Materiales`
+  - `mano de obra`, `cuadrilla` → `Mano de Obra`
+  - `mezcladora` → `Maquinaria`
+  - (más mappings en `app/routers/materiales.py`)
+- Si no hay match, la categoría queda `NULL` y aparece en **"Sin categoría"** en el árbol de insumos
+
+### Tabla `UserMaterialOverride`
+
+- Permite que cada usuario guarde sus propios ajustes de cantidad, unidad y valor unitario para cada material de InsCal
+- Clave: `(usuario_id, producto_id)` — única por usuario-material
+- El frontend consulta `GET /api/calculos/{id}` y aplica los overrides del usuario logueado antes de renderizar
 
 ## Google Sheets — Sincronización
 
