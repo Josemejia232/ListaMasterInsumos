@@ -178,9 +178,8 @@ class TestUsuariosAdmin:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["email"] == "newadmin@test.com"
-        # Token is masked for security: ****oken
         assert data["token"].startswith("****")
-        assert data["token"].endswith("oken")
+        assert len(data["token"]) == 8
         assert data["activo"] is True
     
     def test_crear_usuario_duplicate(self, client, admin_user, regular_user, auth_headers_admin):
@@ -202,9 +201,8 @@ class TestUsuariosAdmin:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["email"] == "updated@test.com"
-        # Token is masked for security: ****oken
         assert data["token"].startswith("****")
-        assert data["token"].endswith("oken")
+        assert len(data["token"]) == 8
     
     def test_eliminar_usuario(self, client, admin_user, regular_user, auth_headers_admin):
         response = client.delete(f"/api/usuarios/{regular_user.id}", headers=auth_headers_admin)

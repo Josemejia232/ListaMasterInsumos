@@ -5,6 +5,7 @@ import re
 import time
 import random
 import hmac
+import hashlib
 import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -89,6 +90,18 @@ async def https_redirect(request: Request, call_next):
         return RedirectResponse(str(request.url.replace(scheme="https")), status_code=301)
     return await call_next(request)
 
+# ─── Global Exception Handler ─────────────────────────────────
+
+import traceback
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {exc}\n{traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor. Intenta de nuevo mas tarde."},
+    )
+
 # ─── Security Headers ─────────────────────────────────────────
 CSP_HEADER = (
     "default-src 'self'; "
@@ -107,6 +120,7 @@ async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Content-Security-Policy"] = CSP_HEADER
@@ -312,6 +326,15 @@ def startup():
                     logger.info("[Migration] Added mezcla_id column to user_material_overrides (SQLite)")
             except Exception as e:
                 logger.warning(f"[Migration] mezcla_id column skipped: {e}")
+            try:
+                result = conn.execute(text("PRAGMA table_info(usuarios)")).fetchall()
+                cols = [r[1] for r in result]
+                if "token_expires_at" not in cols:
+                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN token_expires_at TIMESTAMP"))
+                    conn.commit()
+                    logger.info("[Migration] Added token_expires_at column to usuarios (SQLite)")
+            except Exception as e:
+                logger.warning(f"[Migration] token_expires_at column skipped: {e}")
     else:
         try:
             from alembic.config import Config
@@ -327,7 +350,7 @@ def startup():
                 logger.info("[Alembic] Stamped as head to prevent future failures")
             except Exception as stamp_e:
                 logger.info(f"[Alembic] Stamp skipped: {stamp_e}")
-        # Verificar si mezcla_id existe en PostgreSQL (por si la migración falló parcialmente)
+        # Verificar si mezcla_id y token_expires_at existen en PostgreSQL (por si la migración falló parcialmente)
         try:
             with engine.connect() as conn:
                 result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'user_material_overrides' AND column_name = 'mezcla_id'")).fetchall()
@@ -337,6 +360,15 @@ def startup():
                     logger.info("[Migration] Added mezcla_id column to user_material_overrides (PostgreSQL)")
         except Exception as e:
             logger.warning(f"[Migration] PostgreSQL mezcla_id check skipped: {e}")
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'usuarios' AND column_name = 'token_expires_at'")).fetchall()
+                if not result:
+                    conn.execute(text("ALTER TABLE usuarios ADD COLUMN token_expires_at TIMESTAMP"))
+                    conn.commit()
+                    logger.info("[Migration] Added token_expires_at column to usuarios (PostgreSQL)")
+        except Exception as e:
+            logger.warning(f"[Migration] PostgreSQL token_expires_at check skipped: {e}")
 
     global _index_html, _index_mtime
     index_path = static_dir / "index.html"
@@ -360,18 +392,31 @@ def startup():
             db.commit()
 
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
-        if not admin:
-            admin_email = os.getenv("ADMIN_EMAIL")
-            admin_token = os.getenv("ADMIN_TOKEN")
+        admin_email = os.getenv("ADMIN_EMAIL")
+        admin_token = os.getenv("ADMIN_TOKEN")
+        if admin and admin_token:
+            stored_hash = hashlib.sha256(admin_token.encode()).hexdigest()
+            if admin.token != stored_hash:
+                admin.token = stored_hash
+                db.commit()
+                logger.info(f"[Security] Admin token actualizado (hasheado) para {admin.email}")
+        elif not admin:
             if not admin_email or not admin_token:
                 logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
             else:
-                db.add(Usuario(email=admin_email, token=admin_token, activo=True, tipo="admin"))
+                db.add(Usuario(email=admin_email, token=hashlib.sha256(admin_token.encode()).hexdigest(), activo=True, tipo="admin"))
                 db.commit()
                 logger.info(f"Admin seed creado: {admin_email}")
+
+        # Migrar tokens existentes a SHA-256 si están en texto plano
+        usuarios = db.query(Usuario).all()
+        for u in usuarios:
+            if u.token and len(u.token) != 64:
+                u.token = hashlib.sha256(u.token.encode()).hexdigest()
+        db.commit()
     except Exception as e:
         db.rollback()
-        logger.warning(f"Seed admin skipped: {e}")
+        logger.warning(f"Seed/migration admin skipped: {e}")
     finally:
         db.close()
 

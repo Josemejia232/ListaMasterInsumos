@@ -2,12 +2,14 @@
 import os
 import time
 import secrets
+import hashlib
 import logging
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
-from app.models import Usuario, Pago
+from app.models import Usuario, Pago, RateLimit
 from app.services.auth_service import get_current_user, require_admin, _plan_info, _plan_activo
 from app.schemas import (
     LoginRequest, LoginResponse, PlanInfo, ComprarPlanRequest, ComprarPlanResponse,
@@ -19,6 +21,36 @@ from app import bold as bold_client
 logger = logging.getLogger("app")
 router = APIRouter()
 
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _check_ip_blocked(ip: str, db: Session):
+    now = datetime.utcnow()
+    window = now - timedelta(minutes=15)
+    total = db.query(func.count(RateLimit.id)).filter(
+        RateLimit.key == f"login_fail:{ip}",
+        RateLimit.window_start >= window,
+    ).scalar() or 0
+    if total >= 5:
+        raise HTTPException(status_code=429, detail="Demasiados intentos fallidos. Intenta en 15 minutos.")
+
+
+def _register_fail_ip(ip: str, db: Session):
+    entry = RateLimit(key=f"login_fail:{ip}", window_start=datetime.utcnow(), request_count=1)
+    db.add(entry)
+    db.commit()
+
+
+def _clear_ip_block(ip: str, db: Session):
+    db.query(RateLimit).filter(RateLimit.key == f"login_fail:{ip}").delete()
+    db.commit()
+
+
+TOKEN_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
+
+
 @router.post("/register", response_model=LoginResponse)
 def register(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     rate_limit_login(request)
@@ -26,31 +58,49 @@ def register(req: LoginRequest, request: Request, db: Session = Depends(get_db))
     if existente:
         raise HTTPException(status_code=400, detail="Email ya registrado. Contacta al administrador.")
     token = secrets.token_hex(32)
-    user = Usuario(email=req.email, token=token, activo=True, tipo="usuario")
+    expires = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
+    user = Usuario(
+        email=req.email, token=_hash_token(token),
+        activo=True, tipo="usuario",
+        token_expires_at=expires,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
     info = _plan_info(user)
-    return LoginResponse(id=user.id, email=user.email, token=user.token, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    return LoginResponse(id=user.id, email=user.email, token=token, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+
 
 @router.post("/login", response_model=LoginResponse)
 def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     rate_limit_login(request)
+    ip = request.client.host if request.client else "unknown"
+    _check_ip_blocked(ip, db)
     user = db.query(Usuario).filter(
         Usuario.email == req.email,
         Usuario.activo == True
     ).first()
-    if not user or not os.environ.get("_FAKE_HMAC", "0") == "1":
-        import hmac
-        if not user or not hmac.compare_digest(req.token, user.token or ""):
-            raise HTTPException(status_code=401, detail="Credenciales invalidas")
+    if not user:
+        _register_fail_ip(ip, db)
+        raise HTTPException(status_code=401, detail="Credenciales invalidas")
+    token_hash = _hash_token(req.token)
+    if user.token != token_hash and user.token != req.token:
+        _register_fail_ip(ip, db)
+        raise HTTPException(status_code=401, detail="Credenciales invalidas")
+    if user.token != token_hash:
+        user.token = token_hash
+    user.token_expires_at = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
+    db.commit()
+    _clear_ip_block(ip, db)
     info = _plan_info(user)
     return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+
 
 @router.get("/me", response_model=LoginResponse)
 def auth_me(user: Usuario = Depends(get_current_user)):
     info = _plan_info(user)
     return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+
 
 @router.get("/planes", response_model=PlanInfo)
 def ver_planes(user: Usuario = Depends(get_current_user)):
@@ -68,6 +118,7 @@ def ver_planes(user: Usuario = Depends(get_current_user)):
     else:
         result["puede_upgradear"] = False
     return result
+
 
 @router.post("/comprar-plan", response_model=ComprarPlanResponse)
 async def comprar_plan(
@@ -107,6 +158,7 @@ async def comprar_plan(
     db.commit()
     db.refresh(pago)
     return ComprarPlanResponse(id=pago.id, url=pago.url, amount=pago.amount, status=pago.status)
+
 
 @router.post("/upgrade-plan", response_model=UpgradePlanResponse)
 async def upgrade_plan(

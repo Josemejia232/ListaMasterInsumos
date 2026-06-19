@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timezone
-import hmac
+import hashlib
 import logging
 
 from app.database import get_db
@@ -74,13 +74,31 @@ _FALLBACK_PRECIOS: dict[str, float] = {
 }
 
 
+def _token_valido(user: Usuario) -> bool:
+    if user.tipo == "admin":
+        return True
+    if user.token_expires_at is None:
+        return True
+    return datetime.now(timezone.utc) < user.token_expires_at
+
+
 def _get_user(authorization: str = Header(None), db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token requerido")
     token = authorization[7:]
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token_hash).first()
+    if user:
+        if _token_valido(user):
+            return user
+        raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
     user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token).first()
-    if user and hmac.compare_digest(token, user.token or ""):
-        return user
+    if user:
+        user.token = token_hash
+        db.commit()
+        if _token_valido(user):
+            return user
+        raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
     raise HTTPException(status_code=401, detail="Token invalido")
 
 

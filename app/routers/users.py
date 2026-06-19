@@ -1,5 +1,6 @@
 """Router de administración de usuarios."""
 import secrets
+import hashlib
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -7,6 +8,11 @@ from app.database import get_db
 from app.models import Usuario
 from app.services.auth_service import require_admin
 from app.schemas import UsuarioResponse, UsuarioRequest
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
 
 router = APIRouter()
 
@@ -21,7 +27,7 @@ def crear_usuario(req: UsuarioRequest, _admin: Usuario = Depends(require_admin),
         raise HTTPException(status_code=400, detail="Email ya registrado")
     if not req.token:
         req.token = secrets.token_hex(32)
-    item = Usuario(email=req.email, token=req.token, activo=req.activo, tipo=req.tipo)
+    item = Usuario(email=req.email, token=_hash_token(req.token), activo=req.activo, tipo=req.tipo)
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -35,7 +41,7 @@ def actualizar_usuario(usuario_id: int, req: UsuarioRequest, _admin: Usuario = D
     if req.email:
         item.email = req.email
     if req.token:
-        item.token = req.token
+        item.token = _hash_token(req.token)
     item.activo = req.activo
     item.tipo = req.tipo
     db.commit()
@@ -66,6 +72,7 @@ def resetear_token(usuario_id: int, _admin: Usuario = Depends(require_admin), db
     item = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    item.token = secrets.token_hex(32)
+    raw = secrets.token_hex(32)
+    item.token = _hash_token(raw)
     db.commit()
     return {"ok": True, "message": "Token reseteado. El usuario debe iniciar sesion nuevamente."}

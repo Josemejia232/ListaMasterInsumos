@@ -1,3 +1,4 @@
+
 window.cambiarLogin = function(modo, el){
   document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');

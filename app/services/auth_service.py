@@ -1,11 +1,24 @@
 """Servicios de autenticación y autorización."""
+import hashlib
 import hmac
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import Header, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Usuario
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _token_valido(user: Usuario) -> bool:
+    if user.tipo == "admin":
+        return True
+    if user.token_expires_at is None:
+        return True
+    return datetime.now(timezone.utc) < user.token_expires_at
 
 
 def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
@@ -14,9 +27,19 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Formato invalido")
     token = authorization[7:]
+    token_hash = _hash_token(token)
+    user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token_hash).first()
+    if user:
+        if _token_valido(user):
+            return user
+        raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
     user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token).first()
-    if user and hmac.compare_digest(token, user.token or ""):
-        return user
+    if user:
+        user.token = token_hash
+        db.commit()
+        if _token_valido(user):
+            return user
+        raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
     raise HTTPException(status_code=401, detail="Token invalido o usuario inactivo")
 
 

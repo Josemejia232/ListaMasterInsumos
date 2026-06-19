@@ -84,12 +84,14 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 ## Stack Técnico
 
 - **Backend:** FastAPI + SQLAlchemy + Pydantic
-- **Base de datos:** PostgreSQL (producción) / SQLite (desarrollo)
+- **Base de datos:** PostgreSQL (Neon, producción) / SQLite (desarrollo)
 - **Frontend:** HTML + CSS + JavaScript vanilla (SPA) con responsive design
 - **Scraping:** BeautifulSoup4 + lxml + httpx
 - **Pagos:** Bold API (integration link)
 - **Fuente de datos:** Google Sheets (`gspread`)
-- **Hosting:** Render
+- **Hosting:** Render (servicio unificado — backend API + frontend SPA en el mismo `uvicorn`)
+  - Frontend: servido como archivos estáticos desde el backend (`/app`, `/`)
+  - Backend: `uvicorn app.main:app` (FastAPI)
 
 ## Landing Page
 
@@ -351,3 +353,65 @@ El script `scripts/syncPrices.gs` se ejecuta en el Google Sheet vinculado y sinc
 - **401 en `/scrape/sync` o `/productos`**: El token en I2 no coincide con el del admin en la BD. Verificar en Render → Environment Variables que `ADMIN_TOKEN` coincida con el token real del admin (loguearse en la app para confirmarlo).
 - **Columna J vacía**: El script ejecuta una semilla automática que copia F → J en el primer sync. Revisar Logs de Cloud (Editor Apps Script → Ejecuciones → ver log detallado) para confirmar `Semilla col J: X filas`.
 - **"PRECIO ANTERIOR" aparece en I1**: Versión vieja del script pisó la API URL. Borrar I1 y restaurar `https://listamasterinsumos.onrender.com`, o actualizar el script a la versión más reciente de `scripts/syncPrices.gs`.
+
+## Auditoría de Seguridad (cotejado vs SeguridadStack.md)
+
+Evaluación realizada el 19/06/2026 comparando `SeguridadStack.md` contra el código actual.
+
+### 🟢 Implementado correctamente
+
+| Control | Archivo |
+|---------|---------|
+| CORS restrictivo (sin `*`, dominios desde env) | `app/main.py:64-78` |
+| Validación de inputs (Pydantic v2 + domain allowlist) | `app/schemas.py`, `app/dependencies.py:98-115` |
+| SQLAlchemy ORM (sin SQL injection) | Toda la app |
+| Rate limiting DB-backed (login 10/min, scrape 5/min) | `app/dependencies.py:27-74` |
+| CSP headers (`frame-ancestors`, `base-uri`, `form-action`) | `app/main.py:93-103` |
+| `X-Frame-Options: DENY` | `app/main.py:109` |
+| `X-Content-Type-Options: nosniff` | `app/main.py:108` |
+| `Referrer-Policy: strict-origin-when-cross-origin` | `app/main.py:110` |
+| `Permissions-Policy` | `app/main.py:111` |
+| HTTPS redirect (configurable via `FORCE_HTTPS`) | `app/main.py:82-90` |
+| Timing-safe comparison (`hmac.compare_digest`) | `app/services/auth_service.py:18` |
+| Token masking en respuestas (`****XXXX`) | `app/schemas.py:150-155` |
+| Admin endpoints protegidos (`require_admin`) | `app/routers/*.py` |
+| `.env` en `.gitignore` | `.gitignore:11-14` |
+| API keys solo en variables de entorno | `app/bold.py:11-13` |
+
+### 🟡 Parcialmente implementado o con riesgo bajo
+
+| Control | Riesgo | Archivo |
+|---------|--------|---------|
+| `'unsafe-inline'` en CSP para scripts/styles | XSS potencial | `app/main.py:94-95` |
+| Errores de Bold exponen `str(e)` al usuario | Fuga de info interna | `app/routers/auth.py:97,137` |
+| Sin global exception handler | Error 500 genérico sin control | `app/main.py` |
+| Background tasks sin colas dedicadas | Bloqueo en tareas largas | `app/routers/scraping.py` |
+
+### 🔴 No implementado (priorizado)
+
+| Control | Prioridad | Impacto |
+|---------|:---------:|---------|
+| `Strict-Transport-Security` (HSTS) | Alta | Seguridad de conexión |
+| Tokens hasheados en DB (SHA-256) | **Crítica** | Exposición de tokens si DB comprometida |
+| `ADMIN_TOKEN` débil | **Crítica** | Adivinación/fuerza bruta |
+| Sentry / monitoreo de errores | Alta | Sin alertas de ataque |
+| CAPTCHA en registro | Media | Bots automatizados |
+| JWT con expiración + refresh tokens | Media | Sesiones sin expiración |
+| Rate limiting por usuario (no solo IP) | Media | Abuso por usuario legítimo |
+| Auditoría de acciones admin | Media | Sin trazabilidad |
+| Cloudflare / WAF | Baja | DDoS |
+| Secrets vault (Doppler, AWS) | Baja | Gestión de secrets en prod |
+
+### 🎯 Plan de remediación — 3 cambios urgentes
+
+**Objetivo:** Máxima seguridad con mínimo riesgo operacional (0 usuarios activos en producción).
+
+| # | Cambio | Archivos a modificar |
+|---|--------|----------------------|
+| 1 | **Token de admin fuerte**: Generar `ADMIN_TOKEN` con `secrets.token_hex(32)` (64 chars). Agregar startup migration para actualizar token admin en DB si cambia la env var. | `app/main.py`, Render Dashboard |
+| 2 | **Tokens hasheados en DB**: Almacenar SHA-256(token) en lugar de token plano. Comparar hash vs hash en `get_current_user`, login, register, reset token. | `app/models.py`, `app/services/auth_service.py`, `app/routers/auth.py`, `app/routers/users.py`, `app/calculos/router.py` |
+| 3 | **Sentry**: Agregar `sentry-sdk>=2.0.0`, inicializar en `main.py` con `Sentry.init()`, agregar `SENTRY_DSN` a env vars. | `requirements.txt`, `app/main.py`, Render Dashboard |
+
+**Nota:** Con 0 usuarios, no se requiere migración de datos — los cambios son deploy-and-go.
+
+Creado por JM

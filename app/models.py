@@ -49,6 +49,7 @@ class Usuario(Base):
     tipo = Column(String(20), default="usuario", nullable=False)  # admin | usuario
     plan = Column(String(10), nullable=True)  # NULL=free, 'basico', 'plus'
     fecha_pago = Column(DateTime, nullable=True)
+    token_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 
