@@ -372,6 +372,9 @@ def startup():
         except Exception as e:
             logger.warning(f"[Migration] PostgreSQL token_expires_at check skipped: {e}")
 
+    # Ensure all model tables exist (idempotent - only creates missing ones)
+    Base.metadata.create_all(bind=engine)
+
     global _index_html, _index_mtime
     index_path = static_dir / "index.html"
     if index_path.exists():

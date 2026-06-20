@@ -9,7 +9,7 @@ load_dotenv()
 
 # Import app models for autogenerate support
 from app.database import Base, DATABASE_URL, IS_SQLITE
-from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo, RateLimit, CacheEntry
+from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo, RateLimit, CacheEntry, LoginCode
 
 target_metadata = Base.metadata
 
