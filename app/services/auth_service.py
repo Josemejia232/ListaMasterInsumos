@@ -19,7 +19,10 @@ def _token_valido(user: Usuario) -> bool:
         return True
     if user.token_expires_at is None:
         return True
-    return datetime.now(timezone.utc) < user.token_expires_at
+    exp = user.token_expires_at
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) < exp
 
 
 def get_current_user(request: Request, authorization: str = Header(None), db: Session = Depends(get_db)):
