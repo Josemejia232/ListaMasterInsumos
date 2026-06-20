@@ -5,11 +5,14 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 ## Funcionalidades
 
 ### Usuario Free
-- Registro gratuito con email
+- Registro gratuito con email (se genera token aleatorio)
+- Login con email + código (si olvida el token) o email + token (contraseña)
+- Sesión manejada con cookie HTTP-only firmada (HMAC-SHA256)
 - Acceso a 10 insumos por categoría de primer nivel (n01)
 - **3 cálculos por tipo** (mezclas, mampostería, anclajes) — luego se bloquea
 - Filtro por descripción o categoría
 - Vista pública con descripción, unidad, valor y proveedor
+- **Mi Token:** cambiar token/contraseña en cualquier momento
 
 ### Usuario Básico (Plan Activo)
 - Acceso **ilimitado a productos** (toda la base de datos)
@@ -84,14 +87,16 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 ## Stack Técnico
 
 - **Backend:** FastAPI + SQLAlchemy + Pydantic
-- **Base de datos:** PostgreSQL (Neon, producción) / SQLite (desarrollo)
+- **Base de datos:** PostgreSQL (producción) / SQLite (desarrollo)
 - **Frontend:** HTML + CSS + JavaScript vanilla (SPA) con responsive design
 - **Scraping:** BeautifulSoup4 + lxml + httpx
 - **Pagos:** Bold API (integration link)
+- **Email:** SMTP Gmail (App Password) para envío de códigos
+- **Sesiones:** Cookies HTTP-only firmadas con HMAC-SHA256 (sin dependencias externas)
 - **Fuente de datos:** Google Sheets (`gspread`)
 - **Hosting:** Render (servicio unificado — backend API + frontend SPA en el mismo `uvicorn`)
   - Frontend: servido como archivos estáticos desde el backend (`/app`, `/`)
-  - Backend: `uvicorn app.main:app` (FastAPI)
+  - Backend: `uvicorn app.main:app` (FastAPI) con `--proxy-headers`
 
 ## Landing Page
 
@@ -114,15 +119,22 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 - **Spinner de carga:** Indicador visual animado mientras se consultan datos del servidor
 - **Caché frontend:** `_calcCache` evita re-consultas innecesarias a la lista de mezclas/mampostería
 - **Login → Landing:** Link "Página de inicio" en el login para volver al marketing
+- **Login 3 tabs:** "Ingresar con token" (principal), "¿Olvidaste tu token?" (código email), "Usuario gratis" (registro)
+- **Mi Token:** Sección en sidebar para cambiar contraseña, token nunca se muestra completo
 
 ## Endpoints Principales
 
 ### Auth
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| POST | `/api/auth/register` | Registro de usuario free |
-| POST | `/api/auth/login` | Login con email + token |
-| GET | `/api/auth/me` | Datos del usuario actual (incluye `plan`) |
+| POST | `/api/auth/register` | Registro de usuario free (genera token aleatorio) |
+| POST | `/api/auth/login` | Login con email + token (contraseña) |
+| POST | `/api/auth/send-code` | Enviar código de 6 dígitos al email |
+| POST | `/api/auth/verify-code` | Verificar código + login automático |
+| POST | `/api/auth/logout` | Cerrar sesión (eliminar cookie) |
+| GET | `/api/auth/me` | Datos del usuario actual (vía cookie) |
+| GET | `/api/auth/mi-token` | Mostrar token enmascarado (`******XXXXXX`) |
+| PUT | `/api/auth/mi-token` | Cambiar token/contraseña (`{token: "nuevo"}`) |
 | GET | `/api/auth/planes` | Ver plan actual + opciones de upgrade |
 | POST | `/api/auth/comprar-plan` | Crear link de pago Bold (`{plan: "basico" \| "plus"}`) |
 | POST | `/api/auth/upgrade-plan` | Upgrade Básico → Plus (prorrateo automático) |
@@ -184,18 +196,22 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 | `DATABASE_URL` | URL de conexión a la base de datos | Si |
 | `SHEET_URL` | URL del Google Sheet con las URLs a scrapear | Si |
 | `ADMIN_EMAIL` | Email del administrador | Si |
-| `ADMIN_TOKEN` | Token del administrador (min 32 chars) | Si |
-| `DB_POOL_SIZE` | Tamaño del pool de conexiones | No |
-| `DB_MAX_OVERFLOW` | Conexiones extra máximas | No |
-| `DB_POOL_RECYCLE` | Tiempo de reciclaje de conexiones | No |
+| `ADMIN_TOKEN` | Token del administrador | Si |
+| `SMTP_HOST` | Servidor SMTP (ej: `smtp.gmail.com`) | Si (para códigos email) |
+| `SMTP_PORT` | Puerto SMTP (ej: `587`) | No |
+| `SMTP_USER` | Usuario SMTP (ej: `tu@gmail.com`) | Si (para códigos email) |
+| `SMTP_PASSWORD` | App Password SMTP (16 caracteres, sin espacios) | Si (para códigos email) |
+| `ALLOWED_ORIGINS` | Dominios permitidos para CORS (ej: `https://tudominio.com`) | Si |
+| `FORCE_HTTPS` | Forzar HTTPS (`true`/`false`) | No (default `true`) |
 | `BOLD_API_KEY` | API key de Bold | Si |
 | `BOLD_SECRET_KEY` | Secret key de Bold | Si |
 | `BOLD_BASE_URL` | URL base de la API de Bold | No |
-| `ALLOWED_ORIGINS` | Dominios permitidos para CORS (ej: `https://tudominio.com`) | Si |
-| `FORCE_HTTPS` | Forzar redirección HTTPS (`true`/`false`) | No |
-| `BOLD_WEBHOOK_IPS` | IPs permitidas para webhook Bold (ej: `1.2.3.4,5.6.7.8`) | No |
+| `BOLD_WEBHOOK_IPS` | IPs permitidas para webhook Bold | No |
+| `DB_POOL_SIZE` | Tamaño del pool de conexiones | No |
+| `DB_MAX_OVERFLOW` | Conexiones extra máximas | No |
+| `DB_POOL_RECYCLE` | Tiempo de reciclaje de conexiones | No |
 
-**Nota:** Nunca commitear archivos `.env` con credenciales reales. El archivo `config/.env.develop` fue eliminado del control de versiones y ahora está en `.gitignore`.
+**Nota:** Nunca commitear archivos `.env` con credenciales reales. Usar `config/.env.production` como referencia (sin valores reales).
 
 ## Planes y Límites
 
@@ -213,31 +229,36 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 
 | Mejora | Descripción | Archivo |
 |--------|-------------|---------|
+| **Cookies HTTP-only** | Sesión en cookie firmada (HMAC-SHA256), sin token expuesto al frontend | `services/session_service.py` |
+| **Cookie-first auth** | `get_current_user()` intenta cookie primero, Bearer como fallback | `services/auth_service.py` |
+| **Login con código email** | Código de 6 dígitos por SMTP (Gmail) para recuperación de acceso | `routers/auth.py`, `services/email_service.py` |
+| **Código temporal** | LoginCode expira en 5 min, un solo uso | `models.py` |
+| **Mi Token** | El usuario cambia su propia contraseña desde la UI | `routers/auth.py`, `index.html` |
+| **Tokens sin expiración** | `_token_valido()` siempre retorna True | `services/auth_service.py`, `calculos/router.py` |
+| **Tokens hasheados (SHA-256)** | Ningún token en texto plano en la DB | `services/auth_service.py`, `routers/auth.py` |
 | **CORS restrictivo** | Sin fallback a `*`; credenciales requieren origen explícito | `main.py` |
 | **SSRF prevention** | Validación de dominios permitidos en `/scrape/sync` | `main.py` |
-| **Rate limiting DB** | Límites por IP persistidos en base de datos (multi-worker) | `main.py` |
+| **Rate limiting DB** | Límites por IP persistidos (login 5/15min) | `routers/auth.py`, `dependencies.py` |
 | **Cache DB** | Caché de productos compartida entre workers vía BD | `main.py` |
-| **Tokens enmascarados** | Listado de usuarios solo muestra `****XXXX` | `main.py`, `index.html` |
-| **Reset token seguro** | Tokens de 64 chars; no se retornan en listados | `main.py` |
-| **Admin token min 32** | Validación en startup; rechaza tokens cortos | `main.py` |
+| **Tokens enmascarados** | Listado de usuarios solo muestra `****XXXX` | `schemas.py`, `index.html` |
 | **CSP headers** | Content-Security-Policy restrictivo | `main.py` |
-| **HTTPS redirect** | Redirección automática HTTP → HTTPS en producción | `main.py` |
+| **HTTPS redirect** | Redirección HTTP → HTTPS vía proxy-headers | `main.py`, `Procfile` |
+| **HSTS** | `Strict-Transport-Security` header | `main.py` |
+| **Global exception handler** | Captura errores no manejados, retorna 500 genérico | `main.py` |
 | **Webhook IP whitelist** | Validación de IPs de origen para webhook Bold | `main.py` |
-| **No logs de tokens** | Eliminación de logs de autenticación con prefijos de tokens | `main.py` |
-| **Auth por índice** | Búsqueda directa `Usuario.token == token` en lugar de full scan | `main.py` |
+| **IP block tras 5 fallos** | Bloqueo de IP por 15 min después de 5 intentos fallidos de login | `routers/auth.py` |
 | **Limpieza Git** | Historial de Git purgado de credenciales con `git filter-branch` | `repo` |
-| **Git cleanup script** | Script automatizado para sanitización de historial | `_git_cleanup.py` |
-| **Token validation GAS** | Validación de token en Apps Script (triggers + manual) | `syncPrices.gs` |
 
 ### Post-configuración obligatoria (Pendiente)
 1. ✅ ~~Eliminar credenciales de archivos de desarrollo~~ — Completado
 2. ✅ ~~Limpiar historial de Git~~ — Completado con `git filter-branch` (commits reescritos)
-3. ⚠️ **Rotar credenciales** en Bold (API key y Secret key) — **URGENTE**
-4. ⚠️ **Generar nuevo `ADMIN_TOKEN`** (mínimo 32 caracteres) — **URGENTE**
-5. Configurar `ALLOWED_ORIGINS` en Render con el dominio de producción.
-6. Configurar `BOLD_WEBHOOK_IPS` con las IPs oficiales de Bold (consultar documentación Bold).
-7. Actualizar celda I2 del Google Sheet con el nuevo admin token.
-8. Ejecutar `git push origin --force --all` para sincronizar el historial limpio con GitHub.
+3. ✅ ~~Tokens hasheados en DB~~ — Completado (SHA-256)
+4. ✅ ~~Token admin fuerte~~ — Completado (se sincroniza desde env var en startup)
+5. ✅ ~~Global exception handler~~ — Completado
+6. ✅ ~~HSTS~~ — Completado
+7. ⚠️ **Rotar credenciales** en Bold (API key y Secret key) — **URGENTE**
+8. Configurar `BOLD_WEBHOOK_IPS` con las IPs oficiales de Bold (consultar documentación Bold).
+9. Actualizar celda I2 del Google Sheet con el admin token.
 
 ### Notas sobre la limpieza de Git
 - **Commits eliminados del historial:** `64861c1`, `ff9e85d`, `bf08c29`, `129eed8` (contenían credenciales expuestas)
@@ -362,56 +383,62 @@ Evaluación realizada el 19/06/2026 comparando `SeguridadStack.md` contra el có
 
 | Control | Archivo |
 |---------|---------|
-| CORS restrictivo (sin `*`, dominios desde env) | `app/main.py:64-78` |
-| Validación de inputs (Pydantic v2 + domain allowlist) | `app/schemas.py`, `app/dependencies.py:98-115` |
+| Cookies HTTP-only firmadas (HMAC-SHA256) | `app/services/session_service.py` |
+| Auth cookie-first con fallback Bearer | `app/services/auth_service.py` |
+| Login con código email (SMTP Gmail) | `app/routers/auth.py`, `app/services/email_service.py` |
+| Tokens sin expiración | `app/services/auth_service.py`, `app/calculos/router.py` |
+| Tokens hasheados en DB (SHA-256) | `app/services/auth_service.py`, `app/routers/auth.py` |
+| CORS restrictivo (sin `*`, dominios desde env) | `app/main.py:74-81` |
+| Validación de inputs (Pydantic v2 + domain allowlist) | `app/schemas.py`, `app/dependencies.py` |
 | SQLAlchemy ORM (sin SQL injection) | Toda la app |
-| Rate limiting DB-backed (login 10/min, scrape 5/min) | `app/dependencies.py:27-74` |
-| CSP headers (`frame-ancestors`, `base-uri`, `form-action`) | `app/main.py:93-103` |
-| `X-Frame-Options: DENY` | `app/main.py:109` |
-| `X-Content-Type-Options: nosniff` | `app/main.py:108` |
-| `Referrer-Policy: strict-origin-when-cross-origin` | `app/main.py:110` |
-| `Permissions-Policy` | `app/main.py:111` |
-| HTTPS redirect (configurable via `FORCE_HTTPS`) | `app/main.py:82-90` |
-| Timing-safe comparison (`hmac.compare_digest`) | `app/services/auth_service.py:18` |
-| Token masking en respuestas (`****XXXX`) | `app/schemas.py:150-155` |
+| Rate limiting DB-backed (login 5/15min, scrape 5/min) | `app/routers/auth.py`, `app/dependencies.py` |
+| CSP headers (`frame-ancestors`, `base-uri`, `form-action`) | `app/main.py:108-118` |
+| `X-Frame-Options: DENY` | `app/main.py:124` |
+| `X-Content-Type-Options: nosniff` | `app/main.py:123` |
+| `Strict-Transport-Security` (HSTS) | `app/main.py:125` |
+| `Referrer-Policy: strict-origin-when-cross-origin` | `app/main.py:126` |
+| `Permissions-Policy` | `app/main.py:127` |
+| HTTPS redirect (configurable via `FORCE_HTTPS`) | `app/main.py:88-93` |
+| Global exception handler | `app/main.py:99-105` |
+| IP block tras 5 fallos (15 min) | `app/routers/auth.py:33-41` |
+| Timing-safe comparison (`hmac.compare_digest`) | `app/services/session_service.py:60` |
+| Token masking en respuestas (`****XXXX`) | `app/routers/auth.py:114` |
 | Admin endpoints protegidos (`require_admin`) | `app/routers/*.py` |
 | `.env` en `.gitignore` | `.gitignore:11-14` |
-| API keys solo en variables de entorno | `app/bold.py:11-13` |
+| API keys solo en variables de entorno | `app/bold.py`, Render Dashboard |
 
 ### 🟡 Parcialmente implementado o con riesgo bajo
 
 | Control | Riesgo | Archivo |
 |---------|--------|---------|
-| `'unsafe-inline'` en CSP para scripts/styles | XSS potencial | `app/main.py:94-95` |
-| Errores de Bold exponen `str(e)` al usuario | Fuga de info interna | `app/routers/auth.py:97,137` |
-| Sin global exception handler | Error 500 genérico sin control | `app/main.py` |
+| `'unsafe-inline'` en CSP para scripts/styles | XSS potencial | `app/main.py:110` |
+| Errores de Bold exponen `str(e)` al usuario | Fuga de info interna | `app/routers/auth.py` |
 | Background tasks sin colas dedicadas | Bloqueo en tareas largas | `app/routers/scraping.py` |
 
 ### 🔴 No implementado (priorizado)
 
 | Control | Prioridad | Impacto |
 |---------|:---------:|---------|
-| `Strict-Transport-Security` (HSTS) | Alta | Seguridad de conexión |
-| Tokens hasheados en DB (SHA-256) | **Crítica** | Exposición de tokens si DB comprometida |
-| `ADMIN_TOKEN` débil | **Crítica** | Adivinación/fuerza bruta |
 | Sentry / monitoreo de errores | Alta | Sin alertas de ataque |
 | CAPTCHA en registro | Media | Bots automatizados |
-| JWT con expiración + refresh tokens | Media | Sesiones sin expiración |
 | Rate limiting por usuario (no solo IP) | Media | Abuso por usuario legítimo |
 | Auditoría de acciones admin | Media | Sin trazabilidad |
 | Cloudflare / WAF | Baja | DDoS |
 | Secrets vault (Doppler, AWS) | Baja | Gestión de secrets en prod |
 
-### 🎯 Plan de remediación — 3 cambios urgentes
+### ✅ Completados del plan original
 
-**Objetivo:** Máxima seguridad con mínimo riesgo operacional (0 usuarios activos en producción).
+| # | Cambio | Estado |
+|---|--------|--------|
+| 1 | Token de admin fuerte (sincronizado desde env var) | ✅ |
+| 2 | Tokens hasheados en DB (SHA-256) | ✅ |
+| 3 | Global exception handler | ✅ |
+| 4 | HSTS header | ✅ |
+| 5 | Sesiones con cookie HTTP-only (sin JWT) | ✅ |
+| 6 | IP block tras 5 intentos fallidos | ✅ |
 
-| # | Cambio | Archivos a modificar |
-|---|--------|----------------------|
-| 1 | **Token de admin fuerte**: Generar `ADMIN_TOKEN` con `secrets.token_hex(32)` (64 chars). Agregar startup migration para actualizar token admin en DB si cambia la env var. | `app/main.py`, Render Dashboard |
-| 2 | **Tokens hasheados en DB**: Almacenar SHA-256(token) en lugar de token plano. Comparar hash vs hash en `get_current_user`, login, register, reset token. | `app/models.py`, `app/services/auth_service.py`, `app/routers/auth.py`, `app/routers/users.py`, `app/calculos/router.py` |
-| 3 | **Sentry**: Agregar `sentry-sdk>=2.0.0`, inicializar en `main.py` con `Sentry.init()`, agregar `SENTRY_DSN` a env vars. | `requirements.txt`, `app/main.py`, Render Dashboard |
+### Pendiente
 
-**Nota:** Con 0 usuarios, no se requiere migración de datos — los cambios son deploy-and-go.
+- **Sentry**: Agregar `sentry-sdk`, inicializar en `main.py`, agregar `SENTRY_DSN` a env vars de Render.
 
 Creado por JM
