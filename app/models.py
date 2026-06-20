@@ -77,6 +77,17 @@ class UsoCalculo(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class LoginCode(Base):
+    __tablename__ = "login_codes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(200), nullable=False, index=True)
+    code = Column(String(6), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    used = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
 class RateLimit(Base):
     __tablename__ = "rate_limits"
 

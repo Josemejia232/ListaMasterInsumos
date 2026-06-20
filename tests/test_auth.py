@@ -35,8 +35,7 @@ class TestRegister:
         assert data["tipo"] == "usuario"
         assert data["plan"] == "free"
         assert data["plan_activo"] is False
-        assert "token" in data
-        assert len(data["token"]) == 64  # 32 hex chars
+        assert data["token"] == ""  # token no se expone al frontend
     
     def test_register_duplicate_email(self, client, regular_user):
         response = client.post("/api/auth/register", json={

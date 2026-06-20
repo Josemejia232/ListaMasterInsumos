@@ -5,17 +5,21 @@ import secrets
 import hashlib
 import logging
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
-from app.models import Usuario, Pago, RateLimit
+from app.models import Usuario, Pago, RateLimit, LoginCode
 from app.services.auth_service import get_current_user, require_admin, _plan_info, _plan_activo
 from app.schemas import (
     LoginRequest, LoginResponse, PlanInfo, ComprarPlanRequest, ComprarPlanResponse,
     UpgradePlanResponse, UsuarioRequest, UsuarioResponse,
+    RequestCodeRequest, VerifyCodeRequest, VerifyCodeResponse,
+    MiTokenResponse, CambiarTokenRequest,
 )
 from app.dependencies import rate_limit_login, rate_limit_scrape
+from app.services.email_service import enviar_codigo
+from app.services.session_service import crear_cookie, eliminar_cookie
 from app import bold as bold_client
 
 logger = logging.getLogger("app")
@@ -51,8 +55,78 @@ def _clear_ip_block(ip: str, db: Session):
 TOKEN_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
 
 
+@router.post("/send-code")
+def send_code(req: RequestCodeRequest, request: Request, db: Session = Depends(get_db)):
+    rate_limit_login(request)
+    ip = request.client.host if request.client else "unknown"
+    _check_ip_blocked(ip, db)
+    code = f"{secrets.randbelow(1000000):06d}"
+    expires = datetime.now(timezone.utc) + timedelta(minutes=5)
+    db.query(LoginCode).filter(LoginCode.email == req.email, LoginCode.used == False).delete()
+    db.commit()
+    entry = LoginCode(email=req.email, code=code, expires_at=expires)
+    db.add(entry)
+    db.commit()
+    enviar_codigo(req.email, code)
+    return {"mensaje": "Si el email esta registrado, recibiras un codigo de acceso."}
+
+
+@router.post("/verify-code", response_model=VerifyCodeResponse)
+def verify_code(req: VerifyCodeRequest, request: Request, response: Response, db: Session = Depends(get_db)):
+    rate_limit_login(request)
+    ip = request.client.host if request.client else "unknown"
+    _check_ip_blocked(ip, db)
+    now = datetime.now(timezone.utc)
+    code_entry = db.query(LoginCode).filter(
+        LoginCode.email == req.email,
+        LoginCode.code == req.code,
+        LoginCode.used == False,
+        LoginCode.expires_at > now,
+    ).first()
+    if not code_entry:
+        _register_fail_ip(ip, db)
+        raise HTTPException(status_code=401, detail="Codigo invalido o expirado")
+    code_entry.used = True
+    db.commit()
+    user = db.query(Usuario).filter(Usuario.email == req.email, Usuario.activo == True).first()
+    if not user:
+        token = secrets.token_hex(32)
+        expires = now + timedelta(days=TOKEN_DAYS)
+        user = Usuario(email=req.email, token=_hash_token(token), activo=True, tipo="usuario", token_expires_at=expires)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        _clear_ip_block(ip, db)
+        crear_cookie(user.id, response)
+        info = _plan_info(user)
+        return VerifyCodeResponse(id=user.id, email=user.email, token="", tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    user.token_expires_at = now + timedelta(days=TOKEN_DAYS)
+    db.commit()
+    db.refresh(user)
+    _clear_ip_block(ip, db)
+    crear_cookie(user.id, response)
+    info = _plan_info(user)
+    return VerifyCodeResponse(id=user.id, email=user.email, token="", tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+
+
+@router.get("/mi-token")
+def mi_token(user: Usuario = Depends(get_current_user)):
+    masked = user.token[-6:] if user.token and len(user.token) > 6 else "******"
+    return {"token": f"******{masked}", "mensaje": "El token completo solo se muestra al cambiarlo."}
+
+
+@router.put("/mi-token")
+def cambiar_mi_token(req: CambiarTokenRequest, user: Usuario = Depends(get_current_user), db: Session = Depends(get_db)):
+    if req.token == user.token:
+        raise HTTPException(status_code=400, detail="El nuevo token debe ser diferente al actual")
+    user.token = _hash_token(req.token)
+    user.token_expires_at = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
+    db.commit()
+    return {"mensaje": "Token actualizado correctamente"}
+
+
 @router.post("/register", response_model=LoginResponse)
-def register(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+def register(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     rate_limit_login(request)
     existente = db.query(Usuario).filter(Usuario.email == req.email).first()
     if existente:
@@ -67,12 +141,13 @@ def register(req: LoginRequest, request: Request, db: Session = Depends(get_db))
     db.add(user)
     db.commit()
     db.refresh(user)
+    crear_cookie(user.id, response)
     info = _plan_info(user)
-    return LoginResponse(id=user.id, email=user.email, token=token, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    return LoginResponse(id=user.id, email=user.email, token="", tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
+def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     rate_limit_login(request)
     ip = request.client.host if request.client else "unknown"
     _check_ip_blocked(ip, db)
@@ -92,8 +167,15 @@ def login(req: LoginRequest, request: Request, db: Session = Depends(get_db)):
     user.token_expires_at = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
     db.commit()
     _clear_ip_block(ip, db)
+    crear_cookie(user.id, response)
     info = _plan_info(user)
-    return LoginResponse(id=user.id, email=user.email, tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+    return LoginResponse(id=user.id, email=user.email, token="", tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
+
+
+@router.post("/logout")
+def logout(response: Response):
+    eliminar_cookie(response)
+    return {"mensaje": "Sesion cerrada"}
 
 
 @router.get("/me", response_model=LoginResponse)

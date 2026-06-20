@@ -23,7 +23,7 @@ from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 from app.database import engine, get_db, SessionLocal, Base, IS_SQLITE
-from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo, RateLimit, CacheEntry
+from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo, RateLimit, CacheEntry, LoginCode
 from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
 from app import bold as bold_client
@@ -55,6 +55,7 @@ from app.routers import materiales as materiales_router
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("app")
 
 app = FastAPI(
@@ -76,6 +77,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["*"],
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=500)

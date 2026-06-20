@@ -19,20 +19,29 @@
     <h1>ListaMaster</h1>
     <div class="sub">Accede a tu lista de insumos actualizada</div>
     <div class="login-tabs-bar">
-      <div class="login-tab active" data-login="registro" onclick="cambiarLogin('registro',this)">Usuario gratis</div>
-      <div class="login-tab" data-login="token" onclick="cambiarLogin('token',this)">Ingresar con token</div>
+      <div class="login-tab active" data-login="code" onclick="cambiarLogin('code',this)">Código por email</div>
+      <div class="login-tab" data-login="free" onclick="cambiarLogin('free',this)">Usuario gratis</div>
     </div>
-    <div id="login-registro">
+    <div id="login-code-section">
+      <div class="login-info" id="code-step1">
+        Ingresa tu email para recibir un código de acceso.
+      </div>
+      <div id="code-step1-inputs">
+        <input type="email" id="code-email" placeholder="Tu correo electrónico" autocomplete="email" style="margin-bottom:.75rem">
+        <button class="btn" onclick="solicitarCodigo()">Enviar código</button>
+      </div>
+      <div id="code-step2" style="display:none">
+        <div id="code-msg" style="margin-bottom:.6rem;font-size:.8rem;color:var(--text2)">Revisa la consola del servidor para ver el código (modo prueba).</div>
+        <input type="text" id="code-input" placeholder="Código de 6 dígitos" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="margin-bottom:.75rem;letter-spacing:4px;text-align:center;font-size:1.2rem;font-weight:700">
+        <button class="btn" onclick="verificarCodigo()">Verificar código</button>
+      </div>
+    </div>
+    <div id="login-free-section" style="display:none">
       <div class="login-info">
         Regístrate gratis para acceder a la lista de insumos.
       </div>
-      <input type="email" id="guest-email" placeholder="Tu correo electrónico" autocomplete="email" style="margin-bottom:.75rem">
+      <input type="email" id="free-email" placeholder="Tu correo electrónico" autocomplete="email" style="margin-bottom:.75rem">
       <button class="btn" onclick="entrarInvitado()">Acceder gratis</button>
-    </div>
-    <div id="login-token-section" style="display:none">
-      <input type="email" id="login-email" placeholder="Correo electrónico" autocomplete="email">
-      <input type="password" id="login-token" placeholder="Token de acceso" autocomplete="off">
-      <button class="btn" onclick="login()">Ingresar</button>
     </div>
     <div class="error" id="login-error"></div>
     <div style="margin-top:1rem;text-align:center">
@@ -166,6 +175,24 @@
     </div>
 
     <!-- InsCal -->
+    <div class="section" id="section-mi-token">
+      <h2>Mi Token</h2>
+      <div class="section-card" style="padding:1rem">
+        <div style="margin-bottom:.8rem">
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">
+            Puedes usar tu token para acceder desde la API o desde otro dispositivo.
+            El token actual no se muestra por seguridad, pero puedes cambiarlo aquí.
+          </div>
+          <div id="mi-token-masked" style="font-size:.78rem;color:var(--text2);margin-bottom:.5rem"></div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <input type="text" id="mi-token-nuevo" placeholder="Nuevo token (mín. 6 caracteres)" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+            <button class="btn btn-sm btn-green" onclick="cambiarMiToken()">Guardar</button>
+          </div>
+          <div id="mi-token-msg" style="font-size:.75rem;margin-top:.3rem"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="section" id="section-insumos-calc">
       <h2>InsCal</h2>
       <p style="font-size:.8rem;color:var(--muted);margin-bottom:.5rem">Materiales de concretos, morteros y mamposterias. Al editar Vr Unit se actualiza en todos los calculos y se guarda en tu perfil.</p>

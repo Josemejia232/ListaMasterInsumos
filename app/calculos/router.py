@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timezone
@@ -10,6 +10,7 @@ from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverri
 from app.calculos.data import MEZCLAS, PRECIOS_FIJOS
 from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse
 from app.calculos.data_anclajes import calcular_anclaje
+from app.services.session_service import leer_cookie
 
 router = APIRouter(prefix="/api/calculos", tags=["Cálculos"])
 
@@ -82,7 +83,20 @@ def _token_valido(user: Usuario) -> bool:
     return datetime.now(timezone.utc) < user.token_expires_at
 
 
-def _get_user(authorization: str = Header(None), db: Session = Depends(get_db)):
+def _get_user(request: Request, authorization: str = Header(None), db: Session = Depends(get_db)):
+    # 1. Intentar con cookie de sesión
+    if request:
+        cookie = request.cookies.get("session")
+        if cookie:
+            payload = leer_cookie(cookie)
+            if payload:
+                user = db.query(Usuario).filter(
+                    Usuario.id == payload["uid"],
+                    Usuario.activo == True
+                ).first()
+                if user and _token_valido(user):
+                    return user
+    # 2. Fallback: Bearer token (para API/programático)
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token requerido")
     token = authorization[7:]

@@ -210,6 +210,46 @@ class UpgradePlanResponse(BaseModel):
     credito_basico: float = 0.0
     status: str
 
+class RequestCodeRequest(BaseModel):
+    email: str
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Email invalido")
+        return v.strip().lower()
+
+class VerifyCodeRequest(BaseModel):
+    email: str
+    code: str
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v):
+        if "@" not in v or "." not in v.split("@")[-1]:
+            raise ValueError("Email invalido")
+        return v.strip().lower()
+
+class VerifyCodeResponse(BaseModel):
+    id: int
+    email: str
+    token: str
+    tipo: str
+    plan: str | None = None
+    fecha_pago: datetime | None = None
+    plan_activo: bool = False
+
+class MiTokenResponse(BaseModel):
+    token: str
+
+class CambiarTokenRequest(BaseModel):
+    token: str
+    @field_validator("token")
+    @classmethod
+    def validate_token(cls, v):
+        if len(v) < 6:
+            raise ValueError("El token debe tener al menos 6 caracteres")
+        return v
+
 class PlanInfo(BaseModel):
     plan: str
     activo: bool

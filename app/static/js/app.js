@@ -2,8 +2,8 @@
 window.cambiarLogin = function(modo, el){
   document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
-  document.getElementById('login-registro').style.display = modo==='registro' ? 'block' : 'none';
-  document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
+  document.getElementById('login-code-section').style.display = modo==='code' ? 'block' : 'none';
+  document.getElementById('login-free-section').style.display = modo==='free' ? 'block' : 'none';
   document.getElementById('login-error').textContent = '';
 };
 
@@ -59,26 +59,58 @@ function escapeHtml(s){
 }
 
 // ─── Auth ──────────────────────────────────────────────
-async function entrarInvitado(){
-  var email = document.getElementById('guest-email').value.trim();
-  if(!email){ document.getElementById('login-error').textContent='Regístrate gratis para acceder'; return; }
+async function solicitarCodigo(){
+  var email = document.getElementById('code-email').value.trim();
+  if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
   try {
-    var check = await fetch(API+'/api/check-email?email='+encodeURIComponent(email));
-    var cd = await check.json();
-    if(cd.registrado){
-      document.getElementById('login-error').textContent='Este email ya tiene token. Usa la pestaña "Ingresar con token".';
+    var r = await fetch(API+'/api/auth/send-code', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
+    if(!r.ok){
+      var err = await r.json().catch(function(){ return {detail:'Error'}; });
+      document.getElementById('login-error').textContent = err.detail || 'Error al enviar codigo';
       return;
     }
-    var reg = await fetch(API+'/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email, token:''})});
-    if(!reg.ok){ document.getElementById('login-error').textContent='Error al registrar'; return; }
-    var u = await reg.json();
-    _user = u; _viewMode = 'adjusted';
-    localStorage.setItem('user', JSON.stringify(u));
-    localStorage.setItem('auth_token', u.token || '');
-    initGuest(email);
+    document.getElementById('code-step1-inputs').style.display = 'none';
+    document.getElementById('code-step2').style.display = 'block';
+    document.getElementById('login-error').textContent = '';
   } catch(e){
-    _user = null; _viewMode = 'adjusted';
-    initGuest(email);
+    document.getElementById('login-error').textContent = 'Error de conexion';
+  }
+}
+
+async function verificarCodigo(){
+  var email = document.getElementById('code-email').value.trim();
+  var code = document.getElementById('code-input').value.trim();
+  if(!code || code.length < 6){ document.getElementById('login-error').textContent='Ingresa el codigo de 6 digitos'; return; }
+  try {
+    var r = await fetch(API+'/api/auth/verify-code', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, code})});
+    if(!r.ok){
+      var err = await r.json().catch(function(){ return {detail:'Codigo invalido'}; });
+      document.getElementById('login-error').textContent = err.detail || 'Codigo invalido';
+      return;
+    }
+    var u = await r.json();
+    _user = u; _viewMode = 'adjusted';
+    initApp();
+  } catch(e){
+    document.getElementById('login-error').textContent = 'Error de conexion';
+  }
+}
+
+async function entrarInvitado(){
+  var email = document.getElementById('free-email').value.trim();
+  if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
+  try {
+    var r = await fetch(API+'/api/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email:email, token:''})});
+    if(!r.ok){
+      var err = await r.json().catch(function(){ return {detail:'Error'}; });
+      document.getElementById('login-error').textContent = err.detail || 'Error al registrar';
+      return;
+    }
+    var u = await r.json();
+    _user = u; _viewMode = 'adjusted';
+    initApp();
+  } catch(e){
+    document.getElementById('login-error').textContent = 'Error de conexion';
   }
 }
 function initGuest(email){
@@ -90,18 +122,10 @@ function initGuest(email){
   buildSidebar(); cargarVerInsumos();
   irA('ver-insumos', document.querySelector('[data-section="ver-insumos"]'));
 }
-function login(){
-  const email = document.getElementById('login-email').value.trim();
-  const token = document.getElementById('login-token').value.trim();
-  if(!email || !token){ document.getElementById('login-error').textContent='Completa todos los campos'; return; }
-  fetch(API+'/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token})})
-  .then(r=>{ if(!r.ok){ document.getElementById('login-error').textContent='Credenciales inválidas'; throw new Error('fail'); } return r.json(); })
-  .then(u=>{ _user=u; localStorage.setItem('user', JSON.stringify(u)); localStorage.setItem('auth_token', token); initApp(); })
-  .catch(()=>{});
-}
 function logout(){
   _user = null; _viewMode = null;
-  localStorage.removeItem('user'); localStorage.removeItem('auth_token');
+  localStorage.removeItem('user');
+  fetch(API+'/api/auth/logout', {method:'POST', credentials:'include'}).catch(function(){});
   document.getElementById('login-wrap').style.display='flex';
   document.getElementById('sidebar').style.display='none';
   document.querySelector('.content').style.display='none';
@@ -120,6 +144,7 @@ function buildSidebar(){
     items.push({id:'usuarios', icon:'&#128101;', text:'Usuarios'});
     items.push({id:'pagos', icon:'&#128179;', text:'Pagos'});
   }
+  items.push({id:'mi-token', icon:'&#128273;', text:'Mi Token'});
   items.push({label:'INSUMOS', header:true});
   items.push({id:'ver-insumos', icon:'&#9632;', text:'Insumos', mode:'adjusted'});
   items.push({label:'CÁLCULOS', header:true});
@@ -143,12 +168,13 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
+  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
   if(section==='usuarios') cargarUsuarios();
   if(section==='pagos') cargarPagos();
+  if(section==='mi-token') cargarMiToken();
   if(section==='insumos-calc') cargarInsumosCalc();
   if(section==='mezclas') cargarSelectMezclas();
   if(section==='mamposteria') cargarSelectMamposteria();
@@ -173,12 +199,11 @@ function initApp(){
   irA('ver-insumos', document.querySelectorAll('[data-section="ver-insumos"]')[document.querySelectorAll('[data-section="ver-insumos"]').length-1]);
 }
 (function(){
-  const saved = localStorage.getItem('user');
-  const savedToken = localStorage.getItem('auth_token');
+  var saved = localStorage.getItem('user');
   if(saved){
     try{ _user = JSON.parse(saved); }catch(e){ _user = null; }
-    if(_user && savedToken){
-      fetch(API+'/api/auth/me', {headers:{'Authorization':'Bearer '+savedToken}})
+    if(_user){
+      fetch(API+'/api/auth/me', {credentials:'include'})
         .then(r => { if(r.ok) return r.json().then(u => { _user = u; initApp(); }); logout(); })
         .catch(() => logout());
     } else { logout(); }
@@ -213,7 +238,39 @@ function descripcionAjustada(desc, id, ajustada){
   const idx = ((id * 7919 + 12345) % 233280) % sufijos.length;
   return desc + sufijos[idx];
 }
-const $auth = () => { var t = localStorage.getItem('auth_token'); return t ? 'Bearer '+t : ''; };
+const $auth = () => '';
+
+// ─── Mi Token ──────────────────────────────────────────
+async function cargarMiToken(){
+  try {
+    var r = await apiFetch('/api/auth/mi-token');
+    if(!r.ok) return;
+    var data = await r.json();
+    document.getElementById('mi-token-masked').textContent = 'Token actual: ' + (data.token || '******');
+  } catch(e){}
+}
+
+async function cambiarMiToken(){
+  var nuevo = document.getElementById('mi-token-nuevo').value.trim();
+  var msg = document.getElementById('mi-token-msg');
+  if(!nuevo || nuevo.length < 6){ msg.textContent = 'Minimo 6 caracteres'; msg.style.color = '#e63946'; return; }
+  try {
+    var r = await apiFetch('/api/auth/mi-token', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({token: nuevo})});
+    if(!r.ok){
+      var err = await r.json().catch(function(){ return {detail:'Error'}; });
+      msg.textContent = err.detail || 'Error al cambiar token';
+      msg.style.color = '#e63946';
+      return;
+    }
+    document.getElementById('mi-token-nuevo').value = '';
+    msg.textContent = 'Token actualizado correctamente';
+    msg.style.color = 'var(--green)';
+    setTimeout(function(){ msg.textContent = ''; }, 3000);
+  } catch(e){
+    msg.textContent = 'Error de conexion';
+    msg.style.color = '#e63946';
+  }
+}
 
 // ─── Cálculos ──────────────────────────────────────────
 const _CONV = {
@@ -686,10 +743,9 @@ async function calcularAnclajes(){
 async function apiFetch(url, opts){
   opts = opts || {};
   opts.headers = opts.headers || {};
-  var t = localStorage.getItem('auth_token');
-  if(t) opts.headers['Authorization'] = 'Bearer '+t;
+  opts.credentials = 'include';
   var r = await fetch(API+url, opts);
-  if(t && r.status === 401){ logout(); throw new Error('Sesion expirada'); }
+  if(r.status === 401){ logout(); throw new Error('Sesion expirada'); }
   return r;
 }
 

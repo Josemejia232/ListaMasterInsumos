@@ -3,10 +3,11 @@ import hashlib
 import hmac
 import os
 from datetime import datetime, timezone
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Usuario
+from app.services.session_service import leer_cookie
 
 
 def _hash_token(token: str) -> str:
@@ -21,26 +22,38 @@ def _token_valido(user: Usuario) -> bool:
     return datetime.now(timezone.utc) < user.token_expires_at
 
 
-def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Token requerido")
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Formato invalido")
-    token = authorization[7:]
-    token_hash = _hash_token(token)
-    user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token_hash).first()
-    if user:
-        if _token_valido(user):
-            return user
-        raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
-    user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token).first()
-    if user:
-        user.token = token_hash
-        db.commit()
-        if _token_valido(user):
-            return user
-        raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
-    raise HTTPException(status_code=401, detail="Token invalido o usuario inactivo")
+def get_current_user(request: Request, authorization: str = Header(None), db: Session = Depends(get_db)):
+    # 1. Intentar con cookie de sesión
+    if request:
+        cookie = request.cookies.get("session")
+        if cookie:
+            payload = leer_cookie(cookie)
+            if payload:
+                user = db.query(Usuario).filter(
+                    Usuario.id == payload["uid"],
+                    Usuario.activo == True
+                ).first()
+                if user and _token_valido(user):
+                    return user
+    # 2. Fallback: Bearer token (para API/programático)
+    if authorization:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Formato invalido")
+        token = authorization[7:]
+        token_hash = _hash_token(token)
+        user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token_hash).first()
+        if user:
+            if _token_valido(user):
+                return user
+            raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
+        user = db.query(Usuario).filter(Usuario.activo == True, Usuario.token == token).first()
+        if user:
+            user.token = token_hash
+            db.commit()
+            if _token_valido(user):
+                return user
+            raise HTTPException(status_code=401, detail="Token expirado. Inicia sesion nuevamente.")
+    raise HTTPException(status_code=401, detail="No autenticado")
 
 
 def require_admin(user: Usuario = Depends(get_current_user)):
