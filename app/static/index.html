@@ -19,10 +19,16 @@
     <h1>ListaMaster</h1>
     <div class="sub">Accede a tu lista de insumos actualizada</div>
     <div class="login-tabs-bar">
-      <div class="login-tab active" data-login="code" onclick="cambiarLogin('code',this)">Código por email</div>
+      <div class="login-tab active" data-login="token" onclick="cambiarLogin('token',this)">Ingresar con token</div>
+      <div class="login-tab" data-login="code" onclick="cambiarLogin('code',this)">¿Olvidaste tu token?</div>
       <div class="login-tab" data-login="free" onclick="cambiarLogin('free',this)">Usuario gratis</div>
     </div>
-    <div id="login-code-section">
+    <div id="login-token-section">
+      <input type="email" id="login-email" placeholder="Correo electrónico" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Tu token (contraseña)" autocomplete="current-password">
+      <button class="btn" onclick="login()">Ingresar</button>
+    </div>
+    <div id="login-code-section" style="display:none">
       <div class="login-info" id="code-step1">
         Ingresa tu email para recibir un código de acceso.
       </div>

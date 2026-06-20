@@ -2,6 +2,7 @@
 window.cambiarLogin = function(modo, el){
   document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
   if(el) el.classList.add('active');
+  document.getElementById('login-token-section').style.display = modo==='token' ? 'block' : 'none';
   document.getElementById('login-code-section').style.display = modo==='code' ? 'block' : 'none';
   document.getElementById('login-free-section').style.display = modo==='free' ? 'block' : 'none';
   document.getElementById('login-error').textContent = '';
@@ -59,6 +60,25 @@ function escapeHtml(s){
 }
 
 // ─── Auth ──────────────────────────────────────────────
+async function login(){
+  var email = document.getElementById('login-email').value.trim();
+  var token = document.getElementById('login-password').value.trim();
+  if(!email || !token){ document.getElementById('login-error').textContent='Completa todos los campos'; return; }
+  try {
+    var r = await fetch(API+'/api/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,token})});
+    if(!r.ok){
+      var err = await r.json().catch(function(){ return {detail:'Credenciales invalidas'}; });
+      document.getElementById('login-error').textContent = err.detail || 'Credenciales invalidas';
+      return;
+    }
+    var u = await r.json();
+    _user = u; _viewMode = 'adjusted';
+    initApp();
+  } catch(e){
+    document.getElementById('login-error').textContent = 'Error de conexion';
+  }
+}
+
 async function solicitarCodigo(){
   var email = document.getElementById('code-email').value.trim();
   if(!email){ document.getElementById('login-error').textContent='Ingresa tu email'; return; }
