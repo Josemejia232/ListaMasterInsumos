@@ -1,5 +1,4 @@
 """Router de autenticación y usuarios."""
-import os
 import time
 import secrets
 import hashlib
@@ -52,9 +51,6 @@ def _clear_ip_block(ip: str, db: Session):
     db.commit()
 
 
-TOKEN_DAYS = int(os.getenv("TOKEN_EXPIRE_DAYS", "30"))
-
-
 @router.post("/send-code")
 def send_code(req: RequestCodeRequest, request: Request, db: Session = Depends(get_db)):
     rate_limit_login(request)
@@ -91,8 +87,7 @@ def verify_code(req: VerifyCodeRequest, request: Request, response: Response, db
     user = db.query(Usuario).filter(Usuario.email == req.email, Usuario.activo == True).first()
     if not user:
         token = secrets.token_hex(32)
-        expires = now + timedelta(days=TOKEN_DAYS)
-        user = Usuario(email=req.email, token=_hash_token(token), activo=True, tipo="usuario", token_expires_at=expires)
+        user = Usuario(email=req.email, token=_hash_token(token), activo=True, tipo="usuario")
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -100,7 +95,6 @@ def verify_code(req: VerifyCodeRequest, request: Request, response: Response, db
         crear_cookie(user.id, response)
         info = _plan_info(user)
         return VerifyCodeResponse(id=user.id, email=user.email, token="", tipo=user.tipo, plan=info["plan"], fecha_pago=user.fecha_pago, plan_activo=_plan_activo(user))
-    user.token_expires_at = now + timedelta(days=TOKEN_DAYS)
     db.commit()
     db.refresh(user)
     _clear_ip_block(ip, db)
@@ -120,7 +114,6 @@ def cambiar_mi_token(req: CambiarTokenRequest, user: Usuario = Depends(get_curre
     if req.token == user.token:
         raise HTTPException(status_code=400, detail="El nuevo token debe ser diferente al actual")
     user.token = _hash_token(req.token)
-    user.token_expires_at = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
     db.commit()
     return {"mensaje": "Token actualizado correctamente"}
 
@@ -132,11 +125,9 @@ def register(req: LoginRequest, request: Request, response: Response, db: Sessio
     if existente:
         raise HTTPException(status_code=400, detail="Email ya registrado. Contacta al administrador.")
     token = secrets.token_hex(32)
-    expires = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
     user = Usuario(
         email=req.email, token=_hash_token(token),
         activo=True, tipo="usuario",
-        token_expires_at=expires,
     )
     db.add(user)
     db.commit()
@@ -164,7 +155,6 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         raise HTTPException(status_code=401, detail="Credenciales invalidas")
     if user.token != token_hash:
         user.token = token_hash
-    user.token_expires_at = datetime.now(timezone.utc) + timedelta(days=TOKEN_DAYS)
     db.commit()
     _clear_ip_block(ip, db)
     crear_cookie(user.id, response)
