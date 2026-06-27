@@ -149,3 +149,34 @@ class YesoResponse(BaseModel):
     con_lana: bool
     materiales: list[MaterialYeso]
     total: float
+
+
+class YesoUnaCaraRequest(BaseModel):
+    h: float
+    l: float
+    e: float = 0.6
+    desp: float = 0.05
+    factor_torn: int = 15
+    kg_m2_masilla: float = 0.5
+    n_manos_masilla: int = 2
+    rendimiento_m2_dia: float = 12
+    n_operarios: int = 2
+    jornal: float = 120000
+    precios: dict[str, float] | None = None
+
+
+class MaterialYesoUnaCara(BaseModel):
+    nombre: str
+    unidad: str
+    cantidad: float
+    vr_unitario: float
+    vr_total: float
+
+
+class YesoUnaCaraResponse(BaseModel):
+    h: float
+    l: float
+    area_m2: float
+    e: float
+    materiales: list[MaterialYesoUnaCara]
+    total: float
