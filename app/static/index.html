@@ -220,169 +220,177 @@
     </div>
 
     <!-- Cálculos -->
-    <div class="section" id="section-mezclas">
-      <h2>Mezclas</h2>
-      <div class="form-row">
-        <select id="mez-tipo" onchange="cargarSelectMezclas()" style="flex:0 0 150px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-          <option value="">Todas</option>
-          <option value="concreto">Concretos</option>
-          <option value="mortero">Morteros</option>
-        </select>
-        <select id="mez-select" onchange="cargarMezcla()" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-          <option value="">Seleccione una mezcla...</option>
-        </select>
-        <input type="number" id="mez-vol" placeholder="Ingresa la cantidad" min="0.1" step="0.1" oninput="_renderVolumen('mez')" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        <span style="display:flex;align-items:center;color:var(--text2);font-weight:600;font-size:.88rem;padding-right:.2rem">m³</span>
+    <div class="section" id="section-calculadora">
+      <div style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none" onclick="toggleCalculos()">
+        <span id="calculos-toggle" style="font-size:.7rem;color:var(--text2);transition:transform .15s">▶</span>
+        <h2 style="margin:0;flex:1;font-size:1rem">Cálculos</h2>
       </div>
-      <div id="mez-card-wrap" style="margin-top:.5rem"></div>
-      <div id="mez-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
+      <div id="calculos-body" style="display:none;margin-top:.8rem">
+        <div class="section" id="section-mezclas">
+          <h2>Mezclas</h2>
+          <div class="form-row">
+            <select id="mez-tipo" onchange="cargarSelectMezclas()" style="flex:0 0 150px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+              <option value="">Todas</option>
+              <option value="concreto">Concretos</option>
+              <option value="mortero">Morteros</option>
+            </select>
+            <select id="mez-select" onchange="cargarMezcla()" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+              <option value="">Seleccione una mezcla...</option>
+            </select>
+            <input type="number" id="mez-vol" placeholder="Ingresa la cantidad" min="0.1" step="0.1" oninput="_renderVolumen('mez')" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            <span style="display:flex;align-items:center;color:var(--text2);font-weight:600;font-size:.88rem;padding-right:.2rem">m³</span>
+          </div>
+          <div id="mez-card-wrap" style="margin-top:.5rem"></div>
+          <div id="mez-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-    <div class="section" id="section-mamposteria">
-      <h2>Mampostería</h2>
-      <div class="form-row">
-        <select id="mamp-cat" onchange="cargarSelectMamposteria()" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-          <option value="">Todas las categorías</option>
-          <option value="Adoquines">Adoquines</option>
-          <option value="Estructurales">Estructurales</option>
-          <option value="Fachadas">Fachadas</option>
-          <option value="Divisorios">Divisorios</option>
-          <option value="Placafacil">Placafácil</option>
-        </select>
-        <select id="mamp-select" onchange="cargarMamposteria()" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-          <option value="">Seleccione un tipo de muro...</option>
-        </select>
-        <input type="number" id="mamp-vol" placeholder="Ingresa la cantidad" min="0.1" step="0.1" oninput="_renderVolumen('mamp')" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        <span style="display:flex;align-items:center;color:var(--text2);font-weight:600;font-size:.88rem;padding-right:.2rem">m²</span>
-      </div>
-      <div id="mamp-card-wrap" style="margin-top:.5rem"></div>
-      <div id="mamp-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
+        <div class="section" id="section-mamposteria">
+          <h2>Mampostería</h2>
+          <div class="form-row">
+            <select id="mamp-cat" onchange="cargarSelectMamposteria()" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+              <option value="">Todas las categorías</option>
+              <option value="Adoquines">Adoquines</option>
+              <option value="Estructurales">Estructurales</option>
+              <option value="Fachadas">Fachadas</option>
+              <option value="Divisorios">Divisorios</option>
+              <option value="Placafacil">Placafácil</option>
+            </select>
+            <select id="mamp-select" onchange="cargarMamposteria()" style="flex:1;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+              <option value="">Seleccione un tipo de muro...</option>
+            </select>
+            <input type="number" id="mamp-vol" placeholder="Ingresa la cantidad" min="0.1" step="0.1" oninput="_renderVolumen('mamp')" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            <span style="display:flex;align-items:center;color:var(--text2);font-weight:600;font-size:.88rem;padding-right:.2rem">m²</span>
+          </div>
+          <div id="mamp-card-wrap" style="margin-top:.5rem"></div>
+          <div id="mamp-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-    <div class="section" id="section-anclajes">
-      <h2>Anclajes Químicos</h2>
-      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">ø Varilla (mm)
-          <select id="anc-diam" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="10" selected>10</option>
-            <option value="12">12</option>
-            <option value="14">14</option>
-            <option value="16">16</option>
-            <option value="18">18</option>
-            <option value="20">20</option>
-            <option value="22">22</option>
-            <option value="25">25</option>
-            <option value="28">28</option>
-            <option value="30">30</option>
-            <option value="32">32</option>
-          </select>
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Profundidad (mm)
-          <input type="number" id="anc-profundidad" value="100" min="20" max="500" step="5" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Cant. Puntos
-          <input type="number" id="anc-cant" placeholder="Ingresa la cantidad" min="1" step="1" style="width:70px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <select id="anc-base" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-          <option value="concreto">Concreto</option>
-          <option value="ladrillo_macizo">Ladrillo Macizo</option>
-          <option value="piedra">Piedra</option>
-        </select>
-        <button onclick="calcularAnclajes()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-      </div>
-      <div id="anc-card-wrap" style="margin-top:.5rem"></div>
-      <div id="anc-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
+        <div class="section" id="section-anclajes">
+          <h2>Anclajes Químicos</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">ø Varilla (mm)
+              <select id="anc-diam" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="10" selected>10</option>
+                <option value="12">12</option>
+                <option value="14">14</option>
+                <option value="16">16</option>
+                <option value="18">18</option>
+                <option value="20">20</option>
+                <option value="22">22</option>
+                <option value="25">25</option>
+                <option value="28">28</option>
+                <option value="30">30</option>
+                <option value="32">32</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Profundidad (mm)
+              <input type="number" id="anc-profundidad" value="100" min="20" max="500" step="5" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Cant. Puntos
+              <input type="number" id="anc-cant" placeholder="Ingresa la cantidad" min="1" step="1" style="width:70px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <select id="anc-base" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+              <option value="concreto">Concreto</option>
+              <option value="ladrillo_macizo">Ladrillo Macizo</option>
+              <option value="piedra">Piedra</option>
+            </select>
+            <button onclick="calcularAnclajes()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+          </div>
+          <div id="anc-card-wrap" style="margin-top:.5rem"></div>
+          <div id="anc-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-    <div class="section" id="section-boquilla">
-      <h2>Boquilla</h2>
-      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Formato
-          <select id="boq-formato" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-            <option value="10x10x0.9">10×10×0.9</option>
-            <option value="20x20x0.9">20×20×0.9</option>
-            <option value="30x30x0.9">30×30×0.9</option>
-            <option value="30x60x0.9">30×60×0.9</option>
-            <option value="40x40x0.9">40×40×0.9</option>
-          </select>
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho de Junta
-          <select id="boq-ancho" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
-            <option value="2">2 mm</option>
-            <option value="3">3 mm</option>
-            <option value="4">4 mm</option>
-            <option value="5">5 mm</option>
-          </select>
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Área (m²)
-          <input type="number" id="boq-area" placeholder="Ingresa los m²" min="0.1" step="0.1" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <button onclick="calcularBoquilla()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-      </div>
-      <div id="boq-card-wrap" style="margin-top:.5rem"></div>
-      <div id="boq-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
+        <div class="section" id="section-boquilla">
+          <h2>Boquilla</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Formato
+              <select id="boq-formato" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+                <option value="10x10x0.9">10×10×0.9</option>
+                <option value="20x20x0.9">20×20×0.9</option>
+                <option value="30x30x0.9">30×30×0.9</option>
+                <option value="30x60x0.9">30×60×0.9</option>
+                <option value="40x40x0.9">40×40×0.9</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho de Junta
+              <select id="boq-ancho" style="background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem">
+                <option value="2">2 mm</option>
+                <option value="3">3 mm</option>
+                <option value="4">4 mm</option>
+                <option value="5">5 mm</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Área (m²)
+              <input type="number" id="boq-area" placeholder="Ingresa los m²" min="0.1" step="0.1" style="width:90px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <button onclick="calcularBoquilla()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+          </div>
+          <div id="boq-card-wrap" style="margin-top:.5rem"></div>
+          <div id="boq-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-    <div class="section" id="section-yeso">
-      <h2>Muro Doble Cara en Yeso</h2>
-      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
-          <input type="number" id="yeso-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
-          <input type="number" id="yeso-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
-          <input type="number" id="yeso-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
-          <input type="checkbox" id="yeso-lana" style="width:16px;height:16px"> Lana mineral
-        </label>
-        <button onclick="calcularYeso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-        <button onclick="abrirModalYeso()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">⚙️ Parámetros</button>
-      </div>
-      <div id="yeso-card-wrap" style="margin-top:.5rem"></div>
-      <div id="yeso-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
+        <div class="section" id="section-yeso">
+          <h2>Muro Doble Cara en Yeso</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
+              <input type="number" id="yeso-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
+              <input type="number" id="yeso-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
+              <input type="number" id="yeso-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
+              <input type="checkbox" id="yeso-lana" style="width:16px;height:16px"> Lana mineral
+            </label>
+            <button onclick="calcularYeso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+            <button onclick="abrirModalYeso()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">⚙️ Parámetros</button>
+          </div>
+          <div id="yeso-card-wrap" style="margin-top:.5rem"></div>
+          <div id="yeso-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-    <div class="section" id="section-cieloraso">
-      <h2>Cielo Raso en Lámina de Yeso</h2>
-      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho (m)
-          <input type="number" id="cr-an" placeholder="Ej: 3" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Largo (m)
-          <input type="number" id="cr-la" placeholder="Ej: 5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
-          <input type="checkbox" id="cr-varilla" style="width:16px;height:16px"> Varilla roscada
-        </label>
-        <button onclick="calcularCieloRaso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-        <button onclick="abrirModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
-      </div>
-      <div id="cr-card-wrap" style="margin-top:.5rem"></div>
-      <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
+        <div class="section" id="section-cieloraso">
+          <h2>Cielo Raso en Lámina de Yeso</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho (m)
+              <input type="number" id="cr-an" placeholder="Ej: 3" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Largo (m)
+              <input type="number" id="cr-la" placeholder="Ej: 5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
+              <input type="checkbox" id="cr-varilla" style="width:16px;height:16px"> Varilla roscada
+            </label>
+            <button onclick="calcularCieloRaso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+            <button onclick="abrirModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
+          </div>
+          <div id="cr-card-wrap" style="margin-top:.5rem"></div>
+          <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-    <div class="section" id="section-yesouc">
-      <h2>Muro Una Cara en Yeso</h2>
-      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
-          <input type="number" id="yesouc-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
-          <input type="number" id="yesouc-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
-          <input type="number" id="yesouc-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-        </label>
-        <button onclick="calcularYesoUnaCara()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-        <button onclick="abrirModalYesoUC()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
+        <div class="section" id="section-yesouc">
+          <h2>Muro Una Cara en Yeso</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
+              <input type="number" id="yesouc-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
+              <input type="number" id="yesouc-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
+              <input type="number" id="yesouc-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <button onclick="calcularYesoUnaCara()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+            <button onclick="abrirModalYesoUC()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
+          </div>
+          <div id="yesouc-card-wrap" style="margin-top:.5rem"></div>
+          <div id="yesouc-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
       </div>
-      <div id="yesouc-card-wrap" style="margin-top:.5rem"></div>
-      <div id="yesouc-result-wrap" style="margin-top:.5rem;display:none"></div>
     </div>
 
   </div>

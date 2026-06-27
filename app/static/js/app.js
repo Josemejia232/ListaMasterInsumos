@@ -51,6 +51,27 @@ function _showLoading(elId){
 function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
 var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
 
+// ─── Calculos collapsible ────────────────────────────
+function toggleCalculos(){
+  const body = document.getElementById('calculos-body');
+  const toggle = document.getElementById('calculos-toggle');
+  if(!body || !toggle) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  toggle.textContent = isOpen ? '▶' : '▼';
+  try { localStorage.setItem('lm_calculos_open', isOpen ? '0' : '1'); } catch(e){}
+}
+(function(){
+  try {
+    if(localStorage.getItem('lm_calculos_open') === '1'){
+      const body = document.getElementById('calculos-body');
+      const toggle = document.getElementById('calculos-toggle');
+      if(body) body.style.display = '';
+      if(toggle) toggle.textContent = '▼';
+    }
+  } catch(e){}
+})();
+
 // ─── XSS Protection ───────────────────────────────────
 function escapeHtml(s){
   if(!s) return '';
