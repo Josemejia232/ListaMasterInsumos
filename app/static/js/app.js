@@ -1829,7 +1829,7 @@ async function _nomInlineSave(btn, id){
     } else if(f.type === 'number'){
       body[f.key] = parseFloat(v) || 0;
     } else if(f.type === 'date'){
-      body[f.key] = v || null;
+      body[f.key] = v || new Date().toISOString().slice(0,10);
     } else {
       body[f.key] = v;
     }
@@ -1923,7 +1923,7 @@ async function _nomInlineSaveNew(btn){
     } else if(f.type === 'number'){
       body[f.key] = parseFloat(v) || 0;
     } else if(f.type === 'date'){
-      body[f.key] = v || null;
+      body[f.key] = v || new Date().toISOString().slice(0,10);
     } else {
       body[f.key] = v;
     }
