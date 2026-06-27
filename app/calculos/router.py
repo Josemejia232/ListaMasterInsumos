@@ -6,12 +6,13 @@ import hashlib
 import logging
 
 from app.database import get_db
-from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverride
+from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverride, UserCalcConfig
 from app.calculos.data import MEZCLAS, PRECIOS_FIJOS
-from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse, BoquillaRequest, BoquillaResponse, MaterialBoquilla, YesoRequest, YesoResponse, MaterialYeso
+from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse, BoquillaRequest, BoquillaResponse, MaterialBoquilla, YesoRequest, YesoResponse, MaterialYeso, CieloRasoRequest, CieloRasoResponse, MaterialCieloRaso
 from app.calculos.data_anclajes import calcular_anclaje
 from app.calculos.data_boquilla import calcular_boquilla, FORMATOS, ANCHOS_DISPONIBLES
 from app.calculos.data_yeso import calcular_yeso, PRECIOS_YESO, VALORES_DEFAULT
+from app.calculos.data_cielo_raso import calcular_cielo_raso, PRECIOS_CIELO_RASO, VALORES_DEFAULT_CR
 from app.services.session_service import leer_cookie
 
 router = APIRouter(prefix="/api/calculos", tags=["Cálculos"])
@@ -464,6 +465,43 @@ def calcular_anclajes(req: AnclajeRequest, user: Usuario = Depends(_get_user), d
     return calcular_anclaje(req.diametro_mm, req.profundidad_mm, req.cantidad, req.material_base)
 
 
+@router.get("/parametros/{tipo}")
+def get_parametros(tipo: str, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    config = db.query(UserCalcConfig).filter(
+        UserCalcConfig.usuario_id == user.id,
+        UserCalcConfig.tipo == tipo,
+    ).first()
+    if not config:
+        return {}
+    import json
+    return json.loads(config.config_json)
+
+
+class ParametrosIn(BaseModel):
+    tipo: str
+    config_json: str
+
+
+@router.put("/parametros/{tipo}")
+def save_parametros(tipo: str, body: ParametrosIn, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    import json
+    try:
+        parsed = json.loads(body.config_json)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="JSON invalido")
+    config = db.query(UserCalcConfig).filter(
+        UserCalcConfig.usuario_id == user.id,
+        UserCalcConfig.tipo == tipo,
+    ).first()
+    if config:
+        config.config_json = body.config_json
+    else:
+        config = UserCalcConfig(usuario_id=user.id, tipo=tipo, config_json=body.config_json)
+        db.add(config)
+    db.commit()
+    return {"ok": True}
+
+
 @router.post("/boquillas", response_model=BoquillaResponse)
 def calcular_boquillas(req: BoquillaRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
     _requiere_plan_calculo("boquillas", user, db)
@@ -490,4 +528,21 @@ def calcular_yesos(req: YesoRequest, user: Usuario = Depends(_get_user), db: Ses
         rendimiento_m2_dia=req.rendimiento_m2_dia,
         n_operarios=req.n_operarios, jornal=req.jornal,
         precios=req.precios,
+    )
+
+
+@router.post("/cielo-raso", response_model=CieloRasoResponse)
+def calcular_cielo_rasos(req: CieloRasoRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    _requiere_plan_calculo("cieloraso", user, db)
+    if req.an <= 0 or req.la <= 0:
+        raise HTTPException(status_code=400, detail="Ancho y largo deben ser mayores a 0")
+    return calcular_cielo_raso(
+        an=req.an, la=req.la, desp=req.desp,
+        sep_vp=req.sep_vp, sep_vs=req.sep_vs, sep_colg=req.sep_colg,
+        h_colg=req.h_colg, l_varilla=req.l_varilla,
+        factor_torn=req.factor_torn,
+        kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
+        rendimiento_m2_dia=req.rendimiento_m2_dia,
+        n_operarios=req.n_operarios, jornal=req.jornal,
+        con_varilla=req.con_varilla, precios=req.precios,
     )

@@ -105,6 +105,42 @@ class MaterialYeso(BaseModel):
     vr_total: float
 
 
+class CieloRasoRequest(BaseModel):
+    an: float
+    la: float
+    desp: float = 0.05
+    sep_vp: float = 1.2
+    sep_vs: float = 0.5
+    sep_colg: float = 1.2
+    h_colg: float = 0.5
+    l_varilla: float = 3.0
+    factor_torn: int = 25
+    kg_m2_masilla: float = 0.5
+    n_manos_masilla: int = 2
+    rendimiento_m2_dia: float = 12
+    n_operarios: int = 2
+    jornal: float = 120000
+    con_varilla: bool = False
+    precios: dict[str, float] | None = None
+
+
+class MaterialCieloRaso(BaseModel):
+    nombre: str
+    unidad: str
+    cantidad: float
+    vr_unitario: float
+    vr_total: float
+
+
+class CieloRasoResponse(BaseModel):
+    an: float
+    la: float
+    area_m2: float
+    perimetro_ml: float
+    materiales: list[MaterialCieloRaso]
+    total: float
+
+
 class YesoResponse(BaseModel):
     h: float
     l: float

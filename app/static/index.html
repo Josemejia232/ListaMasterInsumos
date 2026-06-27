@@ -335,6 +335,25 @@
       <div id="yeso-result-wrap" style="margin-top:.5rem;display:none"></div>
     </div>
 
+    <div class="section" id="section-cieloraso">
+      <h2>Cielo Raso en Lámina de Yeso</h2>
+      <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho (m)
+          <input type="number" id="cr-an" placeholder="Ej: 3" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+        </label>
+        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Largo (m)
+          <input type="number" id="cr-la" placeholder="Ej: 5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+        </label>
+        <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
+          <input type="checkbox" id="cr-varilla" style="width:16px;height:16px"> Varilla roscada
+        </label>
+        <button onclick="calcularCieloRaso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+        <button onclick="abrirModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">⚙️ Parámetros</button>
+      </div>
+      <div id="cr-card-wrap" style="margin-top:.5rem"></div>
+      <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
+    </div>
+
   </div>
 </div>
 
@@ -387,6 +406,69 @@
     <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
       <button onclick="cerrarModalYeso()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar</button>
       <button onclick="guardarModalYeso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-cr" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:520px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0">Parámetros - Cielo Raso</h3>
+      <button onclick="cerrarModalCR()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">&times;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">% Desperdicio
+        <input type="number" id="cr-desp" value="5" min="0" max="50" step="1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Sep. viga principal (m)
+        <input type="number" id="cr-sep-vp" value="1.2" min="0.1" step="0.1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Sep. viga secundaria (m)
+        <input type="number" id="cr-sep-vs" value="0.5" min="0.1" step="0.05" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Sep. colgadores (m)
+        <input type="number" id="cr-sep-colg" value="1.2" min="0.1" step="0.1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Altura colgante (m)
+        <input type="number" id="cr-h-colg" value="0.5" min="0.1" step="0.05" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Long. varilla (m)
+        <input type="number" id="cr-l-varilla" value="3" min="0.5" step="0.5" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Factor tornillos (und/m²)
+        <input type="number" id="cr-factor-torn" value="25" min="1" step="1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Masilla (kg/m²/mano)
+        <input type="number" id="cr-kg-masilla" value="0.5" min="0" step="0.1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">N° manos masilla
+        <input type="number" id="cr-n-manos" value="2" min="1" step="1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Rendimiento (m²/día)
+        <input type="number" id="cr-rend" value="12" min="1" step="1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">N° operarios
+        <input type="number" id="cr-op" value="2" min="1" step="1" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Jornal ($)
+        <input type="number" id="cr-jornal" value="120000" min="0" step="1000" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+    </div>
+    <hr style="margin:.8rem 0;border-color:var(--border)">
+    <div style="font-size:.8rem;font-weight:600;color:var(--text2);margin-bottom:.5rem">Precios unitarios</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem">
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Lámina yeso 1.22×2.44
+        <input type="number" id="cr-p-lamina" value="35000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Canal perimetral 3.05m
+        <input type="number" id="cr-p-canal-per" value="10000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Viga principal 3.05m
+        <input type="number" id="cr-p-vp" value="11000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Viga secundaria 3.05m
+        <input type="number" id="cr-p-vs" value="12000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Colgador / pendón
+        <input type="number" id="cr-p-colg" value="1500" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Varilla roscada 3m
+        <input type="number" id="cr-p-varilla" value="8000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Tornillo punta broca (und)
+        <input type="number" id="cr-p-tornillo" value="70" min="0" step="5" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Cinta de papel (rollo)
+        <input type="number" id="cr-p-cinta" value="8000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">Masilla (bolsa 20kg)
+        <input type="number" id="cr-p-masilla" value="35000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+      <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2)">M.O. Cielo Raso (hr)
+        <input type="number" id="cr-p-mo" value="25000" min="0" step="100" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
+      <button onclick="cerrarModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar</button>
+      <button onclick="guardarModalCR()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
     </div>
   </div>
 </div>

@@ -108,6 +108,17 @@ class CacheEntry(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class UserCalcConfig(Base):
+    __tablename__ = "user_calc_config"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    tipo = Column(String(20), nullable=False)  # "yeso", "boquilla"
+    config_json = Column(Text, nullable=False)  # JSON string with all params
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 class UserMaterialOverride(Base):
     __tablename__ = "user_material_overrides"
 

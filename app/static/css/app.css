@@ -445,7 +445,8 @@ h2::before{
   #mamp-result-wrap .section-card td:first-child,
   #anc-result-wrap .section-card td:first-child,
   #boq-result-wrap .section-card td:first-child,
-  #yeso-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:200px}
+  #yeso-result-wrap .section-card td:first-child,
+  #cr-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:200px}
 }
 @media(max-width:480px){
   .form-row,.form-inline{flex-direction:column}
@@ -486,6 +487,16 @@ h2::before{
   to { transform: rotate(360deg); }
 }
 
+.menu-submenu-header{
+  padding:.55rem .5rem .55rem 1.2rem;font-size:.78rem;font-weight:600;
+  color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:.4rem;
+  border-bottom:1px solid transparent;transition:background .15s;
+}
+.menu-submenu-header:hover{background:var(--navy)}
+.menu-submenu .sub-arrow{font-size:.55rem;width:16px;text-align:center;flex-shrink:0}
+.menu-submenu-body{padding-left:.5rem}
+.menu-submenu .sub-item{font-size:.75rem;padding:.4rem .5rem .4rem 1.8rem}
+
 .modal-overlay {
   position: fixed; top:0; left:0; width:100%; height:100%;
   background: rgba(0,0,0,.5); z-index:9999;
@@ -500,8 +511,10 @@ h2::before{
 @media(max-width:480px){
   .modal-content{max-width:100%;border-radius:0;height:100vh;max-height:100vh;width:100%;padding:1rem}
   .modal-content > div[style*="grid-template-columns"]{grid-template-columns:1fr !important}
-  #yeso-result-wrap .section-card td,#yeso-result-wrap .section-card th{font-size:.65rem;padding:.2rem .25rem !important}
-  #yeso-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:160px;min-width:100px}
+  #yeso-result-wrap .section-card td,#yeso-result-wrap .section-card th,
+  #cr-result-wrap .section-card td,#cr-result-wrap .section-card th{font-size:.65rem;padding:.2rem .25rem !important}
+  #yeso-result-wrap .section-card td:first-child,
+  #cr-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:160px;min-width:100px}
 }
 @media(max-width:768px){
   #yeso-result-wrap .section-card td:first-child{white-space:normal;word-break:break-word;max-width:200px}

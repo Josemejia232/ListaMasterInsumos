@@ -173,13 +173,43 @@ function buildSidebar(){
   items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
   items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
   items.push({id:'boquilla', icon:'&#9881;', text:'Boquilla'});
-  items.push({id:'yeso', icon:'&#9881;', text:'Muro Yeso'});
+  items.push({label:'DRYWALL', submenu:true, children:[
+    {id:'yeso', icon:'&#9881;', text:'Muro Yeso'},
+    {id:'cieloraso', icon:'&#9881;', text:'Cielo Raso'},
+  ]});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
+    if(i.submenu){
+      var collapsed = sessionStorage.getItem('submenu_'+i.label) !== 'open';
+      var childrenHtml = i.children.map(c => {
+        var mode = c.mode ? ' data-mode="'+c.mode+'"' : '';
+        return '<div class="menu-item sub-item" data-section="'+c.id+'"'+mode+' onclick="irA(\''+c.id+'\',this)"><span class="ico">'+c.icon+'</span> '+c.text+'</div>';
+      }).join('');
+      return '<div class="menu-submenu">'+
+        '<div class="menu-submenu-header" onclick="toggleSubmenu(this)">'+
+          '<span class="ico sub-arrow">'+(collapsed?'&#9654;':'&#9660;')+'</span> '+i.label+
+        '</div>'+
+        '<div class="menu-submenu-body" style="display:'+(collapsed?'none':'block')+'">'+childrenHtml+'</div>'+
+      '</div>';
+    }
     var mode = i.mode ? ' data-mode="'+i.mode+'"' : '';
     return '<div class="menu-item" data-section="'+i.id+'"'+mode+' onclick="irA(\''+i.id+'\',this)"><span class="ico">'+i.icon+'</span> '+i.text+'</div>';
   }).join('');
+}
+
+function toggleSubmenu(el){
+  var body = el.parentElement.querySelector('.menu-submenu-body');
+  var arrow = el.querySelector('.sub-arrow');
+  if(body.style.display === 'none'){
+    body.style.display = 'block';
+    arrow.innerHTML = '&#9660;';
+    sessionStorage.setItem('submenu_'+el.textContent.trim(), 'open');
+  } else {
+    body.style.display = 'none';
+    arrow.innerHTML = '&#9654;';
+    sessionStorage.removeItem('submenu_'+el.textContent.trim());
+  }
 }
 
 // ─── Navigation ────────────────────────────────────────
@@ -190,7 +220,7 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'yeso':'Muro Doble Cara en Yeso'};
+  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'yeso':'Muro Doble Cara en Yeso', 'cieloraso':'Cielo Raso en Lámina de Yeso'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
@@ -200,6 +230,8 @@ function irA(section, el){
   if(section==='insumos-calc') cargarInsumosCalc();
   if(section==='mezclas') cargarSelectMezclas();
   if(section==='mamposteria') cargarSelectMamposteria();
+  if(section==='yeso') cargarParametrosYeso();
+  if(section==='cieloraso') cargarParametrosCR();
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
@@ -812,51 +844,48 @@ async function calcularBoquilla(){
   } catch(e){}
 }
 
-let _yesoParams = {};
+let _yesoParams = null;
+
+async function cargarParametrosYeso(){
+  try {
+    const r = await apiFetch('/api/calculos/parametros/yeso');
+    if(r.ok){
+      const data = await r.json();
+      _yesoParams = Object.keys(data).length > 0 ? data : null;
+    }
+  } catch(e){}
+}
+
+function llenarModalYeso(){
+  const p = _yesoParams || {};
+  document.getElementById('yeso-desp').value = p.desp != null ? (p.desp * 100) : 5;
+  document.getElementById('yeso-factor-torn').value = p.factor_torn || 30;
+  document.getElementById('yeso-kg-masilla').value = p.kg_m2_masilla || 0.5;
+  document.getElementById('yeso-n-manos').value = p.n_manos_masilla || 2;
+  document.getElementById('yeso-rend').value = p.rendimiento_m2_dia || 12;
+  document.getElementById('yeso-op').value = p.n_operarios || 2;
+  document.getElementById('yeso-jornal').value = p.jornal || 120000;
+  const precios = p.precios || {};
+  document.getElementById('yeso-p-lamina').value = precios['Lamina de yeso 1.22x2.44'] || 35000;
+  document.getElementById('yeso-p-montante').value = precios['Montante 3.05m'] || 12000;
+  document.getElementById('yeso-p-canal').value = precios['Canal 3.05m'] || 10000;
+  document.getElementById('yeso-p-tornillo').value = precios['Tornillo punta broca'] || 80;
+  document.getElementById('yeso-p-cinta').value = precios['Cinta de papel'] || 8000;
+  document.getElementById('yeso-p-masilla').value = precios['Masilla / pasta (bolsa 20kg)'] || 35000;
+  document.getElementById('yeso-p-lana').value = precios['Lana mineral (m²)'] || 18000;
+  document.getElementById('yeso-p-mo').value = precios['M.O. Drywall'] || 25000;
+}
 
 function abrirModalYeso(){
-  const m = document.getElementById('modal-yeso');
-  if(Object.keys(_yesoParams).length === 0){
-    document.getElementById('yeso-desp').value = 5;
-    document.getElementById('yeso-factor-torn').value = 30;
-    document.getElementById('yeso-kg-masilla').value = 0.5;
-    document.getElementById('yeso-n-manos').value = 2;
-    document.getElementById('yeso-rend').value = 12;
-    document.getElementById('yeso-op').value = 2;
-    document.getElementById('yeso-jornal').value = 120000;
-    document.getElementById('yeso-p-lamina').value = 35000;
-    document.getElementById('yeso-p-montante').value = 12000;
-    document.getElementById('yeso-p-canal').value = 10000;
-    document.getElementById('yeso-p-tornillo').value = 80;
-    document.getElementById('yeso-p-cinta').value = 8000;
-    document.getElementById('yeso-p-masilla').value = 35000;
-    document.getElementById('yeso-p-lana').value = 18000;
-    document.getElementById('yeso-p-mo').value = 25000;
-  } else {
-    document.getElementById('yeso-desp').value = _yesoParams.desp;
-    document.getElementById('yeso-factor-torn').value = _yesoParams.factor_torn;
-    document.getElementById('yeso-kg-masilla').value = _yesoParams.kg_m2_masilla;
-    document.getElementById('yeso-n-manos').value = _yesoParams.n_manos_masilla;
-    document.getElementById('yeso-rend').value = _yesoParams.rendimiento_m2_dia;
-    document.getElementById('yeso-op').value = _yesoParams.n_operarios;
-    document.getElementById('yeso-jornal').value = _yesoParams.jornal;
-    document.getElementById('yeso-p-lamina').value = _yesoParams.precios['Lamina de yeso 1.22x2.44'];
-    document.getElementById('yeso-p-montante').value = _yesoParams.precios['Montante 3.05m'];
-    document.getElementById('yeso-p-canal').value = _yesoParams.precios['Canal 3.05m'];
-    document.getElementById('yeso-p-tornillo').value = _yesoParams.precios['Tornillo punta broca'];
-    document.getElementById('yeso-p-cinta').value = _yesoParams.precios['Cinta de papel'];
-    document.getElementById('yeso-p-masilla').value = _yesoParams.precios['Masilla / pasta (bolsa 20kg)'];
-    document.getElementById('yeso-p-lana').value = _yesoParams.precios['Lana mineral (m²)'];
-    document.getElementById('yeso-p-mo').value = _yesoParams.precios['M.O. Drywall'];
-  }
-  m.style.display = 'flex';
+  llenarModalYeso();
+  document.getElementById('modal-yeso').style.display = 'flex';
 }
 
 function cerrarModalYeso(){
   document.getElementById('modal-yeso').style.display = 'none';
 }
 
-function guardarModalYeso(){
+async function guardarModalYeso(){
   _yesoParams = {
     desp: parseFloat(document.getElementById('yeso-desp').value) / 100,
     factor_torn: parseInt(document.getElementById('yeso-factor-torn').value) || 30,
@@ -876,6 +905,11 @@ function guardarModalYeso(){
       'M.O. Drywall': parseFloat(document.getElementById('yeso-p-mo').value) || 25000,
     }
   };
+  await apiFetch('/api/calculos/parametros/yeso', {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tipo:'yeso', config_json:JSON.stringify(_yesoParams)})
+  });
   cerrarModalYeso();
 }
 
@@ -891,7 +925,7 @@ async function calcularYeso(){
   _showLoading('yeso-card-wrap');
   try {
     const body = {h, l, e, con_lana: conLana};
-    if(Object.keys(_yesoParams).length > 0){
+    if(_yesoParams){
       body.desp = _yesoParams.desp;
       body.factor_torn = _yesoParams.factor_torn;
       body.kg_m2_masilla = _yesoParams.kg_m2_masilla;
@@ -927,6 +961,155 @@ async function calcularYeso(){
     '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
       '<div><div style="font-weight:600;font-size:.85rem">Muro Yeso DC '+h+'×'+l+'m</div>'+
       '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Sep. mont. '+data.e+'m'+(data.con_lana ? ' · +Lana mineral' : '')+'</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);min-width:120px">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
+
+let _crParams = null;
+
+async function cargarParametrosCR(){
+  try {
+    const r = await apiFetch('/api/calculos/parametros/cieloraso');
+    if(r.ok){
+      const data = await r.json();
+      _crParams = Object.keys(data).length > 0 ? data : null;
+    }
+  } catch(e){}
+}
+
+function llenarModalCR(){
+  const p = _crParams || {};
+  document.getElementById('cr-desp').value = p.desp != null ? (p.desp * 100) : 5;
+  document.getElementById('cr-sep-vp').value = p.sep_vp || 1.2;
+  document.getElementById('cr-sep-vs').value = p.sep_vs || 0.5;
+  document.getElementById('cr-sep-colg').value = p.sep_colg || 1.2;
+  document.getElementById('cr-h-colg').value = p.h_colg || 0.5;
+  document.getElementById('cr-l-varilla').value = p.l_varilla || 3;
+  document.getElementById('cr-factor-torn').value = p.factor_torn || 25;
+  document.getElementById('cr-kg-masilla').value = p.kg_m2_masilla || 0.5;
+  document.getElementById('cr-n-manos').value = p.n_manos_masilla || 2;
+  document.getElementById('cr-rend').value = p.rendimiento_m2_dia || 12;
+  document.getElementById('cr-op').value = p.n_operarios || 2;
+  document.getElementById('cr-jornal').value = p.jornal || 120000;
+  const precios = p.precios || {};
+  document.getElementById('cr-p-lamina').value = precios['Lamina de yeso 1.22x2.44'] || 35000;
+  document.getElementById('cr-p-canal-per').value = precios['Canal perimetral 3.05m'] || 10000;
+  document.getElementById('cr-p-vp').value = precios['Viga principal (canal) 3.05m'] || 11000;
+  document.getElementById('cr-p-vs').value = precios['Viga secundaria (montante) 3.05m'] || 12000;
+  document.getElementById('cr-p-colg').value = precios['Colgador / pendon'] || 1500;
+  document.getElementById('cr-p-varilla').value = precios['Varilla roscada 3m'] || 8000;
+  document.getElementById('cr-p-tornillo').value = precios['Tornillo punta broca'] || 70;
+  document.getElementById('cr-p-cinta').value = precios['Cinta de papel'] || 8000;
+  document.getElementById('cr-p-masilla').value = precios['Masilla / pasta (bolsa 20kg)'] || 35000;
+  document.getElementById('cr-p-mo').value = precios['M.O. Cielo Raso'] || 25000;
+}
+
+function abrirModalCR(){
+  llenarModalCR();
+  document.getElementById('modal-cr').style.display = 'flex';
+}
+
+function cerrarModalCR(){
+  document.getElementById('modal-cr').style.display = 'none';
+}
+
+async function guardarModalCR(){
+  _crParams = {
+    desp: parseFloat(document.getElementById('cr-desp').value) / 100,
+    sep_vp: parseFloat(document.getElementById('cr-sep-vp').value) || 1.2,
+    sep_vs: parseFloat(document.getElementById('cr-sep-vs').value) || 0.5,
+    sep_colg: parseFloat(document.getElementById('cr-sep-colg').value) || 1.2,
+    h_colg: parseFloat(document.getElementById('cr-h-colg').value) || 0.5,
+    l_varilla: parseFloat(document.getElementById('cr-l-varilla').value) || 3,
+    factor_torn: parseInt(document.getElementById('cr-factor-torn').value) || 25,
+    kg_m2_masilla: parseFloat(document.getElementById('cr-kg-masilla').value) || 0.5,
+    n_manos_masilla: parseInt(document.getElementById('cr-n-manos').value) || 2,
+    rendimiento_m2_dia: parseFloat(document.getElementById('cr-rend').value) || 12,
+    n_operarios: parseInt(document.getElementById('cr-op').value) || 2,
+    jornal: parseFloat(document.getElementById('cr-jornal').value) || 120000,
+    precios: {
+      'Lamina de yeso 1.22x2.44': parseFloat(document.getElementById('cr-p-lamina').value) || 35000,
+      'Canal perimetral 3.05m': parseFloat(document.getElementById('cr-p-canal-per').value) || 10000,
+      'Viga principal (canal) 3.05m': parseFloat(document.getElementById('cr-p-vp').value) || 11000,
+      'Viga secundaria (montante) 3.05m': parseFloat(document.getElementById('cr-p-vs').value) || 12000,
+      'Colgador / pendon': parseFloat(document.getElementById('cr-p-colg').value) || 1500,
+      'Varilla roscada 3m': parseFloat(document.getElementById('cr-p-varilla').value) || 8000,
+      'Tornillo punta broca': parseFloat(document.getElementById('cr-p-tornillo').value) || 70,
+      'Cinta de papel': parseFloat(document.getElementById('cr-p-cinta').value) || 8000,
+      'Masilla / pasta (bolsa 20kg)': parseFloat(document.getElementById('cr-p-masilla').value) || 35000,
+      'M.O. Cielo Raso': parseFloat(document.getElementById('cr-p-mo').value) || 25000,
+    }
+  };
+  await apiFetch('/api/calculos/parametros/cieloraso', {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tipo:'cieloraso', config_json:JSON.stringify(_crParams)})
+  });
+  cerrarModalCR();
+}
+
+async function calcularCieloRaso(){
+  const an = parseFloat(document.getElementById('cr-an').value) || 0;
+  const la = parseFloat(document.getElementById('cr-la').value) || 0;
+  const conVarilla = document.getElementById('cr-varilla').checked;
+  const wrap = document.getElementById('cr-card-wrap');
+  const rwrap = document.getElementById('cr-result-wrap');
+  rwrap.style.display = 'none';
+  if(an <= 0 || la <= 0){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Ingrese ancho y largo</div>'; return; }
+  _showLoading('cr-card-wrap');
+  try {
+    const body = {an, la, con_varilla: conVarilla};
+    if(_crParams){
+      body.desp = _crParams.desp;
+      body.sep_vp = _crParams.sep_vp;
+      body.sep_vs = _crParams.sep_vs;
+      body.sep_colg = _crParams.sep_colg;
+      body.h_colg = _crParams.h_colg;
+      body.l_varilla = _crParams.l_varilla;
+      body.factor_torn = _crParams.factor_torn;
+      body.kg_m2_masilla = _crParams.kg_m2_masilla;
+      body.n_manos_masilla = _crParams.n_manos_masilla;
+      body.rendimiento_m2_dia = _crParams.rendimiento_m2_dia;
+      body.n_operarios = _crParams.n_operarios;
+      body.jornal = _crParams.jornal;
+      body.precios = _crParams.precios;
+    }
+    const r = await apiFetch('/api/calculos/cielo-raso', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) return;
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Cielo Raso '+an+'×'+la+'m</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Perímetro '+data.perimetro_ml+'ml'+(conVarilla ? ' · +Varilla' : '')+'</div></div>'+
       '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
       '<div style="padding:.2rem .6rem .5rem">'+
       '<table style="width:100%;border-collapse:collapse">'+

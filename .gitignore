@@ -19,4 +19,4 @@ node_modules/
 *.log
 *.xls
 *.xlsx
-CALCULOS/
+/CALCULOS/
