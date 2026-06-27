@@ -317,6 +317,42 @@ Las recetas de concretos y morteros provienen del archivo `20191013 Base De Dato
   </tbody>
 </table>
 
+### Muro Doble Cara en Yeso
+
+**Datos base:** h (altura m), l (longitud m), A = h × l (m²), e (sep. montantes m)
+
+| Insumo | Fórmula | Und |
+|--------|---------|:---:|
+| Lámina de yeso 1.22×2.44 | `A × 2 / 2.9768 × (1 + %desp)` | und |
+| Montante (perfil vertical 3.05m) | `(l / e + 1) × h / 3.05` | und |
+| Canal (piso + techo 3.05m) | `l × 2 / 3.05` | und |
+| Tornillo punta broca | `A × 2 × factor_torn` | und |
+| Cinta de papel | `juntas_v × h × 2 + juntas_h × l × 2` donde `juntas_v = l / 1.22`, `juntas_h = h / 2.44` | m.l. |
+| Masilla / pasta | `A × 2 × kg_m2 × n_manos` | kg |
+| Lana mineral (si aplica) | `A × (1 + %desp)` | m² |
+| Mano de obra | `A / rendimiento × n_operarios × jornal` | $ |
+
+**Parámetros configurables (modal ⚙️):** %desp (5%), factor_torn (30 und/m²), kg_m2_masilla (0.5), n_manos (2), rendimiento (12 m²/día), n_operarios (2), jornal ($120.000), más precios unitarios de cada insumo.
+
+### Cielo Raso en Lámina de Yeso
+
+**Datos base:** an (ancho m), la (largo m), A = an × la (m²), P = 2 × (an + la) (m.l.)
+
+| Insumo | Fórmula | Und |
+|--------|---------|:---:|
+| Lámina de yeso 1.22×2.44 | `A / 2.9768 × (1 + %desp)` | und |
+| Canal perimetral (3.05m) | `P / 3.05` | und |
+| Viga principal (canal 3.05m) | `(an / sep_vp + 1) × la / 3.05` | und |
+| Viga secundaria (montante 3.05m) | `(la / sep_vs + 1) × an / 3.05` | und |
+| Colgador / pendón | `A / (sep_vp × sep_colg)` | und |
+| Varilla roscada (si aplica) | `n_colgadores × h_colg / l_varilla` | und |
+| Tornillo punta broca | `A × factor_torn` | und |
+| Cinta de papel | `juntas_v × la + juntas_h × an` donde `juntas_v = an / 1.22`, `juntas_h = la / 2.44` | m.l. |
+| Masilla / pasta | `A × kg_m2 × n_manos` | kg |
+| Mano de obra | `A / rendimiento × n_operarios × jornal` | $ |
+
+**Parámetros configurables (modal ⚙️):** %desp (5%), sep_vp (1.2m), sep_vs (0.5m), sep_colg (1.2m), h_colg (0.5m), l_varilla (3m), factor_torn (25 und/m²), kg_m2_masilla (0.5), n_manos (2), rendimiento (12 m²/día), n_operarios (2), jornal ($120.000), más precios unitarios de cada insumo. Los parámetros se guardan por usuario en la tabla `user_calc_config`.
+
 ### Estructura del módulo
 
 ```
