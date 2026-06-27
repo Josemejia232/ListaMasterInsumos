@@ -1416,7 +1416,8 @@ async function _renderVinculacion(content){
     const cedOpts = personas.map(p => `<option value="${p.cedula}">${escapeHtml(p.nombre)} (${p.cedula})</option>`).join('');
     const proyOpts = proyectos.map(p => `<option value="${p.id_proyecto}">${escapeHtml(p.nombre)}</option>`).join('');
     const cargOpts = cargos.map(c => `<option value="${c.id_cargo}">${escapeHtml(c.descripcion)}</option>`).join('');
-    content.innerHTML = _nomFormTable({
+    const cargoBtn = '<div style="margin-bottom:.5rem"><button onclick="abrirModalCargo()" style="background:none;border:1.5px solid var(--border);border-radius:.4rem;padding:.3rem .6rem;font-size:.75rem;cursor:pointer;color:var(--text2)">⚙️ Gestionar Cargos</button></div>';
+    content.innerHTML = cargoBtn + _nomFormTable({
       title:'Vinculaciones (Persona ↔ Proyecto)', singular:'vinculación',
       fields:[
         {key:'cedula',label:'Persona',type:'select',options:cedOpts},
