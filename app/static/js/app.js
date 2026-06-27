@@ -285,22 +285,11 @@ function irA(section, el){
   if(section==='pagos') cargarPagos();
   if(section==='mi-token') cargarMiToken();
   if(section==='insumos-calc') cargarInsumosCalc();
-  if(section==='mezclas' || section==='mamposteria' || section==='anclajes' || section==='boquilla' || section==='yeso' || section==='yesouc' || section==='cieloraso'){
-    if(section==='mezclas') cargarSelectMezclas();
-    if(section==='mamposteria') cargarSelectMamposteria();
-    if(section==='yeso') cargarParametrosYeso();
-    if(section==='yesouc') cargarParametrosYesoUC();
-    if(section==='cieloraso') cargarParametrosCR();
-    const calculadora = document.getElementById('section-calculadora');
-    if(calculadora) calculadora.classList.add('active');
-    const cb = document.getElementById('calculos-body');
-    if(cb && cb.style.display === 'none'){
-      cb.style.display = '';
-      const t = document.getElementById('calculos-toggle');
-      if(t) t.textContent = '▼';
-      try { localStorage.setItem('lm_calculos_open', '1'); } catch(e){}
-    }
-  }
+  if(section==='mezclas') cargarSelectMezclas();
+  if(section==='mamposteria') cargarSelectMamposteria();
+  if(section==='yeso') cargarParametrosYeso();
+  if(section==='yesouc') cargarParametrosYesoUC();
+  if(section==='cieloraso') cargarParametrosCR();
   if(section==='nomina') cargarNomina();
 }
 document.addEventListener('click', function(e){
