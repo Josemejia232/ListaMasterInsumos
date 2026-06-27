@@ -438,8 +438,10 @@ Abono ──> Prestamo (id_prestamo)
 - **Columnas con nombre descriptivo**: Uso (Proyectos), EPS y AFP (Personas) muestran el nombre en lugar del ID
 - **Abonos**: sub-tabla expandible dentro de Préstamos (▶/▼), no hay pestaña independiente. Cada préstamo expande una fila de abonos inline, alineados con las columnas F. Préstamo y Valor del padre. CRUD inline completo (agregar, editar, eliminar). El saldo del préstamo se actualiza automáticamente al crear/editar/eliminar abonos
 - **Órden de columnas**: véase tabla abajo
-- **Modales de gestión**: Uso de Proyecto (desde Proyectos), EPS/AFP/Cargo (desde Personas) — se abren desde el botón `+` junto al select en edición inline
+- **Modales de gestión**: Uso de Proyecto (desde Proyectos), EPS/AFP (desde Personas), Cargo (desde Personas y Vinculaciones) — se abren desde el botón `+` junto al select en edición inline o desde botón ⚙️ sobre la tabla
 - **Formato moneda**: valores en `$COP` con `toLocaleString('es-CO')`
+- **Fecha por defecto**: al crear/editar, si la fecha está vacía se envía la fecha actual (evita errores 422)
+- **Tabla responsive**: sin `table-layout:fixed` ni `<colgroup>` con anchos fijos; columnas se distribuyen automáticamente
 
 ### Endpoints Nómina
 
@@ -509,10 +511,10 @@ app/
 |--------|-------------------|----------------------|
 | Proyectos | Nombre, Dirección, Responsable, Uso | — |
 | Personas | Nombre, Celular, Cédula, F. Expedición, EPS, AFP | — |
-| Vinculaciones | Persona, Cargo, Salario Q, F. Ingreso, F. Retiro, Proyecto, Estado | — |
+| Vinculaciones | Persona, Cargo (con modal CRUD ⚙️), Salario Q, F. Ingreso, F. Retiro, Proyecto, Estado | — |
 | Quincenas | Vinculación, N° Quincena, F. Pago, Bruto, Desc. Abono, Desc. Seguro | Neto |
-| Préstamos | Vinculación, F. Préstamo, Valor | Saldo |
-| Abonos | (sub-tabla expandible en Préstamos) Fecha Abono, Valor Abono | — |
+| Préstamos | Vinculación, F. Préstamo, Valor (alineado derecha), Valor | Saldo |
+| Abonos | (sub-tabla expandible en Préstamos) Fecha Abono, Valor Abono (alineado derecha) | — |
 
 ### Lógica de precios (3 fuentes)
 
