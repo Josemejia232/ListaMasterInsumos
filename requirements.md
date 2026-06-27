@@ -33,11 +33,15 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 
 ### Módulo Cálculos
 
-| Sección | Tipos | Unidades | Precios |
-|---------|-------|----------|---------|
-| **Mezclas** | 6 concretos (3.500–1.800 psi) + 6 morteros (1:10–1:6) | m³ | Cemento/arena/gravilla desde BD; agua, MO, mezcladora fijos |
-| **Mampostería** | 37 ítems (5 legacy + 32 Ladrillera Santafé) | m² | Fallback por ítem; Arena Base/Sello para adoquines; Mortero para estructurales/fachadas/divisorios |
-| **Anclajes** | Calculadora Sika AnchorFix | ø varilla (mm), profundidad (mm), cantidad puntos | Tubos 300ml, varilla, tuercas, broca, kit limpieza, MO |
+Módulo colapsable con sub-módulos de cálculo agrupados. El estado (abierto/cerrado) persiste en `localStorage`.
+
+| Sub-módulo | Secciones | Unidades |
+|------------|-----------|----------|
+| **Mezclas** | 6 concretos (3.500–1.800 psi) + 6 morteros (1:10–1:6) | m³ |
+| **Mampostería** | 37 ítems (5 legacy + 32 Ladrillera Santafé) | m² |
+| **Anclajes** | Calculadora Sika AnchorFix | ø varilla (mm), profundidad (mm), cantidad puntos |
+| **Boquilla** | 5 formatos × 4 anchos de junta | m² |
+| **Drywall** (colapsable) | Muro Doble Cara, Cielo Raso, Muro Una Cara | m² |
 
 - **Plan Free**: 3 usos por tipo (mezclas, mampostería, anclajes). Bloqueo con mensaje de upgrade.
 - **Plan Básico**: Sin acceso a calculadora (403).
@@ -388,7 +392,7 @@ app/
 
 ## Módulo Nómina — Proyectos · Personas · Vinculaciones · Quincenas · Préstamos · Abonos
 
-Módulo de gestión de nómina de obra con 10 tablas relacionales. CRUD completo vía API en `/api/nomina/…` y frontend con pestañas en la sección "Nómina" del sidebar.
+Módulo de gestión de nómina de obra con 10 tablas relacionales. CRUD completo vía API en `/api/nomina/…` y frontend en la sección "Nómina" (entre InsCal y Cálculos).
 
 ### Tablas
 
@@ -421,14 +425,17 @@ Abono ──> Prestamo (id_prestamo)
 
 ### Frontend (Nómina Dashboard)
 
-- Acceso desde el sidebar → submenú **NÓMINA**
-- Pestañas: Proyectos, Personas, Vinculaciones, Quincenas, Préstamos, Abonos
-- **Edición inline sobre la fila**: al hacer clic en ✏️ las celdas se convierten en inputs/selects editables directamente en la tabla (aplica a todas las pestañas)
+- Sección en página principal entre **InsCal** y **Cálculos**
+- Botones de módulo (Proyectos, Personas, Vinculaciones, Quincenas, Préstamos) en la misma línea del título **Nómina**
+- **Edición inline sobre la fila**: al hacer clic en ✏️ las celdas se convierten en inputs/selects editables directamente en la tabla (aplica a todos los módulos)
 - **Agregar inline**: botón "+ Agregar" inserta una fila vacía editable al inicio de la tabla
 - **Guardar**: botón 💾 en la fila envía POST (nuevo) o PUT (edición) al endpoint correspondiente
 - **Cancelar**: botón ✕ restaura los valores originales de la fila
-- **Columnas con nombre descriptivo**: Uso (Proyectos), EPS y AFP (Personas) muestran el nombre en lugar del ID; las columnas relacionales (Persona, Proyecto, Cargo, Vinculación) se muestran solo en columnas extra con nombre descriptivo, sin duplicar el ID
-- **Órden de columnas**: Personas → Nombre, Celular, Cédula, F. Expedición, EPS, AFP; Vinculaciones → F. Ingreso, F. Retiro, Salario + extra (Persona, Proyecto, Cargo, Estado); Quincenas → N° Quincena, F. Pago + extra (Persona, Bruto, Desc.Abono, Desc.Seguro, Neto); Préstamos → F. Préstamo + extra (Persona, Valor, Saldo); Abonos → F. Abono + extra (Préstamo, Valor)
+- **Columnas editables**: todos los campos del formulario son visibles y editables directamente en la tabla (incluyendo selects y fechas)
+- **Columnas extra (solo lectura)**: Neto (Quincenas), Saldo (Préstamos) — se muestran como columnas adicionales sin edición
+- **Columnas con nombre descriptivo**: Uso (Proyectos), EPS y AFP (Personas) muestran el nombre en lugar del ID
+- **Abonos**: sub-tabla expandible dentro de Préstamos (▶/▼), no hay pestaña independiente. Cada préstamo expande una fila de abonos inline, alineados con las columnas F. Préstamo y Valor del padre. CRUD inline completo (agregar, editar, eliminar). El saldo del préstamo se actualiza automáticamente al crear/editar/eliminar abonos
+- **Órden de columnas**: véase tabla abajo
 - **Modales de gestión**: Uso de Proyecto (desde Proyectos), EPS/AFP/Cargo (desde Personas) — se abren desde el botón `+` junto al select en edición inline
 - **Formato moneda**: valores en `$COP` con `toLocaleString('es-CO')`
 
@@ -470,14 +477,17 @@ Abono ──> Prestamo (id_prestamo)
 | GET | `/api/nomina/quincenas` | Listar quincenas |
 | GET | `/api/nomina/quincenas/{id}` | Obtener quincena por ID |
 | POST | `/api/nomina/quincenas` | Crear quincena |
+| PUT | `/api/nomina/quincenas/{id}` | Actualizar quincena (recalcula neto) |
 | DELETE | `/api/nomina/quincenas/{id}` | Eliminar quincena |
 | GET | `/api/nomina/prestamos` | Listar préstamos |
 | GET | `/api/nomina/prestamos/{id}` | Obtener préstamo por ID |
-| POST | `/api/nomina/prestamos` | Crear préstamo |
+| POST | `/api/nomina/prestamos` | Crear préstamo (saldo = valor) |
+| PUT | `/api/nomina/prestamos/{id}` | Actualizar préstamo (ajusta saldo según diferencia de valor) |
 | DELETE | `/api/nomina/prestamos/{id}` | Eliminar préstamo |
 | GET | `/api/nomina/abonos` | Listar abonos (filtro `?prestamo_id=`) |
 | GET | `/api/nomina/abonos/{id}` | Obtener abono por ID |
 | POST | `/api/nomina/abonos` | Crear abono (descuenta del saldo del préstamo) |
+| PUT | `/api/nomina/abonos/{id}` | Actualizar abono (reajusta saldo del préstamo) |
 | DELETE | `/api/nomina/abonos/{id}` | Eliminar abono (restaura saldo del préstamo) |
 
 ### Estructura del módulo Nómina
@@ -490,6 +500,17 @@ app/
 │   └── router.py       → CRUD endpoints + lógica de saldo
 ├── models_nomina.py    → 10 modelos SQLAlchemy
 ```
+
+### Columnas por módulo
+
+| Módulo | Columnas editables | Extra (solo lectura) |
+|--------|-------------------|----------------------|
+| Proyectos | Nombre, Dirección, Responsable, Uso | — |
+| Personas | Nombre, Celular, Cédula, F. Expedición, EPS, AFP | — |
+| Vinculaciones | Persona, Cargo, Salario Q, F. Ingreso, F. Retiro, Proyecto, Estado | — |
+| Quincenas | Vinculación, N° Quincena, F. Pago, Bruto, Desc. Abono, Desc. Seguro | Neto |
+| Préstamos | Vinculación, F. Préstamo, Valor | Saldo |
+| Abonos | (sub-tabla expandible en Préstamos) Fecha Abono, Valor Abono | — |
 
 ### Lógica de precios (3 fuentes)
 
