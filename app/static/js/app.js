@@ -1367,9 +1367,9 @@ async function _renderVinculacion(content){
     content.innerHTML = _nomFormTable({
       title:'Vinculaciones (Persona ↔ Proyecto)', singular:'vinculación',
       fields:[
-        {key:'cedula',label:'Persona',type:'select',options:cedOpts},
-        {key:'id_proyecto',label:'Proyecto',type:'select',options:proyOpts},
-        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts},
+        {key:'cedula',label:'Persona',type:'select',options:cedOpts,noTable:true},
+        {key:'id_proyecto',label:'Proyecto',type:'select',options:proyOpts,noTable:true},
+        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts,noTable:true},
         {key:'fecha_ingreso',label:'F. Ingreso',type:'date'},
         {key:'fecha_retiro',label:'F. Retiro',type:'date'},
         {key:'salario_quincenal',label:'Salario Quincenal',type:'number'},
@@ -1394,12 +1394,9 @@ async function _renderQuincena(content){
     content.innerHTML = _nomFormTable({
       title:'Quincenas', singular:'quincena',
       fields:[
-        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
+        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts,noTable:true},
         {key:'numero_quincena',label:'N° Quincena',type:'number'},
         {key:'fecha_pago',label:'F. Pago',type:'date'},
-        {key:'valor_bruto',label:'Valor Bruto',type:'number'},
-        {key:'desc_abono',label:'Desc. Abono',type:'number'},
-        {key:'desc_seguro',label:'Desc. Seguro',type:'number'},
       ],
       data:quincenas, idKey:'id_quincena',
       onSave: async (body) => { await _apiNomina('/quincenas', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('quincena'); },
@@ -1421,9 +1418,8 @@ async function _renderPrestamo(content){
     content.innerHTML = _nomFormTable({
       title:'Préstamos', singular:'préstamo',
       fields:[
-        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
+        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts,noTable:true},
         {key:'fecha_prestamo',label:'F. Préstamo',type:'date'},
-        {key:'valor',label:'Valor',type:'number'},
       ],
       data:prestamos, idKey:'id_prestamo',
       onSave: async (body) => { await _apiNomina('/prestamos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('prestamo'); },
@@ -1445,9 +1441,8 @@ async function _renderAbono(content){
     content.innerHTML = _nomFormTable({
       title:'Abonos a Préstamos', singular:'abono',
       fields:[
-        {key:'id_prestamo',label:'Préstamo',type:'select',options:presOpts},
+        {key:'id_prestamo',label:'Préstamo',type:'select',options:presOpts,noTable:true},
         {key:'fecha_abono',label:'F. Abono',type:'date'},
-        {key:'valor_abono',label:'Valor Abono',type:'number'},
       ],
       data:abonos, idKey:'id_abono',
       onSave: async (body) => { await _apiNomina('/abonos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('abono'); },

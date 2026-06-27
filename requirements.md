@@ -427,8 +427,8 @@ Abono ──> Prestamo (id_prestamo)
 - **Agregar inline**: botón "+ Agregar" inserta una fila vacía editable al inicio de la tabla
 - **Guardar**: botón 💾 en la fila envía POST (nuevo) o PUT (edición) al endpoint correspondiente
 - **Cancelar**: botón ✕ restaura los valores originales de la fila
-- **Columnas con nombre descriptivo**: Uso (en Proyectos), EPS y AFP (en Personas) muestran el nombre en lugar del ID interno
-- **Órden de columnas en Personas**: Nombre, Celular, Cédula, F. Expedición, EPS, AFP
+- **Columnas con nombre descriptivo**: Uso (Proyectos), EPS y AFP (Personas) muestran el nombre en lugar del ID; las columnas relacionales (Persona, Proyecto, Cargo, Vinculación) se muestran solo en columnas extra con nombre descriptivo, sin duplicar el ID
+- **Órden de columnas**: Personas → Nombre, Celular, Cédula, F. Expedición, EPS, AFP; Vinculaciones → F. Ingreso, F. Retiro, Salario + extra (Persona, Proyecto, Cargo, Estado); Quincenas → N° Quincena, F. Pago + extra (Persona, Bruto, Desc.Abono, Desc.Seguro, Neto); Préstamos → F. Préstamo + extra (Persona, Valor, Saldo); Abonos → F. Abono + extra (Préstamo, Valor)
 - **Modales de gestión**: Uso de Proyecto (desde Proyectos), EPS/AFP/Cargo (desde Personas) — se abren desde el botón `+` junto al select en edición inline
 - **Formato moneda**: valores en `$COP` con `toLocaleString('es-CO')`
 
