@@ -372,6 +372,19 @@
       <div id="yesouc-card-wrap" style="margin-top:.5rem"></div>
       <div id="yesouc-result-wrap" style="margin-top:.5rem;display:none"></div>
     </div>
+
+    <div class="section" id="section-nomina">
+      <h2>Nómina</h2>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem">
+        <button class="btn btn-sm nomina-tab active" data-tab="proyecto" onclick="cambiarTabNomina('proyecto',this)" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Proyectos</button>
+        <button class="btn btn-sm nomina-tab" data-tab="persona" onclick="cambiarTabNomina('persona',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Personas</button>
+        <button class="btn btn-sm nomina-tab" data-tab="vinculacion" onclick="cambiarTabNomina('vinculacion',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Vinculaciones</button>
+        <button class="btn btn-sm nomina-tab" data-tab="quincena" onclick="cambiarTabNomina('quincena',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Quincenas</button>
+        <button class="btn btn-sm nomina-tab" data-tab="prestamo" onclick="cambiarTabNomina('prestamo',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Préstamos</button>
+        <button class="btn btn-sm nomina-tab" data-tab="abono" onclick="cambiarTabNomina('abono',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Abonos</button>
+      </div>
+      <div id="nomina-content"></div>
+    </div>
       <div id="cr-card-wrap" style="margin-top:.5rem"></div>
       <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
     </div>
@@ -538,6 +551,86 @@
     <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:1rem">
       <button onclick="cerrarModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar</button>
       <button onclick="guardarModalCR()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-uso" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:440px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0">Administrar Usos de Proyecto</h3>
+      <button onclick="cerrarModalUso()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">&times;</button>
+    </div>
+    <div id="modal-uso-lista" style="margin-bottom:1rem;max-height:260px;overflow-y:auto"></div>
+    <hr style="border-color:var(--border);margin:.5rem 0">
+    <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2);margin-bottom:.5rem">Descripción
+      <input type="text" id="modal-uso-desc" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem;margin-top:.25rem"></label>
+    <input type="hidden" id="modal-uso-id">
+    <div id="modal-uso-msg" style="font-size:.75rem;margin-bottom:.5rem;color:var(--red)"></div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem">
+      <button onclick="cancelarEdicionUso()" id="modal-uso-cancel" style="display:none;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar edición</button>
+      <button onclick="cerrarModalUso()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cerrar</button>
+      <button onclick="guardarModalUso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-eps" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:440px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0">Administrar EPS</h3>
+      <button onclick="cerrarModalEps()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">&times;</button>
+    </div>
+    <div id="modal-eps-lista" style="margin-bottom:1rem;max-height:260px;overflow-y:auto"></div>
+    <hr style="border-color:var(--border);margin:.5rem 0">
+    <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2);margin-bottom:.5rem">Nombre EPS
+      <input type="text" id="modal-eps-nombre" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem;margin-top:.25rem"></label>
+    <input type="hidden" id="modal-eps-id">
+    <div id="modal-eps-msg" style="font-size:.75rem;margin-bottom:.5rem;color:var(--red)"></div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem">
+      <button onclick="cancelarEdicionEps()" id="modal-eps-cancel" style="display:none;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar edición</button>
+      <button onclick="cerrarModalEps()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cerrar</button>
+      <button onclick="guardarModalEps()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-afp" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:440px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0">Administrar AFP (Pensión)</h3>
+      <button onclick="cerrarModalAfp()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">&times;</button>
+    </div>
+    <div id="modal-afp-lista" style="margin-bottom:1rem;max-height:260px;overflow-y:auto"></div>
+    <hr style="border-color:var(--border);margin:.5rem 0">
+    <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2);margin-bottom:.5rem">Nombre AFP
+      <input type="text" id="modal-afp-nombre" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem;margin-top:.25rem"></label>
+    <input type="hidden" id="modal-afp-id">
+    <div id="modal-afp-msg" style="font-size:.75rem;margin-bottom:.5rem;color:var(--red)"></div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem">
+      <button onclick="cancelarEdicionAfp()" id="modal-afp-cancel" style="display:none;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar edición</button>
+      <button onclick="cerrarModalAfp()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cerrar</button>
+      <button onclick="guardarModalAfp()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modal-cargo" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:440px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0">Administrar Cargos</h3>
+      <button onclick="cerrarModalCargo()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">&times;</button>
+    </div>
+    <div id="modal-cargo-lista" style="margin-bottom:1rem;max-height:260px;overflow-y:auto"></div>
+    <hr style="border-color:var(--border);margin:.5rem 0">
+    <label style="display:flex;flex-direction:column;font-size:.8rem;color:var(--text2);margin-bottom:.5rem">Descripción
+      <input type="text" id="modal-cargo-desc" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem;margin-top:.25rem"></label>
+    <input type="hidden" id="modal-cargo-id">
+    <div id="modal-cargo-msg" style="font-size:.75rem;margin-bottom:.5rem;color:var(--red)"></div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem">
+      <button onclick="cancelarEdicionCargo()" id="modal-cargo-cancel" style="display:none;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cancelar edición</button>
+      <button onclick="cerrarModalCargo()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;cursor:pointer">Cerrar</button>
+      <button onclick="guardarModalCargo()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1.2rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
     </div>
   </div>
 </div>

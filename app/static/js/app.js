@@ -178,6 +178,9 @@ function buildSidebar(){
     {id:'yesouc', icon:'&#9881;', text:'Muro Yeso 1C'},
     {id:'cieloraso', icon:'&#9881;', text:'Cielo Raso'},
   ]});
+  items.push({label:'NÓMINA', submenu:true, children:[
+    {id:'nomina', icon:'&#9881;', text:'Dashboard'},
+  ]});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -221,7 +224,7 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'yeso':'Muro Doble Cara en Yeso', 'yesouc':'Muro Una Cara en Yeso', 'cieloraso':'Cielo Raso en Lámina de Yeso'};
+  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'yeso':'Muro Doble Cara en Yeso', 'yesouc':'Muro Una Cara en Yeso', 'cieloraso':'Cielo Raso en Lámina de Yeso', 'nomina':'Nómina'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
@@ -234,6 +237,7 @@ function irA(section, el){
   if(section==='yeso') cargarParametrosYeso();
   if(section==='yesouc') cargarParametrosYesoUC();
   if(section==='cieloraso') cargarParametrosCR();
+  if(section==='nomina') cargarNomina();
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
@@ -1254,6 +1258,371 @@ async function calcularYesoUnaCara(){
   } catch(e){}
 }
 
+// ─── NÓMINA ────────────────────────────────────────────
+function cambiarTabNomina(tab, el){
+  document.querySelectorAll('.nomina-tab').forEach(t=>{
+    t.style.background = 'var(--card2)';
+    t.style.color = 'var(--text)';
+    t.style.border = '1px solid var(--border)';
+    t.classList.remove('active');
+  });
+  if(el){
+    el.style.background = 'var(--accent)';
+    el.style.color = '#fff';
+    el.style.border = 'none';
+    el.classList.add('active');
+  }
+  _renderTabNomina(tab);
+}
+
+async function cargarNomina(){
+  _renderTabNomina('proyecto');
+}
+
+async function _renderTabNomina(tab){
+  const content = document.getElementById('nomina-content');
+  content.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--muted)"><div class="loading-spinner" style="margin:0 auto 1rem;border-top-color:var(--accent)"></div>Cargando...</div>';
+  switch(tab){
+    case 'proyecto': await _renderProyecto(content); break;
+    case 'persona': await _renderPersona(content); break;
+    case 'vinculacion': await _renderVinculacion(content); break;
+    case 'quincena': await _renderQuincena(content); break;
+    case 'prestamo': await _renderPrestamo(content); break;
+    case 'abono': await _renderAbono(content); break;
+  }
+}
+
+async function _apiNomina(path, opts){
+  opts = opts || {};
+  opts.headers = opts.headers || {};
+  opts.headers['Content-Type'] = 'application/json';
+  opts.credentials = 'include';
+  const r = await fetch('/api/nomina'+path, opts);
+  if(r.status === 401){ logout(); throw new Error('Sesion expirada'); }
+  return r;
+}
+
+// ─── Proyecto ────────────────────────────────
+async function _renderProyecto(content){
+  try {
+    const [proyectos, usos] = await Promise.all([
+      _apiNomina('/proyectos').then(r=>r.ok?r.json():[]),
+      _apiNomina('/usos-proyecto').then(r=>r.ok?r.json():[]),
+    ]);
+    const usoOpts = usos.map(u => `<option value="${u.id_uso}">${escapeHtml(u.descripcion)}</option>`).join('');
+    const btnUso = '<button type="button" onclick="abrirModalUso()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Crear nuevo uso">+</button>';
+    content.innerHTML = _nomFormTable({
+      title:'Proyectos', singular:'proyecto',
+      fields:[
+        {key:'nombre',label:'Nombre'},
+        {key:'direccion',label:'Dirección'},
+        {key:'responsable',label:'Responsable'},
+        {key:'id_uso',label:'Uso',type:'select',options:usoOpts,suffixHtml:btnUso},
+      ],
+      data:proyectos, idKey:'id_proyecto',
+      onSave: async (body) => { await _apiNomina('/proyectos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('proyecto'); },
+      onDelete: async (id) => { await _apiNomina('/proyectos/'+id, {method:'DELETE'}); await _renderTabNomina('proyecto'); },
+      extraHeaders:['Uso'],
+      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.uso_descripcion||'')+'</td>',
+    });
+  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al cargar</div>'; }
+}
+
+// ─── Persona ─────────────────────────────────
+async function _renderPersona(content){
+  try {
+    const [personas, epsList, afpList] = await Promise.all([
+      _apiNomina('/personas').then(r=>r.ok?r.json():[]),
+      _apiNomina('/eps').then(r=>r.ok?r.json():[]),
+      _apiNomina('/afp').then(r=>r.ok?r.json():[]),
+    ]);
+    const epsOpts = '<option value="">--</option>'+epsList.map(e => `<option value="${e.id_eps}">${escapeHtml(e.nombre_eps)}</option>`).join('');
+    const afpOpts = '<option value="">--</option>'+afpList.map(a => `<option value="${a.id_afp}">${escapeHtml(a.nombre_afp)}</option>`).join('');
+    const cargoBtn = '<div style="margin-bottom:.5rem"><button onclick="abrirModalCargo()" style="background:none;border:1.5px solid var(--border);border-radius:.4rem;padding:.3rem .6rem;font-size:.75rem;cursor:pointer;color:var(--text2)">⚙️ Gestionar Cargos</button></div>';
+    content.innerHTML = cargoBtn + _nomFormTable({
+      title:'Personas', singular:'persona',
+      fields:[
+        {key:'cedula',label:'Cédula',type:'number'},
+        {key:'fecha_expedicion',label:'F. Expedición',type:'date'},
+        {key:'nombre',label:'Nombre'},
+        {key:'celular',label:'Celular'},
+        {key:'id_eps',label:'EPS',type:'select',options:epsOpts,noTable:true,suffixHtml:'<button type="button" onclick="abrirModalEps()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar EPS">+</button>'},
+        {key:'id_afp',label:'AFP',type:'select',options:afpOpts,noTable:true,suffixHtml:'<button type="button" onclick="abrirModalAfp()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar AFP">+</button>'},
+      ],
+      data:personas, idKey:'cedula',
+      onSave: async (body) => { await _apiNomina('/personas', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('persona'); },
+      onDelete: async (id) => { if(confirm('Eliminar persona?')){ await _apiNomina('/personas/'+id, {method:'DELETE'}); await _renderTabNomina('persona'); } },
+      extraHeaders:['EPS','AFP'],
+      extraCols: d => '<td style="font-size:.78rem"><a href="#" onclick="abrirModalEps();return false" style="color:var(--accent);text-decoration:none">'+escapeHtml(d.eps_nombre||'')+'</a></td><td style="font-size:.78rem"><a href="#" onclick="abrirModalAfp();return false" style="color:var(--accent);text-decoration:none">'+escapeHtml(d.afp_nombre||'')+'</a></td>',
+    });
+  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
+}
+
+// ─── Vinculacion ─────────────────────────────
+async function _renderVinculacion(content){
+  try {
+    const [vinculaciones, personas, proyectos, cargos] = await Promise.all([
+      _apiNomina('/vinculaciones').then(r=>r.ok?r.json():[]),
+      _apiNomina('/personas').then(r=>r.ok?r.json():[]),
+      _apiNomina('/proyectos').then(r=>r.ok?r.json():[]),
+      _apiNomina('/cargos').then(r=>r.ok?r.json():[]),
+    ]);
+    const cedOpts = personas.map(p => `<option value="${p.cedula}">${escapeHtml(p.nombre)} (${p.cedula})</option>`).join('');
+    const proyOpts = proyectos.map(p => `<option value="${p.id_proyecto}">${escapeHtml(p.nombre)}</option>`).join('');
+    const cargOpts = cargos.map(c => `<option value="${c.id_cargo}">${escapeHtml(c.descripcion)}</option>`).join('');
+    content.innerHTML = _nomFormTable({
+      title:'Vinculaciones (Persona ↔ Proyecto)', singular:'vinculación',
+      fields:[
+        {key:'cedula',label:'Persona',type:'select',options:cedOpts},
+        {key:'id_proyecto',label:'Proyecto',type:'select',options:proyOpts},
+        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts},
+        {key:'fecha_ingreso',label:'F. Ingreso',type:'date'},
+        {key:'fecha_retiro',label:'F. Retiro',type:'date'},
+        {key:'salario_quincenal',label:'Salario Quincenal',type:'number'},
+      ],
+      data:vinculaciones, idKey:'id_vinculacion',
+      onSave: async (body) => { await _apiNomina('/vinculaciones', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('vinculacion'); },
+      onDelete: async (id) => { if(confirm('Eliminar vinculacion?')){ await _apiNomina('/vinculaciones/'+id, {method:'DELETE'}); await _renderTabNomina('vinculacion'); } },
+      extraHeaders:['Persona','Proyecto','Cargo','Estado'],
+      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.persona_nombre||'')+'</td><td style="font-size:.78rem">'+escapeHtml(d.proyecto_nombre||'')+'</td><td style="font-size:.78rem">'+escapeHtml(d.cargo_descripcion||'')+'</td><td style="font-size:.78rem">'+escapeHtml(d.estado||'')+'</td>',
+    });
+  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
+}
+
+// ─── Quincena ────────────────────────────────
+async function _renderQuincena(content){
+  try {
+    const [quincenas, vinculaciones] = await Promise.all([
+      _apiNomina('/quincenas').then(r=>r.ok?r.json():[]),
+      _apiNomina('/vinculaciones').then(r=>r.ok?r.json():[]),
+    ]);
+    const vincOpts = vinculaciones.map(v => `<option value="${v.id_vinculacion}">${escapeHtml(v.persona_nombre||'')} - ${escapeHtml(v.proyecto_nombre||'')}</option>`).join('');
+    content.innerHTML = _nomFormTable({
+      title:'Quincenas', singular:'quincena',
+      fields:[
+        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
+        {key:'numero_quincena',label:'N° Quincena',type:'number'},
+        {key:'fecha_pago',label:'F. Pago',type:'date'},
+        {key:'valor_bruto',label:'Valor Bruto',type:'number'},
+        {key:'desc_abono',label:'Desc. Abono',type:'number'},
+        {key:'desc_seguro',label:'Desc. Seguro',type:'number'},
+      ],
+      data:quincenas, idKey:'id_quincena',
+      onSave: async (body) => { await _apiNomina('/quincenas', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('quincena'); },
+      onDelete: async (id) => { if(confirm('Eliminar quincena?')){ await _apiNomina('/quincenas/'+id, {method:'DELETE'}); await _renderTabNomina('quincena'); } },
+      extraHeaders:['Persona','Bruto','Desc.Abono','Desc.Seguro','Neto'],
+      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.vinculacion_info||'')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.valor_bruto).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.desc_abono).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.desc_seguro).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.valor_neto).toLocaleString('es-CO')+'</td>',
+    });
+  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
+}
+
+// ─── Prestamo ────────────────────────────────
+async function _renderPrestamo(content){
+  try {
+    const [prestamos, vinculaciones] = await Promise.all([
+      _apiNomina('/prestamos').then(r=>r.ok?r.json():[]),
+      _apiNomina('/vinculaciones').then(r=>r.ok?r.json():[]),
+    ]);
+    const vincOpts = vinculaciones.map(v => `<option value="${v.id_vinculacion}">${escapeHtml(v.persona_nombre||'')} - ${escapeHtml(v.proyecto_nombre||'')}</option>`).join('');
+    content.innerHTML = _nomFormTable({
+      title:'Préstamos', singular:'préstamo',
+      fields:[
+        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
+        {key:'fecha_prestamo',label:'F. Préstamo',type:'date'},
+        {key:'valor',label:'Valor',type:'number'},
+      ],
+      data:prestamos, idKey:'id_prestamo',
+      onSave: async (body) => { await _apiNomina('/prestamos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('prestamo'); },
+      onDelete: async (id) => { if(confirm('Eliminar prestamo?')){ await _apiNomina('/prestamos/'+id, {method:'DELETE'}); await _renderTabNomina('prestamo'); } },
+      extraHeaders:['Persona','Valor','Saldo'],
+      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.vinculacion_info||'')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.valor).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.saldo).toLocaleString('es-CO')+'</td>',
+    });
+  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
+}
+
+// ─── Abono ───────────────────────────────────
+async function _renderAbono(content){
+  try {
+    const [abonos, prestamos] = await Promise.all([
+      _apiNomina('/abonos').then(r=>r.ok?r.json():[]),
+      _apiNomina('/prestamos').then(r=>r.ok?r.json():[]),
+    ]);
+    const presOpts = prestamos.map(p => `<option value="${p.id_prestamo}">#${p.id_prestamo} - ${escapeHtml(p.vinculacion_info||'')} (saldo: $${Number(p.saldo).toLocaleString('es-CO')})</option>`).join('');
+    content.innerHTML = _nomFormTable({
+      title:'Abonos a Préstamos', singular:'abono',
+      fields:[
+        {key:'id_prestamo',label:'Préstamo',type:'select',options:presOpts},
+        {key:'fecha_abono',label:'F. Abono',type:'date'},
+        {key:'valor_abono',label:'Valor Abono',type:'number'},
+      ],
+      data:abonos, idKey:'id_abono',
+      onSave: async (body) => { await _apiNomina('/abonos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('abono'); },
+      onDelete: async (id) => { if(confirm('Eliminar abono?')){ await _apiNomina('/abonos/'+id, {method:'DELETE'}); await _renderTabNomina('abono'); } },
+      extraHeaders:['Préstamo','Valor'],
+      extraCols: d => '<td style="font-size:.78rem">#'+d.id_prestamo+'</td><td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.valor_abono).toLocaleString('es-CO')+'</td>',
+    });
+  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
+}
+
+// ─── Helper: form + table generator ──────────
+function _nomFormTable({title, singular, fields, data, idKey, onSave, onDelete, extraHeaders, extraCols}){
+  const formFields = fields.map(f => {
+    const val = f.type === 'select' ? f.options : '';
+    const typeAttr = f.type === 'select' ? '' : `type="${f.type||'text'}"`;
+    const stepAttr = f.type === 'number' ? 'step="0.01"' : '';
+    if(f.type === 'select'){
+      const suffix = f.suffixHtml || '';
+      return `<label style="display:flex;flex-direction:column;font-size:.78rem;color:var(--text2)">${escapeHtml(f.label)}
+        <div style="display:flex;gap:.35rem;align-items:stretch"><select id="nom-${f.key}" style="flex:1;padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem;background:#fff;color:var(--text)">${f.options}</select>${suffix}</div></label>`;
+    }
+    return `<label style="display:flex;flex-direction:column;font-size:.78rem;color:var(--text2)">${escapeHtml(f.label)}
+      <input ${typeAttr} ${stepAttr} id="nom-${f.key}" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>`;
+  }).join('');
+
+  const tableFields = fields.filter(f => !f.noTable);
+  const cols = tableFields.map(f => `<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(f.label)}</th>`).join('');
+  const extraH = extraHeaders ? extraHeaders.map(h => `<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(h)}</th>`).join('') : '';
+  const rows = data.map(d => {
+    const valCols = tableFields.map(f => {
+      const v = d[f.key];
+      if(f.type === 'select' && v != null) return '<td style="font-size:.78rem"># '+v+'</td>';
+      if(/^(valor|saldo|desc_|salario)/.test(f.key))
+        return '<td style="font-size:.78rem;text-align:right">$'+(v != null ? Number(v).toLocaleString('es-CO') : '0')+'</td>';
+      if(f.type === 'date' && v) return '<td style="font-size:.78rem">'+v+'</td>';
+      return '<td style="font-size:.78rem">'+escapeHtml(v != null ? String(v) : '')+'</td>';
+    }).join('');
+    const extra = extraCols ? extraCols(d) : '';
+    return `<tr>${valCols}${extra}<td style="text-align:center;white-space:nowrap">`+
+      `<button onclick="_nomEdit(${d[idKey]})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Editar">✏️</button>`+
+      `<button onclick="if(confirm('Eliminar ${singular}?')){ _nomDel(${d[idKey]}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Eliminar">✕</button></td></tr>`;
+  }).join('');
+
+  return `<div class="section-card" style="padding:1rem">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.5rem;margin-bottom:.8rem">${formFields}</div>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+      <button onclick="_nomSave(this)" id="nom-save-btn" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;font-weight:600;cursor:pointer">+ Agregar ${singular}</button>
+      <button onclick="_nomCancelEdit()" id="nom-cancel-btn" style="display:none;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;cursor:pointer">Cancelar</button>
+    </div>
+    <input type="hidden" id="nom-edit-id">
+    <div id="nom-msg" style="font-size:.75rem;margin-top:.4rem;color:var(--green)"></div>
+    <div class="table-wrap" style="margin-top:.8rem;max-height:400px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>${cols}${extraH}<th style="padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);width:70px"></th></tr></thead>
+        <tbody>${rows||'<tr><td colspan="99" style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">Sin registros</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+const _NOM_ENDPOINTS = {proyecto:'proyectos', persona:'personas', vinculacion:'vinculaciones', quincena:'quincenas', prestamo:'prestamos', abono:'abonos'};
+
+async function _nomSave(btn){
+  if(!btn) btn = document.activeElement;
+  const card = btn ? btn.closest('.section-card') : null;
+  if(!card){ const msg = document.getElementById('nom-msg'); if(msg) msg.textContent = 'Error: no se encontro la tarjeta'; return; }
+  const selects = card.querySelectorAll('select');
+  const inputs = card.querySelectorAll('input:not([type="hidden"])');
+  const body = {};
+  selects.forEach(s => {
+    const key = s.id.replace('nom-','');
+    const v = s.value;
+    body[key] = (v === '' || v === null) ? null : (isNaN(v) ? v : Number(v));
+  });
+  inputs.forEach(i => {
+    const key = i.id.replace('nom-','');
+    const val = i.value;
+    if(i.type === 'number') body[key] = parseFloat(val) || 0;
+    else if(i.type === 'date') body[key] = val || null;
+    else body[key] = val;
+  });
+  const msg = card.querySelector('#nom-msg');
+  const activeTab = document.querySelector('.nomina-tab.active');
+  if(!activeTab){ if(msg) msg.textContent = 'Error: no hay tab activo'; return; }
+  const tab = activeTab.dataset.tab;
+  const ep = _NOM_ENDPOINTS[tab];
+  if(!ep){ if(msg) msg.textContent = 'Error: endpoint no encontrado'; return; }
+  const editId = card.querySelector('#nom-edit-id');
+  const isEdit = editId && editId.value;
+  const method = isEdit ? 'PUT' : 'POST';
+  const url = isEdit ? '/'+ep+'/'+editId.value : '/'+ep;
+  try {
+    const r = await _apiNomina(url, {method,body:JSON.stringify(body)});
+    if(!r.ok){
+      const err = await r.json().catch(()=> ({detail:'Error'}));
+      if(msg) msg.textContent = 'Error: '+(err.detail||'');
+      return;
+    }
+    if(msg) msg.textContent = 'Guardado';
+    if(editId){ editId.value = ''; _nomCancelEdit(); }
+    if(activeTab) cambiarTabNomina(tab, activeTab);
+  } catch(e){ if(msg) msg.textContent = 'Error de conexion'; }
+}
+
+function _nomCancelEdit(){
+  const card = document.querySelector('#nomina-content .section-card');
+  if(!card) return;
+  card.querySelectorAll('input:not([type="hidden"]), select').forEach(el => {
+    if(el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  const btn = card.querySelector('#nom-save-btn');
+  const cancel = card.querySelector('#nom-cancel-btn');
+  const editId = card.querySelector('#nom-edit-id');
+  const msg = card.querySelector('#nom-msg');
+  if(btn) btn.textContent = btn.textContent.replace('Actualizar','+ Agregar');
+  if(cancel) cancel.style.display = 'none';
+  if(editId) editId.value = '';
+  if(msg) msg.textContent = '';
+}
+
+async function _nomEdit(id){
+  const activeTab = document.querySelector('.nomina-tab.active');
+  if(!activeTab) return;
+  const tab = activeTab.dataset.tab;
+  const ep = _NOM_ENDPOINTS[tab];
+  if(!ep) return;
+  const card = document.querySelector('#nomina-content .section-card');
+  if(!card) return;
+  try {
+    const r = await _apiNomina('/'+ep+'/'+id);
+    if(!r.ok) return;
+    const data = await r.json();
+    card.querySelectorAll('input:not([type="hidden"]), select').forEach(el => {
+      const key = el.id.replace('nom-','');
+      if(key === 'save' || key === 'cancel' || key === 'edit') return;
+      if(data[key] === undefined || data[key] === null){
+        if(el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+        return;
+      }
+      const val = String(data[key]);
+      if(el.tagName === 'SELECT'){
+        const opt = Array.from(el.options).find(o => o.value === val);
+        if(opt) el.value = val;
+      } else {
+        el.value = val;
+      }
+    });
+    const editId = card.querySelector('#nom-edit-id');
+    if(editId) editId.value = id;
+    const btn = card.querySelector('#nom-save-btn');
+    if(btn) btn.textContent = btn.textContent.replace('+ Agregar','Actualizar');
+    const cancel = card.querySelector('#nom-cancel-btn');
+    if(cancel) cancel.style.display = '';
+    const msg = card.querySelector('#nom-msg');
+    if(msg) msg.textContent = '';
+  } catch(e){}
+}
+
+function _nomDel(id){
+  const activeTab = document.querySelector('.nomina-tab.active');
+  if(!activeTab) return;
+  const tab = activeTab.dataset.tab;
+  const ep = _NOM_ENDPOINTS[tab];
+  if(!ep) return;
+  _apiNomina('/'+ep+'/'+id, {method:'DELETE'}).then(() => { if(activeTab) cambiarTabNomina(tab, activeTab); });
+}
+
 async function apiFetch(url, opts){
   opts = opts || {};
   opts.headers = opts.headers || {};
@@ -1723,4 +2092,330 @@ async function eliminarPago(id){
     if(!r.ok){ var err=await r.json(); alert('Error: '+(err.detail||'No se pudo eliminar')); return; }
     await cargarPagos();
   } catch(e){ alert('Error: '+e.message); }
+}
+
+// ─── Modal Uso de Proyecto ─────────────────────
+function abrirModalUso(){
+  document.getElementById('modal-uso').style.display = 'flex';
+  document.getElementById('modal-uso-desc').value = '';
+  document.getElementById('modal-uso-id').value = '';
+  document.getElementById('modal-uso-msg').textContent = '';
+  document.getElementById('modal-uso-cancel').style.display = 'none';
+  document.getElementById('modal-uso-desc').focus();
+  renderListaUsos();
+}
+function cerrarModalUso(){
+  document.getElementById('modal-uso').style.display = 'none';
+}
+function cancelarEdicionUso(){
+  document.getElementById('modal-uso-desc').value = '';
+  document.getElementById('modal-uso-id').value = '';
+  document.getElementById('modal-uso-msg').textContent = '';
+  document.getElementById('modal-uso-cancel').style.display = 'none';
+  document.getElementById('modal-uso-desc').focus();
+}
+async function renderListaUsos(){
+  const cont = document.getElementById('modal-uso-lista');
+  try {
+    const r = await _apiNomina('/usos-proyecto');
+    if(!r.ok){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error al cargar</div>'; return; }
+    const usos = await r.json();
+    if(!usos.length){ cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Sin usos registrados</div>'; return; }
+    cont.innerHTML = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Descripción</th><th style="width:70px;padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)"></th></tr></thead><tbody>'+
+      usos.map(u => '<tr><td style="font-size:.78rem;padding:.25rem .3rem">'+escapeHtml(u.descripcion)+'</td>'+
+        '<td style="text-align:center;white-space:nowrap">'+
+        '<button onclick="editarUso('+u.id_uso+',\''+u.descripcion.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Editar">✏️</button>'+
+        '<button onclick="eliminarUso('+u.id_uso+')" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Eliminar">✕</button></td></tr>').join('')+
+      '</tbody></table>';
+  } catch(e){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error de conexión</div>'; }
+}
+function editarUso(id, desc){
+  document.getElementById('modal-uso-id').value = id;
+  document.getElementById('modal-uso-desc').value = desc;
+  document.getElementById('modal-uso-msg').textContent = '';
+  document.getElementById('modal-uso-cancel').style.display = '';
+  document.getElementById('modal-uso-desc').focus();
+}
+async function eliminarUso(id){
+  if(!confirm('¿Eliminar este uso?')) return;
+  try {
+    const r = await _apiNomina('/usos-proyecto/'+id, {method:'DELETE'});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); document.getElementById('modal-uso-msg').textContent = 'Error: '+(e.detail||''); return; }
+    renderListaUsos();
+    actualizarSelectUso();
+  } catch(e){ document.getElementById('modal-uso-msg').textContent = 'Error de conexión'; }
+}
+async function actualizarSelectUso(){
+  const sel = document.getElementById('nom-id_uso');
+  if(!sel) return;
+  try {
+    const r = await _apiNomina('/usos-proyecto');
+    if(!r.ok) return;
+    const usos = await r.json();
+    const val = sel.value;
+    sel.innerHTML = usos.map(u => '<option value="'+u.id_uso+'">'+escapeHtml(u.descripcion)+'</option>').join('');
+    if(usos.some(u => String(u.id_uso) === val)) sel.value = val;
+  } catch(e){}
+}
+async function guardarModalUso(){
+  const desc = document.getElementById('modal-uso-desc').value.trim();
+  const id = document.getElementById('modal-uso-id').value;
+  const msg = document.getElementById('modal-uso-msg');
+  if(!desc){ msg.textContent = 'Ingrese una descripción'; return; }
+  try {
+    let r;
+    if(id){
+      r = await _apiNomina('/usos-proyecto/'+id, {method:'PUT',body:JSON.stringify({descripcion:desc})});
+    } else {
+      r = await _apiNomina('/usos-proyecto', {method:'POST',body:JSON.stringify({descripcion:desc})});
+    }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); msg.textContent = 'Error: '+(e.detail||''); return; }
+    document.getElementById('modal-uso-desc').value = '';
+    document.getElementById('modal-uso-id').value = '';
+    document.getElementById('modal-uso-cancel').style.display = 'none';
+    msg.textContent = '';
+    renderListaUsos();
+    actualizarSelectUso();
+  } catch(e){ msg.textContent = 'Error de conexión'; }
+}
+
+// ─── Modal EPS ────────────────────────────────
+function abrirModalEps(){
+  document.getElementById('modal-eps').style.display = 'flex';
+  document.getElementById('modal-eps-nombre').value = '';
+  document.getElementById('modal-eps-id').value = '';
+  document.getElementById('modal-eps-msg').textContent = '';
+  document.getElementById('modal-eps-cancel').style.display = 'none';
+  document.getElementById('modal-eps-nombre').focus();
+  renderListaEps();
+}
+function cerrarModalEps(){
+  document.getElementById('modal-eps').style.display = 'none';
+}
+function cancelarEdicionEps(){
+  document.getElementById('modal-eps-nombre').value = '';
+  document.getElementById('modal-eps-id').value = '';
+  document.getElementById('modal-eps-msg').textContent = '';
+  document.getElementById('modal-eps-cancel').style.display = 'none';
+  document.getElementById('modal-eps-nombre').focus();
+}
+async function renderListaEps(){
+  const cont = document.getElementById('modal-eps-lista');
+  try {
+    const r = await _apiNomina('/eps');
+    if(!r.ok){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error al cargar</div>'; return; }
+    const items = await r.json();
+    if(!items.length){ cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Sin EPS registradas</div>'; return; }
+    cont.innerHTML = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Nombre EPS</th><th style="width:70px;padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)"></th></tr></thead><tbody>'+
+      items.map(i => '<tr><td style="font-size:.78rem;padding:.25rem .3rem">'+escapeHtml(i.nombre_eps)+'</td>'+
+        '<td style="text-align:center;white-space:nowrap">'+
+        '<button onclick="editarEps('+i.id_eps+',\''+i.nombre_eps.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Editar">✏️</button>'+
+        '<button onclick="eliminarEps('+i.id_eps+')" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Eliminar">✕</button></td></tr>').join('')+
+      '</tbody></table>';
+  } catch(e){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error de conexión</div>'; }
+}
+function editarEps(id, nombre){
+  document.getElementById('modal-eps-id').value = id;
+  document.getElementById('modal-eps-nombre').value = nombre;
+  document.getElementById('modal-eps-msg').textContent = '';
+  document.getElementById('modal-eps-cancel').style.display = '';
+  document.getElementById('modal-eps-nombre').focus();
+}
+async function eliminarEps(id){
+  if(!confirm('¿Eliminar esta EPS?')) return;
+  try {
+    const r = await _apiNomina('/eps/'+id, {method:'DELETE'});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); document.getElementById('modal-eps-msg').textContent = 'Error: '+(e.detail||''); return; }
+    renderListaEps();
+    actualizarSelectEps();
+  } catch(e){ document.getElementById('modal-eps-msg').textContent = 'Error de conexión'; }
+}
+async function actualizarSelectEps(){
+  const sel = document.getElementById('nom-id_eps');
+  if(!sel) return;
+  try {
+    const r = await _apiNomina('/eps');
+    if(!r.ok) return;
+    const items = await r.json();
+    const val = sel.value;
+    sel.innerHTML = '<option value="">--</option>'+items.map(i => '<option value="'+i.id_eps+'">'+escapeHtml(i.nombre_eps)+'</option>').join('');
+    if(items.some(i => String(i.id_eps) === val)) sel.value = val;
+  } catch(e){}
+}
+async function guardarModalEps(){
+  const nombre = document.getElementById('modal-eps-nombre').value.trim();
+  const id = document.getElementById('modal-eps-id').value;
+  const msg = document.getElementById('modal-eps-msg');
+  if(!nombre){ msg.textContent = 'Ingrese el nombre de la EPS'; return; }
+  try {
+    let r;
+    if(id){
+      r = await _apiNomina('/eps/'+id, {method:'PUT',body:JSON.stringify({nombre_eps:nombre})});
+    } else {
+      r = await _apiNomina('/eps', {method:'POST',body:JSON.stringify({nombre_eps:nombre})});
+    }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); msg.textContent = 'Error: '+(e.detail||''); return; }
+    document.getElementById('modal-eps-nombre').value = '';
+    document.getElementById('modal-eps-id').value = '';
+    document.getElementById('modal-eps-cancel').style.display = 'none';
+    msg.textContent = '';
+    renderListaEps();
+    actualizarSelectEps();
+  } catch(e){ msg.textContent = 'Error de conexión'; }
+}
+
+// ─── Modal AFP ────────────────────────────────
+function abrirModalAfp(){
+  document.getElementById('modal-afp').style.display = 'flex';
+  document.getElementById('modal-afp-nombre').value = '';
+  document.getElementById('modal-afp-id').value = '';
+  document.getElementById('modal-afp-msg').textContent = '';
+  document.getElementById('modal-afp-cancel').style.display = 'none';
+  document.getElementById('modal-afp-nombre').focus();
+  renderListaAfp();
+}
+function cerrarModalAfp(){
+  document.getElementById('modal-afp').style.display = 'none';
+}
+function cancelarEdicionAfp(){
+  document.getElementById('modal-afp-nombre').value = '';
+  document.getElementById('modal-afp-id').value = '';
+  document.getElementById('modal-afp-msg').textContent = '';
+  document.getElementById('modal-afp-cancel').style.display = 'none';
+  document.getElementById('modal-afp-nombre').focus();
+}
+async function renderListaAfp(){
+  const cont = document.getElementById('modal-afp-lista');
+  try {
+    const r = await _apiNomina('/afp');
+    if(!r.ok){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error al cargar</div>'; return; }
+    const items = await r.json();
+    if(!items.length){ cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Sin AFP registradas</div>'; return; }
+    cont.innerHTML = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Nombre AFP</th><th style="width:70px;padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)"></th></tr></thead><tbody>'+
+      items.map(i => '<tr><td style="font-size:.78rem;padding:.25rem .3rem">'+escapeHtml(i.nombre_afp)+'</td>'+
+        '<td style="text-align:center;white-space:nowrap">'+
+        '<button onclick="editarAfp('+i.id_afp+',\''+i.nombre_afp.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Editar">✏️</button>'+
+        '<button onclick="eliminarAfp('+i.id_afp+')" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Eliminar">✕</button></td></tr>').join('')+
+      '</tbody></table>';
+  } catch(e){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error de conexión</div>'; }
+}
+function editarAfp(id, nombre){
+  document.getElementById('modal-afp-id').value = id;
+  document.getElementById('modal-afp-nombre').value = nombre;
+  document.getElementById('modal-afp-msg').textContent = '';
+  document.getElementById('modal-afp-cancel').style.display = '';
+  document.getElementById('modal-afp-nombre').focus();
+}
+async function eliminarAfp(id){
+  if(!confirm('¿Eliminar esta AFP?')) return;
+  try {
+    const r = await _apiNomina('/afp/'+id, {method:'DELETE'});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); document.getElementById('modal-afp-msg').textContent = 'Error: '+(e.detail||''); return; }
+    renderListaAfp();
+    actualizarSelectAfp();
+  } catch(e){ document.getElementById('modal-afp-msg').textContent = 'Error de conexión'; }
+}
+async function actualizarSelectAfp(){
+  const sel = document.getElementById('nom-id_afp');
+  if(!sel) return;
+  try {
+    const r = await _apiNomina('/afp');
+    if(!r.ok) return;
+    const items = await r.json();
+    const val = sel.value;
+    sel.innerHTML = '<option value="">--</option>'+items.map(i => '<option value="'+i.id_afp+'">'+escapeHtml(i.nombre_afp)+'</option>').join('');
+    if(items.some(i => String(i.id_afp) === val)) sel.value = val;
+  } catch(e){}
+}
+async function guardarModalAfp(){
+  const nombre = document.getElementById('modal-afp-nombre').value.trim();
+  const id = document.getElementById('modal-afp-id').value;
+  const msg = document.getElementById('modal-afp-msg');
+  if(!nombre){ msg.textContent = 'Ingrese el nombre de la AFP'; return; }
+  try {
+    let r;
+    if(id){
+      r = await _apiNomina('/afp/'+id, {method:'PUT',body:JSON.stringify({nombre_afp:nombre})});
+    } else {
+      r = await _apiNomina('/afp', {method:'POST',body:JSON.stringify({nombre_afp:nombre})});
+    }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); msg.textContent = 'Error: '+(e.detail||''); return; }
+    document.getElementById('modal-afp-nombre').value = '';
+    document.getElementById('modal-afp-id').value = '';
+    document.getElementById('modal-afp-cancel').style.display = 'none';
+    msg.textContent = '';
+    renderListaAfp();
+    actualizarSelectAfp();
+  } catch(e){ msg.textContent = 'Error de conexión'; }
+}
+
+// ─── Modal Cargo ──────────────────────────────
+function abrirModalCargo(){
+  document.getElementById('modal-cargo').style.display = 'flex';
+  document.getElementById('modal-cargo-desc').value = '';
+  document.getElementById('modal-cargo-id').value = '';
+  document.getElementById('modal-cargo-msg').textContent = '';
+  document.getElementById('modal-cargo-cancel').style.display = 'none';
+  document.getElementById('modal-cargo-desc').focus();
+  renderListaCargos();
+}
+function cerrarModalCargo(){
+  document.getElementById('modal-cargo').style.display = 'none';
+}
+function cancelarEdicionCargo(){
+  document.getElementById('modal-cargo-desc').value = '';
+  document.getElementById('modal-cargo-id').value = '';
+  document.getElementById('modal-cargo-msg').textContent = '';
+  document.getElementById('modal-cargo-cancel').style.display = 'none';
+  document.getElementById('modal-cargo-desc').focus();
+}
+async function renderListaCargos(){
+  const cont = document.getElementById('modal-cargo-lista');
+  try {
+    const r = await _apiNomina('/cargos');
+    if(!r.ok){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error al cargar</div>'; return; }
+    const items = await r.json();
+    if(!items.length){ cont.innerHTML = '<div style="color:var(--muted);font-size:.78rem;text-align:center;padding:.5rem">Sin cargos registrados</div>'; return; }
+    cont.innerHTML = '<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Descripción</th><th style="width:70px;padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)"></th></tr></thead><tbody>'+
+      items.map(i => '<tr><td style="font-size:.78rem;padding:.25rem .3rem">'+escapeHtml(i.descripcion)+'</td>'+
+        '<td style="text-align:center;white-space:nowrap">'+
+        '<button onclick="editarCargo('+i.id_cargo+',\''+i.descripcion.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Editar">✏️</button>'+
+        '<button onclick="eliminarCargo('+i.id_cargo+')" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .3rem" title="Eliminar">✕</button></td></tr>').join('')+
+      '</tbody></table>';
+  } catch(e){ cont.innerHTML = '<div style="color:var(--red);font-size:.75rem">Error de conexión</div>'; }
+}
+function editarCargo(id, desc){
+  document.getElementById('modal-cargo-id').value = id;
+  document.getElementById('modal-cargo-desc').value = desc;
+  document.getElementById('modal-cargo-msg').textContent = '';
+  document.getElementById('modal-cargo-cancel').style.display = '';
+  document.getElementById('modal-cargo-desc').focus();
+}
+async function eliminarCargo(id){
+  if(!confirm('¿Eliminar este cargo?')) return;
+  try {
+    const r = await _apiNomina('/cargos/'+id, {method:'DELETE'});
+    if(!r.ok){ const e=await r.json().catch(()=>({})); document.getElementById('modal-cargo-msg').textContent = 'Error: '+(e.detail||''); return; }
+    renderListaCargos();
+  } catch(e){ document.getElementById('modal-cargo-msg').textContent = 'Error de conexión'; }
+}
+async function guardarModalCargo(){
+  const desc = document.getElementById('modal-cargo-desc').value.trim();
+  const id = document.getElementById('modal-cargo-id').value;
+  const msg = document.getElementById('modal-cargo-msg');
+  if(!desc){ msg.textContent = 'Ingrese la descripción del cargo'; return; }
+  try {
+    let r;
+    if(id){
+      r = await _apiNomina('/cargos/'+id, {method:'PUT',body:JSON.stringify({descripcion:desc})});
+    } else {
+      r = await _apiNomina('/cargos', {method:'POST',body:JSON.stringify({descripcion:desc})});
+    }
+    if(!r.ok){ const e=await r.json().catch(()=>({})); msg.textContent = 'Error: '+(e.detail||''); return; }
+    document.getElementById('modal-cargo-desc').value = '';
+    document.getElementById('modal-cargo-id').value = '';
+    document.getElementById('modal-cargo-cancel').style.display = 'none';
+    msg.textContent = '';
+    renderListaCargos();
+  } catch(e){ msg.textContent = 'Error de conexión'; }
 }

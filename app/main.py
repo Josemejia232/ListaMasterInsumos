@@ -24,10 +24,15 @@ from dotenv import load_dotenv
 
 from app.database import engine, get_db, SessionLocal, Base, IS_SQLITE
 from app.models import Producto, Insumo, Usuario, Pago, UsoCalculo, RateLimit, CacheEntry, LoginCode
+from app.models_nomina import (
+    UsoProyecto, Proyecto, Eps, Afp, Cargo,
+    Persona, Vinculacion, Quincena, Prestamo, Abono,
+)
 from app.sheets import read_urls_from_sheet
 from app.scrapers import get_scraper
 from app import bold as bold_client
 from app.calculos import router as calculos_router
+from app.nomina import router as nomina_router
 from app.services.auth_service import get_current_user, require_admin, _plan_info, _plan_activo
 from app.services.product_service import _normalize_url, _find_by_url, _upsert_producto
 from app.dependencies import (
@@ -140,6 +145,7 @@ app.include_router(products_router.router, prefix="/productos", tags=["productos
 app.include_router(payments_router.router, prefix="/api/pagos", tags=["pagos"])
 app.include_router(scraping_router.router, prefix="", tags=["scraping"])
 app.include_router(materiales_router.router)
+app.include_router(nomina_router)
 
 # ─── Debug ────────────────────────────────────────────────────
 

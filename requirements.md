@@ -386,6 +386,106 @@ app/
 └── schemas.py               → MaterialInscalRequest, MaterialInscalResponse, UpdateAjustadaRequest
 ```
 
+## Módulo Nómina — Proyectos · Personas · Vinculaciones · Quincenas · Préstamos · Abonos
+
+Módulo de gestión de nómina de obra con 10 tablas relacionales. CRUD completo vía API en `/api/nomina/…` y frontend con pestañas en la sección "Nómina" del sidebar.
+
+### Tablas
+
+| Tabla | PK | Descripción |
+|-------|:--:|-------------|
+| `UsoProyecto` | `id_uso` | Clasificación del proyecto (Comercial, Residencial, etc.) — gestionado vía modal en Proyectos |
+| `Proyecto` | `id_proyecto` | Obra o proyecto con nombre, dirección, responsable, FK → `UsoProyecto` |
+| `Eps` | `id_eps` | Entidad Promotora de Salud — gestionado vía modal en Personas |
+| `Afp` | `id_afp` | Administradora de Fondos de Pensiones — gestionado vía modal en Personas |
+| `Cargo` | `id_cargo` | Cargos laborales — gestionado vía modal en Personas |
+| `Persona` | `cedula` | Persona con datos personales, FK → `Eps`, `Afp` |
+| `Vinculacion` | `id_vinculacion` | Relación Persona ↔ Proyecto con cargo, fechas y salario quincenal |
+| `Quincena` | `id_quincena` | Pago quincenal, valor neto calculado como `bruto - desc_abono - desc_seguro` |
+| `Prestamo` | `id_prestamo` | Préstamo a persona vinculada, saldo se actualiza automáticamente con abonos |
+| `Abono` | `id_abono` | Abono a préstamo, descuenta del saldo al crear, restaura al eliminar |
+
+### Relaciones
+
+```
+Persona ──> Eps (id_eps)
+Persona ──> Afp (id_afp)
+Vinculacion ──> Persona (cedula)
+Vinculacion ──> Proyecto (id_proyecto)
+Vinculacion ──> Cargo (id_cargo)
+Proyecto ──> UsoProyecto (id_uso)
+Quincena ──> Vinculacion (id_vinculacion)
+Prestamo ──> Vinculacion (id_vinculacion)
+Abono ──> Prestamo (id_prestamo)
+```
+
+### Frontend (Nómina Dashboard)
+
+- Acceso desde el sidebar → submenú **NÓMINA**
+- Pestañas: Proyectos, Personas, Vinculaciones, Quincenas, Préstamos, Abonos
+- **Modales inline**: Uso de Proyecto (desde Proyectos), EPS/AFP/Cargo (desde Personas) — creación, edición y eliminación sin cambiar de pestaña
+- **Edición inline**: cada fila de tabla tiene botón ✏️ que pre‑carga el formulario para actualizar (aplica a todas las pestañas: Proyectos, Personas, Vinculaciones, Quincenas, Préstamos, Abonos)
+- **Formato moneda**: valores en `$COP` con `toLocaleString('es-CO')`
+
+### Endpoints Nómina
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| GET | `/api/nomina/usos-proyecto` | Listar usos de proyecto |
+| POST | `/api/nomina/usos-proyecto` | Crear uso de proyecto |
+| PUT | `/api/nomina/usos-proyecto/{id}` | Actualizar uso de proyecto |
+| DELETE | `/api/nomina/usos-proyecto/{id}` | Eliminar uso de proyecto |
+| GET | `/api/nomina/proyectos` | Listar proyectos |
+| GET | `/api/nomina/proyectos/{id}` | Obtener proyecto por ID |
+| POST | `/api/nomina/proyectos` | Crear proyecto |
+| PUT | `/api/nomina/proyectos/{id}` | Actualizar proyecto |
+| DELETE | `/api/nomina/proyectos/{id}` | Eliminar proyecto |
+| GET | `/api/nomina/eps` | Listar EPS |
+| POST | `/api/nomina/eps` | Crear EPS |
+| PUT | `/api/nomina/eps/{id}` | Actualizar EPS |
+| DELETE | `/api/nomina/eps/{id}` | Eliminar EPS |
+| GET | `/api/nomina/afp` | Listar AFP |
+| POST | `/api/nomina/afp` | Crear AFP |
+| PUT | `/api/nomina/afp/{id}` | Actualizar AFP |
+| DELETE | `/api/nomina/afp/{id}` | Eliminar AFP |
+| GET | `/api/nomina/cargos` | Listar cargos |
+| POST | `/api/nomina/cargos` | Crear cargo |
+| PUT | `/api/nomina/cargos/{id}` | Actualizar cargo |
+| DELETE | `/api/nomina/cargos/{id}` | Eliminar cargo |
+| GET | `/api/nomina/personas` | Listar personas |
+| GET | `/api/nomina/personas/{cedula}` | Obtener persona por cédula |
+| POST | `/api/nomina/personas` | Crear persona |
+| PUT | `/api/nomina/personas/{cedula}` | Actualizar persona |
+| DELETE | `/api/nomina/personas/{cedula}` | Eliminar persona |
+| GET | `/api/nomina/vinculaciones` | Listar vinculaciones |
+| GET | `/api/nomina/vinculaciones/{id}` | Obtener vinculación por ID |
+| POST | `/api/nomina/vinculaciones` | Crear vinculación |
+| PUT | `/api/nomina/vinculaciones/{id}` | Actualizar vinculación |
+| DELETE | `/api/nomina/vinculaciones/{id}` | Eliminar vinculación |
+| GET | `/api/nomina/quincenas` | Listar quincenas |
+| GET | `/api/nomina/quincenas/{id}` | Obtener quincena por ID |
+| POST | `/api/nomina/quincenas` | Crear quincena |
+| DELETE | `/api/nomina/quincenas/{id}` | Eliminar quincena |
+| GET | `/api/nomina/prestamos` | Listar préstamos |
+| GET | `/api/nomina/prestamos/{id}` | Obtener préstamo por ID |
+| POST | `/api/nomina/prestamos` | Crear préstamo |
+| DELETE | `/api/nomina/prestamos/{id}` | Eliminar préstamo |
+| GET | `/api/nomina/abonos` | Listar abonos (filtro `?prestamo_id=`) |
+| GET | `/api/nomina/abonos/{id}` | Obtener abono por ID |
+| POST | `/api/nomina/abonos` | Crear abono (descuenta del saldo del préstamo) |
+| DELETE | `/api/nomina/abonos/{id}` | Eliminar abono (restaura saldo del préstamo) |
+
+### Estructura del módulo Nómina
+
+```
+app/
+├── nomina/
+│   ├── __init__.py
+│   ├── schemas.py      → Pydantic models de entrada/salida con joins
+│   └── router.py       → CRUD endpoints + lógica de saldo
+├── models_nomina.py    → 10 modelos SQLAlchemy
+```
+
 ### Lógica de precios (3 fuentes)
 
 | Fuente | Descripción |
