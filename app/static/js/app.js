@@ -1420,7 +1420,7 @@ async function _renderVinculacion(content){
       title:'Vinculaciones (Persona ↔ Proyecto)', singular:'vinculación',
       fields:[
         {key:'cedula',label:'Persona',type:'select',options:cedOpts},
-        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts},
+        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts,suffixHtml:'<button type="button" onclick="abrirModalCargo()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar Cargos">+</button>'},
         {key:'salario_quincenal',label:'Salario Q',type:'number'},
         {key:'fecha_ingreso',label:'F. Ingreso',type:'date'},
         {key:'fecha_retiro',label:'F. Retiro',type:'date'},
@@ -2681,6 +2681,18 @@ async function guardarModalAfp(){
 }
 
 // ─── Modal Cargo ──────────────────────────────
+async function actualizarSelectCargo(){
+  const sel = document.getElementById('nom-id_cargo');
+  if(!sel) return;
+  try {
+    const r = await _apiNomina('/cargos');
+    if(!r.ok) return;
+    const items = await r.json();
+    const val = sel.value;
+    sel.innerHTML = items.map(i => '<option value="'+i.id_cargo+'">'+escapeHtml(i.descripcion)+'</option>').join('');
+    if(items.some(i => String(i.id_cargo) === val)) sel.value = val;
+  } catch(e){}
+}
 function abrirModalCargo(){
   document.getElementById('modal-cargo').style.display = 'flex';
   document.getElementById('modal-cargo-desc').value = '';
@@ -2728,6 +2740,7 @@ async function eliminarCargo(id){
     const r = await _apiNomina('/cargos/'+id, {method:'DELETE'});
     if(!r.ok){ const e=await r.json().catch(()=>({})); document.getElementById('modal-cargo-msg').textContent = 'Error: '+(e.detail||''); return; }
     renderListaCargos();
+    actualizarSelectCargo();
   } catch(e){ document.getElementById('modal-cargo-msg').textContent = 'Error de conexión'; }
 }
 async function guardarModalCargo(){
@@ -2748,5 +2761,6 @@ async function guardarModalCargo(){
     document.getElementById('modal-cargo-cancel').style.display = 'none';
     msg.textContent = '';
     renderListaCargos();
+    actualizarSelectCargo();
   } catch(e){ msg.textContent = 'Error de conexión'; }
 }
