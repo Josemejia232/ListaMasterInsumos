@@ -172,6 +172,8 @@ function buildSidebar(){
   items.push({id:'mezclas', icon:'&#9881;', text:'Mezclas'});
   items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
   items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
+  items.push({id:'boquilla', icon:'&#9881;', text:'Boquilla'});
+  items.push({id:'yeso', icon:'&#9881;', text:'Muro Yeso'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -188,7 +190,7 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos'};
+  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'yeso':'Muro Doble Cara en Yeso'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
@@ -746,6 +748,185 @@ async function calcularAnclajes(){
     '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
       '<div><div style="font-weight:600;font-size:.85rem">Anclaje Químico ø'+diam+'mm × '+prof+'mm</div>'+
       '<div style="font-size:.76rem;color:var(--muted)">'+cant+' puntos · '+data.volumen_total_cm3.toFixed(1)+' cm³ resina · '+data.tubos_calculados+' tubo(s) 300ml</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);min-width:120px">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
+
+async function calcularBoquilla(){
+  const formato = document.getElementById('boq-formato').value;
+  const ancho = parseInt(document.getElementById('boq-ancho').value) || 0;
+  const area = parseFloat(document.getElementById('boq-area').value) || 0;
+  const wrap = document.getElementById('boq-card-wrap');
+  const rwrap = document.getElementById('boq-result-wrap');
+  rwrap.style.display = 'none';
+  if(area <= 0){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Ingrese un área válida</div>'; return; }
+  _showLoading('boq-card-wrap');
+  try {
+    const r = await apiFetch('/api/calculos/boquillas', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({formato:formato, ancho_mm:ancho, area_m2:area})
+    });
+    if(!r.ok) return;
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Boquilla '+data.formato.replace(/x/g,'×')+' · Junta '+data.ancho_mm+'mm</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Factor consumo '+data.factor_consumo+' kg/m² · '+data.kg_totales+' kg totales</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);min-width:120px">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
+
+let _yesoParams = {};
+
+function abrirModalYeso(){
+  const m = document.getElementById('modal-yeso');
+  if(Object.keys(_yesoParams).length === 0){
+    document.getElementById('yeso-desp').value = 5;
+    document.getElementById('yeso-factor-torn').value = 30;
+    document.getElementById('yeso-kg-masilla').value = 0.5;
+    document.getElementById('yeso-n-manos').value = 2;
+    document.getElementById('yeso-rend').value = 12;
+    document.getElementById('yeso-op').value = 2;
+    document.getElementById('yeso-jornal').value = 120000;
+    document.getElementById('yeso-p-lamina').value = 35000;
+    document.getElementById('yeso-p-montante').value = 12000;
+    document.getElementById('yeso-p-canal').value = 10000;
+    document.getElementById('yeso-p-tornillo').value = 80;
+    document.getElementById('yeso-p-cinta').value = 8000;
+    document.getElementById('yeso-p-masilla').value = 35000;
+    document.getElementById('yeso-p-lana').value = 18000;
+    document.getElementById('yeso-p-mo').value = 25000;
+  } else {
+    document.getElementById('yeso-desp').value = _yesoParams.desp;
+    document.getElementById('yeso-factor-torn').value = _yesoParams.factor_torn;
+    document.getElementById('yeso-kg-masilla').value = _yesoParams.kg_m2_masilla;
+    document.getElementById('yeso-n-manos').value = _yesoParams.n_manos_masilla;
+    document.getElementById('yeso-rend').value = _yesoParams.rendimiento_m2_dia;
+    document.getElementById('yeso-op').value = _yesoParams.n_operarios;
+    document.getElementById('yeso-jornal').value = _yesoParams.jornal;
+    document.getElementById('yeso-p-lamina').value = _yesoParams.precios['Lamina de yeso 1.22x2.44'];
+    document.getElementById('yeso-p-montante').value = _yesoParams.precios['Montante 3.05m'];
+    document.getElementById('yeso-p-canal').value = _yesoParams.precios['Canal 3.05m'];
+    document.getElementById('yeso-p-tornillo').value = _yesoParams.precios['Tornillo punta broca'];
+    document.getElementById('yeso-p-cinta').value = _yesoParams.precios['Cinta de papel'];
+    document.getElementById('yeso-p-masilla').value = _yesoParams.precios['Masilla / pasta (bolsa 20kg)'];
+    document.getElementById('yeso-p-lana').value = _yesoParams.precios['Lana mineral (m²)'];
+    document.getElementById('yeso-p-mo').value = _yesoParams.precios['M.O. Drywall'];
+  }
+  m.style.display = 'flex';
+}
+
+function cerrarModalYeso(){
+  document.getElementById('modal-yeso').style.display = 'none';
+}
+
+function guardarModalYeso(){
+  _yesoParams = {
+    desp: parseFloat(document.getElementById('yeso-desp').value) / 100,
+    factor_torn: parseInt(document.getElementById('yeso-factor-torn').value) || 30,
+    kg_m2_masilla: parseFloat(document.getElementById('yeso-kg-masilla').value) || 0.5,
+    n_manos_masilla: parseInt(document.getElementById('yeso-n-manos').value) || 2,
+    rendimiento_m2_dia: parseFloat(document.getElementById('yeso-rend').value) || 12,
+    n_operarios: parseInt(document.getElementById('yeso-op').value) || 2,
+    jornal: parseFloat(document.getElementById('yeso-jornal').value) || 120000,
+    precios: {
+      'Lamina de yeso 1.22x2.44': parseFloat(document.getElementById('yeso-p-lamina').value) || 35000,
+      'Montante 3.05m': parseFloat(document.getElementById('yeso-p-montante').value) || 12000,
+      'Canal 3.05m': parseFloat(document.getElementById('yeso-p-canal').value) || 10000,
+      'Tornillo punta broca': parseFloat(document.getElementById('yeso-p-tornillo').value) || 80,
+      'Cinta de papel': parseFloat(document.getElementById('yeso-p-cinta').value) || 8000,
+      'Masilla / pasta (bolsa 20kg)': parseFloat(document.getElementById('yeso-p-masilla').value) || 35000,
+      'Lana mineral (m²)': parseFloat(document.getElementById('yeso-p-lana').value) || 18000,
+      'M.O. Drywall': parseFloat(document.getElementById('yeso-p-mo').value) || 25000,
+    }
+  };
+  cerrarModalYeso();
+}
+
+async function calcularYeso(){
+  const h = parseFloat(document.getElementById('yeso-h').value) || 0;
+  const l = parseFloat(document.getElementById('yeso-l').value) || 0;
+  const e = parseFloat(document.getElementById('yeso-e').value) || 0.6;
+  const conLana = document.getElementById('yeso-lana').checked;
+  const wrap = document.getElementById('yeso-card-wrap');
+  const rwrap = document.getElementById('yeso-result-wrap');
+  rwrap.style.display = 'none';
+  if(h <= 0 || l <= 0){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Ingrese altura y longitud</div>'; return; }
+  _showLoading('yeso-card-wrap');
+  try {
+    const body = {h, l, e, con_lana: conLana};
+    if(Object.keys(_yesoParams).length > 0){
+      body.desp = _yesoParams.desp;
+      body.factor_torn = _yesoParams.factor_torn;
+      body.kg_m2_masilla = _yesoParams.kg_m2_masilla;
+      body.n_manos_masilla = _yesoParams.n_manos_masilla;
+      body.rendimiento_m2_dia = _yesoParams.rendimiento_m2_dia;
+      body.n_operarios = _yesoParams.n_operarios;
+      body.jornal = _yesoParams.jornal;
+      body.precios = _yesoParams.precios;
+    }
+    const r = await apiFetch('/api/calculos/yeso', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) return;
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Muro Yeso DC '+h+'×'+l+'m</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Sep. mont. '+data.e+'m'+(data.con_lana ? ' · +Lana mineral' : '')+'</div></div>'+
       '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
       '<div style="padding:.2rem .6rem .5rem">'+
       '<table style="width:100%;border-collapse:collapse">'+

@@ -8,8 +8,10 @@ import logging
 from app.database import get_db
 from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverride
 from app.calculos.data import MEZCLAS, PRECIOS_FIJOS
-from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse
+from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse, BoquillaRequest, BoquillaResponse, MaterialBoquilla, YesoRequest, YesoResponse, MaterialYeso
 from app.calculos.data_anclajes import calcular_anclaje
+from app.calculos.data_boquilla import calcular_boquilla, FORMATOS, ANCHOS_DISPONIBLES
+from app.calculos.data_yeso import calcular_yeso, PRECIOS_YESO, VALORES_DEFAULT
 from app.services.session_service import leer_cookie
 
 router = APIRouter(prefix="/api/calculos", tags=["Cálculos"])
@@ -460,3 +462,32 @@ def calcular_anclajes(req: AnclajeRequest, user: Usuario = Depends(_get_user), d
     if req.cantidad < 1:
         raise HTTPException(status_code=400, detail="Cantidad debe ser mayor a 0")
     return calcular_anclaje(req.diametro_mm, req.profundidad_mm, req.cantidad, req.material_base)
+
+
+@router.post("/boquillas", response_model=BoquillaResponse)
+def calcular_boquillas(req: BoquillaRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    _requiere_plan_calculo("boquillas", user, db)
+    if req.formato not in FORMATOS:
+        raise HTTPException(status_code=400, detail=f"Formato no valido. Usar: {', '.join(FORMATOS)}")
+    if req.ancho_mm not in ANCHOS_DISPONIBLES:
+        raise HTTPException(status_code=400, detail=f"Ancho no valido. Usar: {ANCHOS_DISPONIBLES}")
+    if req.area_m2 <= 0:
+        raise HTTPException(status_code=400, detail="Area debe ser mayor a 0")
+    return calcular_boquilla(req.formato, req.ancho_mm, req.area_m2)
+
+
+@router.post("/yeso", response_model=YesoResponse)
+def calcular_yesos(req: YesoRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
+    _requiere_plan_calculo("yeso", user, db)
+    if req.h <= 0 or req.l <= 0:
+        raise HTTPException(status_code=400, detail="Altura y longitud deben ser mayores a 0")
+    if req.e <= 0 or req.e > req.l:
+        raise HTTPException(status_code=400, detail="Separacion de montantes invalida")
+    return calcular_yeso(
+        h=req.h, l=req.l, e=req.e, con_lana=req.con_lana,
+        desp=req.desp, factor_torn=req.factor_torn,
+        kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
+        rendimiento_m2_dia=req.rendimiento_m2_dia,
+        n_operarios=req.n_operarios, jornal=req.jornal,
+        precios=req.precios,
+    )

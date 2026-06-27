@@ -293,6 +293,30 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 
 Las recetas de concretos y morteros provienen del archivo `20191013 Base De Datos JM.xls` (hoja "Conc-Mort"), con rendimientos basados en Construdata 2014.
 
+### Boquilla FORMATO
+
+<table>
+  <thead>
+    <tr>
+      <th rowspan="2">Formato</th>
+      <th colspan="4">Ancho de Junta</th>
+    </tr>
+    <tr>
+      <th>2 mm</th>
+      <th>3 mm</th>
+      <th>4 mm</th>
+      <th>5 mm</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>10×10×0.9</td><td>0,65</td><td>0,97</td><td>1,30</td><td>1,62</td></tr>
+    <tr><td>20×20×0.9</td><td>0,32</td><td>0,49</td><td>0,65</td><td>0,81</td></tr>
+    <tr><td>30×30×0.9</td><td>0,22</td><td>0,32</td><td>0,43</td><td>0,54</td></tr>
+    <tr><td>30×60×0.9</td><td>0,16</td><td>0,24</td><td>0,32</td><td>0,41</td></tr>
+    <tr><td>40×40×0.9</td><td>0,16</td><td>0,24</td><td>0,32</td><td>0,41</td></tr>
+  </tbody>
+</table>
+
 ### Estructura del módulo
 
 ```
