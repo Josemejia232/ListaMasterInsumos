@@ -124,6 +124,7 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 - **Caché frontend:** `_calcCache` evita re-consultas innecesarias a la lista de mezclas/mampostería
 - **Login → Landing:** Link "Página de inicio" en el login para volver al marketing
 - **Login 3 tabs:** "Ingresar con token" (principal), "¿Olvidaste tu token?" (código email), "Usuario gratis" (registro)
+- **Toggle contraseña:** Icono de ojo SVG en el campo de contraseña para mostrar/ocultar
 - **Mi Token:** Sección en sidebar para cambiar contraseña, token nunca se muestra completo
 
 ## Endpoints Principales
@@ -428,6 +429,7 @@ Abono ──> Prestamo (id_prestamo)
 - Sección en página principal entre **InsCal** y **Cálculos**
 - Botones de módulo (Proyectos, Personas, Vinculaciones, Quincenas, Préstamos) en la misma línea del título **Nómina**
 - **Edición inline sobre la fila**: al hacer clic en ✏️ las celdas se convierten en inputs/selects editables directamente en la tabla (aplica a todos los módulos)
+- **Dropdown con selección correcta**: al editar, el `<select>` muestra la opción correspondiente al valor guardado (no la primera opción por defecto)
 - **Agregar inline**: botón "+ Agregar" inserta una fila vacía editable al inicio de la tabla
 - **Guardar**: botón 💾 en la fila envía POST (nuevo) o PUT (edición) al endpoint correspondiente
 - **Cancelar**: botón ✕ restaura los valores originales de la fila
