@@ -1497,15 +1497,7 @@ async function _renderPrestamo(content){
         <button onclick="_nomInlineAdd(this)" data-fields='${escapeHtml(JSON.stringify(fields))}' data-singular="${escapeHtml(singular)}" data-idkey="${escapeHtml(idKey)}" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.35rem .85rem;font-size:.8rem;font-weight:600;cursor:pointer">+ Agregar préstamo</button>
       </div>
       <div class="table-wrap" style="max-height:400px;overflow-y:auto">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
-          <colgroup>
-            <col style="width:30px">
-            <col>
-            <col style="width:120px">
-            <col style="width:110px">
-            <col style="width:110px">
-            <col style="width:70px">
-          </colgroup>
+        <table style="width:100%;border-collapse:collapse">
           <thead><tr><th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)"></th>${cols}<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Saldo</th><th style="padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)"></th></tr></thead>
           <tbody>${rows||'<tr><td colspan="99" style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">Sin registros</td></tr>'}</tbody>
         </table>
