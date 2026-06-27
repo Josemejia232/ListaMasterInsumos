@@ -1322,8 +1322,6 @@ async function _renderProyecto(content){
       data:proyectos, idKey:'id_proyecto',
       onSave: async (body) => { await _apiNomina('/proyectos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('proyecto'); },
       onDelete: async (id) => { await _apiNomina('/proyectos/'+id, {method:'DELETE'}); await _renderTabNomina('proyecto'); },
-      extraHeaders:['Uso'],
-      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.uso_descripcion||'')+'</td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al cargar</div>'; }
 }
@@ -1342,18 +1340,14 @@ async function _renderPersona(content){
     content.innerHTML = cargoBtn + _nomFormTable({
       title:'Personas', singular:'persona',
       fields:[
-        {key:'cedula',label:'Cédula',type:'number'},
-        {key:'fecha_expedicion',label:'F. Expedición',type:'date'},
         {key:'nombre',label:'Nombre'},
         {key:'celular',label:'Celular'},
-        {key:'id_eps',label:'EPS',type:'select',options:epsOpts,noTable:true,suffixHtml:'<button type="button" onclick="abrirModalEps()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar EPS">+</button>'},
-        {key:'id_afp',label:'AFP',type:'select',options:afpOpts,noTable:true,suffixHtml:'<button type="button" onclick="abrirModalAfp()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar AFP">+</button>'},
+        {key:'cedula',label:'Cédula',type:'number'},
+        {key:'fecha_expedicion',label:'F. Expedición',type:'date'},
+        {key:'id_eps',label:'EPS',type:'select',options:epsOpts,suffixHtml:'<button type="button" onclick="abrirModalEps()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar EPS">+</button>'},
+        {key:'id_afp',label:'AFP',type:'select',options:afpOpts,suffixHtml:'<button type="button" onclick="abrirModalAfp()" style="background:var(--accent);color:#fff;border:none;border-radius:.35rem;padding:0 .55rem;font-size:1.1rem;font-weight:700;cursor:pointer;line-height:1" title="Administrar AFP">+</button>'},
       ],
       data:personas, idKey:'cedula',
-      onSave: async (body) => { await _apiNomina('/personas', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('persona'); },
-      onDelete: async (id) => { if(confirm('Eliminar persona?')){ await _apiNomina('/personas/'+id, {method:'DELETE'}); await _renderTabNomina('persona'); } },
-      extraHeaders:['EPS','AFP'],
-      extraCols: d => '<td style="font-size:.78rem"><a href="#" onclick="abrirModalEps();return false" style="color:var(--accent);text-decoration:none">'+escapeHtml(d.eps_nombre||'')+'</a></td><td style="font-size:.78rem"><a href="#" onclick="abrirModalAfp();return false" style="color:var(--accent);text-decoration:none">'+escapeHtml(d.afp_nombre||'')+'</a></td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
@@ -1466,46 +1460,28 @@ async function _renderAbono(content){
 
 // ─── Helper: form + table generator ──────────
 function _nomFormTable({title, singular, fields, data, idKey, onSave, onDelete, extraHeaders, extraCols}){
-  const formFields = fields.map(f => {
-    const val = f.type === 'select' ? f.options : '';
-    const typeAttr = f.type === 'select' ? '' : `type="${f.type||'text'}"`;
-    const stepAttr = f.type === 'number' ? 'step="0.01"' : '';
-    if(f.type === 'select'){
-      const suffix = f.suffixHtml || '';
-      return `<label style="display:flex;flex-direction:column;font-size:.78rem;color:var(--text2)">${escapeHtml(f.label)}
-        <div style="display:flex;gap:.35rem;align-items:stretch"><select id="nom-${f.key}" style="flex:1;padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem;background:#fff;color:var(--text)">${f.options}</select>${suffix}</div></label>`;
-    }
-    return `<label style="display:flex;flex-direction:column;font-size:.78rem;color:var(--text2)">${escapeHtml(f.label)}
-      <input ${typeAttr} ${stepAttr} id="nom-${f.key}" style="padding:.35rem .5rem;border:1.5px solid var(--border);border-radius:.4rem;font-size:.8rem"></label>`;
-  }).join('');
-
   const tableFields = fields.filter(f => !f.noTable);
   const cols = tableFields.map(f => `<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(f.label)}</th>`).join('');
   const extraH = extraHeaders ? extraHeaders.map(h => `<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(h)}</th>`).join('') : '';
   const rows = data.map(d => {
+    const id = d[idKey];
     const valCols = tableFields.map(f => {
       const v = d[f.key];
-      if(f.type === 'select' && v != null) return '<td style="font-size:.78rem"># '+v+'</td>';
-      if(/^(valor|saldo|desc_|salario)/.test(f.key))
-        return '<td style="font-size:.78rem;text-align:right">$'+(v != null ? Number(v).toLocaleString('es-CO') : '0')+'</td>';
-      if(f.type === 'date' && v) return '<td style="font-size:.78rem">'+v+'</td>';
-      return '<td style="font-size:.78rem">'+escapeHtml(v != null ? String(v) : '')+'</td>';
+      const display = _nomCellDisplay(f, v);
+      return `<td class="nom-cell" data-key="${f.key}" data-type="${f.type||'text'}" data-orig="${escapeHtml(v != null ? String(v) : '')}" data-display="${escapeHtml(display)}">${display}</td>`;
     }).join('');
     const extra = extraCols ? extraCols(d) : '';
-    return `<tr>${valCols}${extra}<td style="text-align:center;white-space:nowrap">`+
-      `<button onclick="_nomEdit(${d[idKey]})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Editar">✏️</button>`+
-      `<button onclick="if(confirm('Eliminar ${singular}?')){ _nomDel(${d[idKey]}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Eliminar">✕</button></td></tr>`;
+    return `<tr data-id="${id}">${valCols}${extra}<td style="text-align:center;white-space:nowrap">`+
+      `<button class="nom-btn-edit" onclick="_nomInlineEdit(this, ${id})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Editar">✏️</button>`+
+      `<button class="nom-btn-del" onclick="if(confirm('Eliminar ${singular}?')){ _nomDel(${id}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Eliminar">✕</button></td></tr>`;
   }).join('');
 
   return `<div class="section-card" style="padding:1rem">
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.5rem;margin-bottom:.8rem">${formFields}</div>
-    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-      <button onclick="_nomSave(this)" id="nom-save-btn" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;font-weight:600;cursor:pointer">+ Agregar ${singular}</button>
-      <button onclick="_nomCancelEdit()" id="nom-cancel-btn" style="display:none;background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;cursor:pointer">Cancelar</button>
+    <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.8rem">
+      <h3 style="margin:0;flex:1;font-size:.95rem">${title}</h3>
+      <button onclick="_nomInlineAdd(this)" data-fields='${escapeHtml(JSON.stringify(fields))}' data-singular="${escapeHtml(singular)}" data-idkey="${escapeHtml(idKey)}" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.35rem .85rem;font-size:.8rem;font-weight:600;cursor:pointer">+ Agregar ${singular}</button>
     </div>
-    <input type="hidden" id="nom-edit-id">
-    <div id="nom-msg" style="font-size:.75rem;margin-top:.4rem;color:var(--green)"></div>
-    <div class="table-wrap" style="margin-top:.8rem;max-height:400px;overflow-y:auto">
+    <div class="table-wrap" style="max-height:400px;overflow-y:auto">
       <table style="width:100%;border-collapse:collapse">
         <thead><tr>${cols}${extraH}<th style="padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);width:70px"></th></tr></thead>
         <tbody>${rows||'<tr><td colspan="99" style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">Sin registros</td></tr>'}</tbody>
@@ -1514,104 +1490,219 @@ function _nomFormTable({title, singular, fields, data, idKey, onSave, onDelete, 
   </div>`;
 }
 
+function _nomCellDisplay(f, v){
+  if(f.type === 'select'){
+    const re = new RegExp('value="(' + String(v ?? '') + ')"[^>]*>([^<]+)');
+    const m = (f.options || '').match(re);
+    return escapeHtml(m ? m[2] : (v != null ? '# ' + v : ''));
+  }
+  if(/^(valor|saldo|desc_|salario)/.test(f.key))
+    return '$'+(v != null ? Number(v).toLocaleString('es-CO') : '0');
+  if(f.type === 'date' && v) return v;
+  return escapeHtml(v != null ? String(v) : '');
+}
+
+function _nomMakeInput(f, val){
+  const id = 'nom-'+f.key;
+  const sv = val != null ? String(val) : '';
+  if(f.type === 'select'){
+    const suffix = f.suffixHtml || '';
+    return `<div style="display:flex;gap:.2rem;align-items:stretch"><select id="${id}" style="flex:1;min-width:60px;padding:.2rem .3rem;border:1px solid var(--accent);border-radius:.3rem;font-size:.75rem;background:#fff;color:#000">${f.options}</select>${suffix}</div>`;
+  }
+  const typeAttr = `type="${f.type||'text'}"`;
+  const stepAttr = f.type === 'number' ? 'step="0.01"' : '';
+  return `<input ${typeAttr} ${stepAttr} id="${id}" value="${escapeHtml(sv)}" style="width:100%;min-width:50px;padding:.2rem .3rem;border:1px solid var(--accent);border-radius:.3rem;font-size:.75rem;background:#fff;color:#000">`;
+}
+
 const _NOM_ENDPOINTS = {proyecto:'proyectos', persona:'personas', vinculacion:'vinculaciones', quincena:'quincenas', prestamo:'prestamos', abono:'abonos'};
 
-async function _nomSave(btn){
-  if(!btn) btn = document.activeElement;
+function _nomGetFields(btn){
   const card = btn ? btn.closest('.section-card') : null;
-  if(!card){ const msg = document.getElementById('nom-msg'); if(msg) msg.textContent = 'Error: no se encontro la tarjeta'; return; }
-  const selects = card.querySelectorAll('select');
-  const inputs = card.querySelectorAll('input:not([type="hidden"])');
-  const body = {};
-  selects.forEach(s => {
-    const key = s.id.replace('nom-','');
-    const v = s.value;
-    body[key] = (v === '' || v === null) ? null : (isNaN(v) ? v : Number(v));
-  });
-  inputs.forEach(i => {
-    const key = i.id.replace('nom-','');
-    const val = i.value;
-    if(i.type === 'number') body[key] = parseFloat(val) || 0;
-    else if(i.type === 'date') body[key] = val || null;
-    else body[key] = val;
-  });
-  const msg = card.querySelector('#nom-msg');
-  const activeTab = document.querySelector('.nomina-tab.active');
-  if(!activeTab){ if(msg) msg.textContent = 'Error: no hay tab activo'; return; }
-  const tab = activeTab.dataset.tab;
-  const ep = _NOM_ENDPOINTS[tab];
-  if(!ep){ if(msg) msg.textContent = 'Error: endpoint no encontrado'; return; }
-  const editId = card.querySelector('#nom-edit-id');
-  const isEdit = editId && editId.value;
-  const method = isEdit ? 'PUT' : 'POST';
-  const url = isEdit ? '/'+ep+'/'+editId.value : '/'+ep;
-  try {
-    const r = await _apiNomina(url, {method,body:JSON.stringify(body)});
-    if(!r.ok){
-      const err = await r.json().catch(()=> ({detail:'Error'}));
-      if(msg) msg.textContent = 'Error: '+(err.detail||'');
-      return;
-    }
-    if(msg) msg.textContent = 'Guardado';
-    if(editId){ editId.value = ''; _nomCancelEdit(); }
-    if(activeTab) cambiarTabNomina(tab, activeTab);
-  } catch(e){ if(msg) msg.textContent = 'Error de conexion'; }
+  if(!card) return null;
+  const addBtn = card.querySelector('[data-fields]');
+  if(!addBtn) return null;
+  try { return {fields: JSON.parse(addBtn.dataset.fields), singular: addBtn.dataset.singular, idKey: addBtn.dataset.idkey}; }
+  catch(e){ return null; }
 }
 
-function _nomCancelEdit(){
-  const card = document.querySelector('#nomina-content .section-card');
+async function _nomInlineEdit(btn, id){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  const card = tr.closest('.section-card');
   if(!card) return;
-  card.querySelectorAll('input:not([type="hidden"]), select').forEach(el => {
-    if(el.tagName === 'SELECT') el.selectedIndex = 0;
-    else el.value = '';
+  const info = _nomGetFields(btn);
+  if(!info) return;
+  const fields = info.fields;
+  const ep = _NOM_ENDPOINTS[document.querySelector('.nomina-tab.active')?.dataset.tab];
+  if(!ep) return;
+  let data;
+  try {
+    const r = await _apiNomina('/'+ep+'/'+id);
+    if(!r.ok) return;
+    data = await r.json();
+  } catch(e){ return; }
+  tr.querySelectorAll('.nom-cell').forEach(td => {
+    const key = td.dataset.key;
+    const f = fields.find(fi => fi.key === key);
+    if(!f) return;
+    const v = data[key];
+    td.innerHTML = _nomMakeInput(f, v);
   });
-  const btn = card.querySelector('#nom-save-btn');
-  const cancel = card.querySelector('#nom-cancel-btn');
-  const editId = card.querySelector('#nom-edit-id');
-  const msg = card.querySelector('#nom-msg');
-  if(btn) btn.textContent = btn.textContent.replace('Actualizar','+ Agregar');
-  if(cancel) cancel.style.display = 'none';
-  if(editId) editId.value = '';
-  if(msg) msg.textContent = '';
+  fields.forEach(f => {
+    if(f.noTable && !tr.querySelector('#nom-'+f.key)){
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.id = 'nom-'+f.key;
+      inp.value = data[f.key] != null ? String(data[f.key]) : '';
+      tr.appendChild(inp);
+    }
+  });
+  const actionTd = tr.querySelector('td:last-child');
+  if(actionTd){
+    actionTd.innerHTML =
+      `<button onclick="_nomInlineSave(this, ${id})" style="background:var(--accent);color:#fff;border:none;border-radius:.3rem;padding:.15rem .45rem;font-size:.75rem;font-weight:600;cursor:pointer">💾</button>`+
+      `<button onclick="_nomInlineCancel(this)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:.85rem;padding:.1rem .25rem" title="Cancelar">✕</button>`;
+  }
 }
 
-async function _nomEdit(id){
+async function _nomInlineSave(btn, id){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  const card = tr.closest('.section-card');
+  if(!card) return;
+  const info = _nomGetFields(btn);
+  if(!info) return;
+  const fields = info.fields;
   const activeTab = document.querySelector('.nomina-tab.active');
   if(!activeTab) return;
   const tab = activeTab.dataset.tab;
   const ep = _NOM_ENDPOINTS[tab];
   if(!ep) return;
-  const card = document.querySelector('#nomina-content .section-card');
-  if(!card) return;
+  const body = {};
+  fields.forEach(f => {
+    const el = tr.querySelector('#nom-'+f.key);
+    if(!el) return;
+    const v = el.value;
+    if(f.type === 'select'){
+      body[f.key] = (v === '' || v === null) ? null : (isNaN(v) ? v : Number(v));
+    } else if(f.type === 'number'){
+      body[f.key] = parseFloat(v) || 0;
+    } else if(f.type === 'date'){
+      body[f.key] = v || null;
+    } else {
+      body[f.key] = v;
+    }
+  });
   try {
-    const r = await _apiNomina('/'+ep+'/'+id);
-    if(!r.ok) return;
-    const data = await r.json();
-    card.querySelectorAll('input:not([type="hidden"]), select').forEach(el => {
-      const key = el.id.replace('nom-','');
-      if(key === 'save' || key === 'cancel' || key === 'edit') return;
-      if(data[key] === undefined || data[key] === null){
-        if(el.tagName === 'SELECT') el.selectedIndex = 0;
-        else el.value = '';
-        return;
-      }
-      const val = String(data[key]);
-      if(el.tagName === 'SELECT'){
-        const opt = Array.from(el.options).find(o => o.value === val);
-        if(opt) el.value = val;
-      } else {
-        el.value = val;
-      }
-    });
-    const editId = card.querySelector('#nom-edit-id');
-    if(editId) editId.value = id;
-    const btn = card.querySelector('#nom-save-btn');
-    if(btn) btn.textContent = btn.textContent.replace('+ Agregar','Actualizar');
-    const cancel = card.querySelector('#nom-cancel-btn');
-    if(cancel) cancel.style.display = '';
-    const msg = card.querySelector('#nom-msg');
-    if(msg) msg.textContent = '';
-  } catch(e){}
+    const r = await _apiNomina('/'+ep+'/'+id, {method:'PUT', body:JSON.stringify(body)});
+    if(!r.ok){
+      const err = await r.json().catch(()=>({detail:'Error'}));
+      alert('Error: '+(err.detail||''));
+      return;
+    }
+    if(activeTab) cambiarTabNomina(tab, activeTab);
+  } catch(e){ alert('Error de conexion'); }
+}
+
+function _nomInlineCancel(btn){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  tr.querySelectorAll('.nom-cell').forEach(td => {
+    td.innerHTML = td.dataset.display || escapeHtml(td.dataset.orig || '');
+  });
+  tr.querySelectorAll('input[type="hidden"]').forEach(inp => {
+    if(inp.id && inp.id.startsWith('nom-')) inp.remove();
+  });
+  const actionTd = tr.querySelector('td:last-child');
+  if(actionTd){
+    actionTd.innerHTML =
+      `<button class="nom-btn-edit" onclick="_nomInlineEdit(this, ${tr.dataset.id})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Editar">✏️</button>`+
+      `<button class="nom-btn-del" onclick="if(confirm('Eliminar?')){ _nomDel(${tr.dataset.id}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Eliminar">✕</button>`;
+  }
+}
+
+function _nomInlineAdd(btn){
+  const card = btn.closest('.section-card');
+  if(!card) return;
+  const tbody = card.querySelector('tbody');
+  if(!tbody) return;
+  const info = _nomGetFields(btn);
+  if(!info) return;
+  const singular = info.singular;
+  const tableFields = info.fields.filter(f => !f.noTable);
+  const valCols = tableFields.map(f => {
+    const td = document.createElement('td');
+    td.className = 'nom-cell';
+    td.dataset.key = f.key;
+    td.dataset.type = f.type || 'text';
+    td.dataset.orig = '';
+    td.innerHTML = _nomMakeInput(f, '');
+    return td;
+  });
+  const tr = document.createElement('tr');
+  valCols.forEach(td => tr.appendChild(td));
+  info.fields.forEach(f => {
+    if(f.noTable){
+      const inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.id = 'nom-'+f.key;
+      inp.value = '';
+      tr.appendChild(inp);
+    }
+  });
+  const actionTd = document.createElement('td');
+  actionTd.style.cssText = 'text-align:center;white-space:nowrap';
+  actionTd.innerHTML =
+    `<button onclick="_nomInlineSaveNew(this)" style="background:var(--accent);color:#fff;border:none;border-radius:.3rem;padding:.15rem .45rem;font-size:.75rem;font-weight:600;cursor:pointer">💾</button>`+
+    `<button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.85rem;padding:.1mm .25rem" title="Cancelar">✕</button>`;
+  tr.appendChild(actionTd);
+  tbody.insertBefore(tr, tbody.firstChild);
+}
+
+async function _nomInlineSaveNew(btn){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  const card = tr.closest('.section-card');
+  if(!card) return;
+  const info = _nomGetFields(btn);
+  if(!info) return;
+  const fields = info.fields;
+  const activeTab = document.querySelector('.nomina-tab.active');
+  if(!activeTab) return;
+  const tab = activeTab.dataset.tab;
+  const ep = _NOM_ENDPOINTS[tab];
+  if(!ep) return;
+  const body = {};
+  fields.forEach(f => {
+    const el = tr.querySelector('#nom-'+f.key);
+    if(!el) return;
+    const v = el.value;
+    if(f.type === 'select'){
+      body[f.key] = (v === '' || v === null) ? null : (isNaN(v) ? v : Number(v));
+    } else if(f.type === 'number'){
+      body[f.key] = parseFloat(v) || 0;
+    } else if(f.type === 'date'){
+      body[f.key] = v || null;
+    } else {
+      body[f.key] = v;
+    }
+  });
+  try {
+    const r = await _apiNomina('/'+ep, {method:'POST', body:JSON.stringify(body)});
+    if(!r.ok){
+      const err = await r.json().catch(()=>({detail:'Error'}));
+      alert('Error: '+(err.detail||''));
+      return;
+    }
+    if(activeTab) cambiarTabNomina(tab, activeTab);
+  } catch(e){ alert('Error de conexion'); }
+}
+
+function _nomCerrarModal(){
+  document.getElementById('modal-nomina-form').style.display = 'none';
+  document.getElementById('modal-nomina-body').innerHTML = '';
+  document.getElementById('modal-nomina-msg').textContent = '';
+  document.getElementById('modal-nomina-edit-id').value = '';
 }
 
 function _nomDel(id){
@@ -2146,15 +2237,15 @@ async function eliminarUso(id){
   } catch(e){ document.getElementById('modal-uso-msg').textContent = 'Error de conexión'; }
 }
 async function actualizarSelectUso(){
-  const sel = document.getElementById('nom-id_uso');
+  const sel = document.getElementById('nom-modal-id_uso');
   if(!sel) return;
   try {
     const r = await _apiNomina('/usos-proyecto');
     if(!r.ok) return;
-    const usos = await r.json();
+    const items = await r.json();
     const val = sel.value;
-    sel.innerHTML = usos.map(u => '<option value="'+u.id_uso+'">'+escapeHtml(u.descripcion)+'</option>').join('');
-    if(usos.some(u => String(u.id_uso) === val)) sel.value = val;
+    sel.innerHTML = items.map(i => '<option value="'+i.id_uso+'">'+escapeHtml(i.descripcion)+'</option>').join('');
+    if(items.some(i => String(i.id_uso) === val)) sel.value = val;
   } catch(e){}
 }
 async function guardarModalUso(){
@@ -2231,7 +2322,7 @@ async function eliminarEps(id){
   } catch(e){ document.getElementById('modal-eps-msg').textContent = 'Error de conexión'; }
 }
 async function actualizarSelectEps(){
-  const sel = document.getElementById('nom-id_eps');
+  const sel = document.getElementById('nom-modal-id_eps');
   if(!sel) return;
   try {
     const r = await _apiNomina('/eps');
@@ -2316,7 +2407,7 @@ async function eliminarAfp(id){
   } catch(e){ document.getElementById('modal-afp-msg').textContent = 'Error de conexión'; }
 }
 async function actualizarSelectAfp(){
-  const sel = document.getElementById('nom-id_afp');
+  const sel = document.getElementById('nom-modal-id_afp');
   if(!sel) return;
   try {
     const r = await _apiNomina('/afp');

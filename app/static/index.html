@@ -635,6 +635,22 @@
   </div>
 </div>
 
+<div id="modal-nomina-form" class="modal-overlay" style="display:none">
+  <div class="modal-content" style="max-width:520px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h3 style="margin:0" id="modal-nomina-title">Agregar</h3>
+      <button onclick="_nomCerrarModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">&times;</button>
+    </div>
+    <div id="modal-nomina-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.5rem"></div>
+    <input type="hidden" id="modal-nomina-edit-id">
+    <div id="modal-nomina-msg" style="font-size:.75rem;margin-top:.4rem;color:var(--red)"></div>
+    <div style="display:flex;justify-content:flex-end;gap:.5rem;margin-top:.8rem">
+      <button onclick="_nomCerrarModal()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;cursor:pointer">Cancelar</button>
+      <button onclick="_nomGuardarModal()" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;font-weight:600;cursor:pointer">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/app.js"></script>
 </body>
 </html>
