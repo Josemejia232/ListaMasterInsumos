@@ -118,6 +118,14 @@ body{
   background:#fff;
   box-shadow:0 0 0 3px var(--accent-glow);
 }
+.pw-wrap{position:relative;margin-bottom:.75rem}
+.pw-wrap input{margin-bottom:0!important;padding-right:2.5rem!important}
+.pw-toggle{
+  position:absolute;right:.75rem;top:50%;transform:translateY(-50%);
+  color:var(--muted);cursor:pointer;display:flex;align-items:center;
+  padding:.25rem;transition:color .2s;line-height:1;
+}
+.pw-toggle:hover{color:var(--text)}
 .login-box .btn{
   width:100%;
   background:linear-gradient(135deg,var(--accent),var(--accent2));

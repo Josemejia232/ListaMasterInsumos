@@ -101,6 +101,17 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
+function togglePassword(){
+  var pw=document.getElementById('login-password');
+  var eye=document.getElementById('pw-eye');
+  var off=document.getElementById('pw-eye-off');
+  if(pw.type==='password'){
+    pw.type='text';eye.style.display='none';off.style.display='';
+  }else{
+    pw.type='password';eye.style.display='';off.style.display='none';
+  }
+}
+
 // ─── Auth ──────────────────────────────────────────────
 async function login(){
   var email = document.getElementById('login-email').value.trim();
