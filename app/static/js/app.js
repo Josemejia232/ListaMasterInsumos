@@ -1745,7 +1745,9 @@ function _nomMakeInput(f, val){
   const sv = val != null ? String(val) : '';
   if(f.type === 'select'){
     const suffix = f.suffixHtml || '';
-    return `<div style="display:flex;gap:.2rem;align-items:stretch"><select id="${id}" style="flex:1;min-width:60px;padding:.2rem .3rem;border:1px solid var(--accent);border-radius:.3rem;font-size:.75rem;background:#fff;color:#000">${f.options}</select>${suffix}</div>`;
+    const escVal = sv.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const opts = f.options.replace(/\s*selected\s*/g, '').replace(new RegExp('(<option[^>]*?value="'+escVal+'"[^>]*?)>','i'), '$1 selected>');
+    return `<div style="display:flex;gap:.2rem;align-items:stretch"><select id="${id}" style="flex:1;min-width:60px;padding:.2rem .3rem;border:1px solid var(--accent);border-radius:.3rem;font-size:.75rem;background:#fff;color:#000">${opts}</select>${suffix}</div>`;
   }
   const typeAttr = `type="${f.type||'text'}"`;
   const stepAttr = f.type === 'number' ? 'step="0.01"' : '';
