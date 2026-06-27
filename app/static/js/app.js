@@ -1367,18 +1367,18 @@ async function _renderVinculacion(content){
     content.innerHTML = _nomFormTable({
       title:'Vinculaciones (Persona ↔ Proyecto)', singular:'vinculación',
       fields:[
-        {key:'cedula',label:'Persona',type:'select',options:cedOpts,noTable:true},
-        {key:'id_proyecto',label:'Proyecto',type:'select',options:proyOpts,noTable:true},
-        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts,noTable:true},
+        {key:'cedula',label:'Persona',type:'select',options:cedOpts},
+        {key:'id_cargo',label:'Cargo',type:'select',options:cargOpts},
+        {key:'salario_quincenal',label:'Salario Q',type:'number'},
         {key:'fecha_ingreso',label:'F. Ingreso',type:'date'},
         {key:'fecha_retiro',label:'F. Retiro',type:'date'},
-        {key:'salario_quincenal',label:'Salario Quincenal',type:'number'},
+        {key:'id_proyecto',label:'Proyecto',type:'select',options:proyOpts},
       ],
       data:vinculaciones, idKey:'id_vinculacion',
       onSave: async (body) => { await _apiNomina('/vinculaciones', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('vinculacion'); },
       onDelete: async (id) => { if(confirm('Eliminar vinculacion?')){ await _apiNomina('/vinculaciones/'+id, {method:'DELETE'}); await _renderTabNomina('vinculacion'); } },
-      extraHeaders:['Persona','Proyecto','Cargo','Estado'],
-      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.persona_nombre||'')+'</td><td style="font-size:.78rem">'+escapeHtml(d.proyecto_nombre||'')+'</td><td style="font-size:.78rem">'+escapeHtml(d.cargo_descripcion||'')+'</td><td style="font-size:.78rem">'+escapeHtml(d.estado||'')+'</td>',
+      extraHeaders:['Estado'],
+      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.estado||'')+'</td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
