@@ -1373,12 +1373,9 @@ async function _renderVinculacion(content){
         {key:'fecha_ingreso',label:'F. Ingreso',type:'date'},
         {key:'fecha_retiro',label:'F. Retiro',type:'date'},
         {key:'id_proyecto',label:'Proyecto',type:'select',options:proyOpts},
+        {key:'estado',label:'Estado',type:'select',options:'<option value="Activo">Activo</option><option value="Retirado">Retirado</option>'},
       ],
       data:vinculaciones, idKey:'id_vinculacion',
-      onSave: async (body) => { await _apiNomina('/vinculaciones', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('vinculacion'); },
-      onDelete: async (id) => { if(confirm('Eliminar vinculacion?')){ await _apiNomina('/vinculaciones/'+id, {method:'DELETE'}); await _renderTabNomina('vinculacion'); } },
-      extraHeaders:['Estado'],
-      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.estado||'')+'</td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
