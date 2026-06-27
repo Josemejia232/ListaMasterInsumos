@@ -207,6 +207,18 @@
       </div>
     </div>
 
+    <div class="section" id="section-nomina">
+      <h2>Nómina</h2>
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem">
+        <button class="btn btn-sm nomina-tab active" data-tab="proyecto" onclick="cambiarTabNomina('proyecto',this)" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Proyectos</button>
+        <button class="btn btn-sm nomina-tab" data-tab="persona" onclick="cambiarTabNomina('persona',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Personas</button>
+        <button class="btn btn-sm nomina-tab" data-tab="vinculacion" onclick="cambiarTabNomina('vinculacion',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Vinculaciones</button>
+        <button class="btn btn-sm nomina-tab" data-tab="quincena" onclick="cambiarTabNomina('quincena',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Quincenas</button>
+        <button class="btn btn-sm nomina-tab" data-tab="prestamo" onclick="cambiarTabNomina('prestamo',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Préstamos</button>
+      </div>
+      <div id="nomina-content"></div>
+    </div>
+
     <!-- Cálculos -->
     <div class="section" id="section-mezclas">
       <h2>Mezclas</h2>
@@ -371,21 +383,6 @@
       </div>
       <div id="yesouc-card-wrap" style="margin-top:.5rem"></div>
       <div id="yesouc-result-wrap" style="margin-top:.5rem;display:none"></div>
-    </div>
-
-    <div class="section" id="section-nomina">
-      <h2>Nómina</h2>
-      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.8rem">
-        <button class="btn btn-sm nomina-tab active" data-tab="proyecto" onclick="cambiarTabNomina('proyecto',this)" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Proyectos</button>
-        <button class="btn btn-sm nomina-tab" data-tab="persona" onclick="cambiarTabNomina('persona',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Personas</button>
-        <button class="btn btn-sm nomina-tab" data-tab="vinculacion" onclick="cambiarTabNomina('vinculacion',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Vinculaciones</button>
-        <button class="btn btn-sm nomina-tab" data-tab="quincena" onclick="cambiarTabNomina('quincena',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Quincenas</button>
-        <button class="btn btn-sm nomina-tab" data-tab="prestamo" onclick="cambiarTabNomina('prestamo',this)" style="background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:.4rem;padding:.35rem .7rem;font-size:.78rem;cursor:pointer">Préstamos</button>
-      </div>
-      <div id="nomina-content"></div>
-    </div>
-      <div id="cr-card-wrap" style="margin-top:.5rem"></div>
-      <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
     </div>
 
   </div>
