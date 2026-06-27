@@ -48,7 +48,11 @@ def calcular_cielo_raso(
     if an <= 0 or la <= 0:
         raise ValueError("Ancho y largo deben ser > 0")
 
-    p = precios or PRECIOS_CIELO_RASO
+    p = PRECIOS_CIELO_RASO.copy()
+    if precios:
+        for k, v in precios.items():
+            if v is not None:
+                p[k] = v
     A = an * la
     P = 2 * (an + la)
 

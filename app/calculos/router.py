@@ -522,14 +522,18 @@ def calcular_yesos(req: YesoRequest, user: Usuario = Depends(_get_user), db: Ses
         raise HTTPException(status_code=400, detail="Altura y longitud deben ser mayores a 0")
     if req.e <= 0 or req.e > req.l:
         raise HTTPException(status_code=400, detail="Separacion de montantes invalida")
-    return calcular_yeso(
-        h=req.h, l=req.l, e=req.e, con_lana=req.con_lana,
-        desp=req.desp, factor_torn=req.factor_torn,
-        kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
-        rendimiento_m2_dia=req.rendimiento_m2_dia,
-        n_operarios=req.n_operarios, jornal=req.jornal,
-        precios=req.precios,
-    )
+    try:
+        return calcular_yeso(
+            h=req.h, l=req.l, e=req.e, con_lana=req.con_lana,
+            desp=req.desp, factor_torn=req.factor_torn,
+            kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
+            rendimiento_m2_dia=req.rendimiento_m2_dia,
+            n_operarios=req.n_operarios, jornal=req.jornal,
+            precios=req.precios,
+        )
+    except Exception as e:
+        logger.exception("Error en calculo yeso")
+        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
 
 @router.post("/yeso/una-cara", response_model=YesoUnaCaraResponse)

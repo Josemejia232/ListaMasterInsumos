@@ -51,26 +51,7 @@ function _showLoading(elId){
 function debounce(fn, ms){ return function(){ var ctx=this, args=arguments; clearTimeout(_debounceTimer); _debounceTimer=setTimeout(function(){ fn.apply(ctx, args); }, ms); }; }
 var filtrarVerDebounced = debounce(function(){ renderVer(); }, 200);
 
-// ─── Drywall collapsible ────────────────────────────
-function toggleDrywall(){
-  const body = document.getElementById('drywall-body');
-  const toggle = document.getElementById('drywall-toggle');
-  if(!body || !toggle) return;
-  const isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : '';
-  toggle.textContent = isOpen ? '▶' : '▼';
-  try { localStorage.setItem('lm_drywall_open', isOpen ? '0' : '1'); } catch(e){}
-}
-(function(){
-  try {
-    if(localStorage.getItem('lm_drywall_open') === '1'){
-      const body = document.getElementById('drywall-body');
-      const toggle = document.getElementById('drywall-toggle');
-      if(body) body.style.display = '';
-      if(toggle) toggle.textContent = '▼';
-    }
-  } catch(e){}
-})();
+
 
 
 
@@ -207,14 +188,12 @@ function buildSidebar(){
   items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
   items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
   items.push({id:'boquilla', icon:'&#9881;', text:'Boquilla'});
-  items.push({label:'DRYWALL', submenu:true, children:[
-    {id:'yeso', icon:'&#9881;', text:'Muro Yeso DC'},
-    {id:'yesouc', icon:'&#9881;', text:'Muro Yeso 1C'},
-    {id:'cieloraso', icon:'&#9881;', text:'Cielo Raso'},
-  ]});
-  items.push({label:'NÓMINA', submenu:true, children:[
-    {id:'nomina', icon:'&#9881;', text:'Dashboard'},
-  ]});
+  items.push({label:'DRYWALL', header:true});
+  items.push({id:'yeso', icon:'&#9881;', text:'Muro Yeso DC'});
+  items.push({id:'yesouc', icon:'&#9881;', text:'Muro Yeso 1C'});
+  items.push({id:'cieloraso', icon:'&#9881;', text:'Cielo Raso'});
+  items.push({label:'NÓMINA', header:true});
+  items.push({id:'nomina', icon:'&#9881;', text:'Dashboard'});
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -269,24 +248,13 @@ function irA(section, el){
   if(section==='mezclas'||section==='mamposteria'||section==='anclajes'||section==='boquilla'){
     if(section==='mezclas') cargarSelectMezclas();
     if(section==='mamposteria') cargarSelectMamposteria();
-    _expandDrywall();
   }
   if(section==='yeso'||section==='yesouc'||section==='cieloraso'){
     if(section==='yeso') cargarParametrosYeso();
     if(section==='yesouc') cargarParametrosYesoUC();
     if(section==='cieloraso') cargarParametrosCR();
-    _expandDrywall();
   }
   if(section==='nomina') cargarNomina();
-}
-function _expandDrywall(){
-  const db = document.getElementById('drywall-body');
-  if(db && db.style.display === 'none'){
-    db.style.display = '';
-    const t = document.getElementById('drywall-toggle');
-    if(t) t.textContent = '▼';
-    try { localStorage.setItem('lm_drywall_open', '1'); } catch(e){}
-  }
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
@@ -594,7 +562,7 @@ async function cargarSelectMezclas(){
   try {
     const r = await apiFetch(path);
     if(r.status === 403){ const me = await r.json(); document.getElementById('mez-card-wrap').innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
-    if(!r.ok) return;
+    if(!r.ok){ document.getElementById('mez-card-wrap').innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al cargar las mezclas</div>'; return; }
     const data = await r.json();
     _calcCache[tipo||'all'] = data;
     _renderSelectMezclas(tipo, data);
@@ -631,7 +599,8 @@ async function cargarSelectMamposteria(){
   _showLoading('mamp-card-wrap');
   try {
     const r = await apiFetch('/api/calculos?tipo=mamposteria');
-    if(!r.ok) return;
+    if(r.status === 403){ const me = await r.json(); document.getElementById('mamp-card-wrap').innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ document.getElementById('mamp-card-wrap').innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al cargar mamposterías</div>'; return; }
     const data = await r.json();
     _calcCache['mamposteria'] = data;
     const filtered = cat ? data.filter(m => m.categoria === cat) : data;
@@ -666,7 +635,7 @@ async function _renderCard(id, wrap, rwrap, prefix){
   try {
     const r = await apiFetch('/api/calculos/'+id);
     if(r.status === 403){ const e = await r.json(); wrap.innerHTML = _limiteCalcMsg(e.detail||'Sin acceso'); return; }
-    if(!r.ok) return;
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al cargar la información</div>'; return; }
     const m = await r.json();
     _calcData = m;
     _currentMezclaId = id;
@@ -814,7 +783,8 @@ async function calcularAnclajes(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({diametro_mm:diam, profundidad_mm:prof, cantidad:cant, material_base:base})
     });
-    if(!r.ok) return;
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al realizar el cálculo</div>'; return; }
     const data = await r.json();
     _calcData = data;
     const matRows = data.materiales.map(m =>
@@ -864,7 +834,8 @@ async function calcularBoquilla(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({formato:formato, ancho_mm:ancho, area_m2:area})
     });
-    if(!r.ok) return;
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al realizar el cálculo</div>'; return; }
     const data = await r.json();
     _calcData = data;
     const matRows = data.materiales.map(m =>
@@ -995,7 +966,8 @@ async function calcularYeso(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    if(!r.ok) return;
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ const me = await r.json().catch(()=>({})); wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">'+(me.detail||'Error al realizar el cálculo')+'</div>'; return; }
     const data = await r.json();
     _calcData = data;
     const matRows = data.materiales.map(m =>
@@ -1144,7 +1116,8 @@ async function calcularCieloRaso(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    if(!r.ok) return;
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al realizar el cálculo</div>'; return; }
     const data = await r.json();
     _calcData = data;
     const matRows = data.materiales.map(m =>
@@ -1272,7 +1245,8 @@ async function calcularYesoUnaCara(){
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    if(!r.ok) return;
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al realizar el cálculo</div>'; return; }
     const data = await r.json();
     _calcData = data;
     const matRows = data.materiales.map(m =>

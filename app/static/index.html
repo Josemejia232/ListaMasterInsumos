@@ -333,72 +333,64 @@
           <div id="boq-result-wrap" style="margin-top:.5rem;display:none"></div>
         </div>
 
-        <div style="margin:.8rem 0">
-          <div style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none" onclick="toggleDrywall()">
-            <span id="drywall-toggle" style="font-size:.7rem;color:var(--text2)">▶</span>
-            <h3 style="margin:0;font-size:.9rem">Drywall</h3>
+        <div class="section" id="section-yeso">
+          <h2>Muro Doble Cara en Yeso</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
+              <input type="number" id="yeso-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
+              <input type="number" id="yeso-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
+              <input type="number" id="yeso-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
+              <input type="checkbox" id="yeso-lana" style="width:16px;height:16px"> Lana mineral
+            </label>
+            <button onclick="calcularYeso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+            <button onclick="abrirModalYeso()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">⚙️ Parámetros</button>
           </div>
-          <div id="drywall-body" style="display:none;margin-top:.6rem">
-            <div class="section" id="section-yeso">
-              <h2>Muro Doble Cara en Yeso</h2>
-              <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
-                  <input type="number" id="yeso-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
-                  <input type="number" id="yeso-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
-                  <input type="number" id="yeso-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
-                  <input type="checkbox" id="yeso-lana" style="width:16px;height:16px"> Lana mineral
-                </label>
-                <button onclick="calcularYeso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-                <button onclick="abrirModalYeso()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">⚙️ Parámetros</button>
-              </div>
-              <div id="yeso-card-wrap" style="margin-top:.5rem"></div>
-              <div id="yeso-result-wrap" style="margin-top:.5rem;display:none"></div>
-            </div>
+          <div id="yeso-card-wrap" style="margin-top:.5rem"></div>
+          <div id="yeso-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
 
-            <div class="section" id="section-cieloraso">
-              <h2>Cielo Raso en Lámina de Yeso</h2>
-              <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho (m)
-                  <input type="number" id="cr-an" placeholder="Ej: 3" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Largo (m)
-                  <input type="number" id="cr-la" placeholder="Ej: 5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
-                  <input type="checkbox" id="cr-varilla" style="width:16px;height:16px"> Varilla roscada
-                </label>
-                <button onclick="calcularCieloRaso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-                <button onclick="abrirModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
-              </div>
-              <div id="cr-card-wrap" style="margin-top:.5rem"></div>
-              <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
-            </div>
-
-            <div class="section" id="section-yesouc">
-              <h2>Muro Una Cara en Yeso</h2>
-              <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
-                  <input type="number" id="yesouc-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
-                  <input type="number" id="yesouc-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
-                  <input type="number" id="yesouc-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
-                </label>
-                <button onclick="calcularYesoUnaCara()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
-                <button onclick="abrirModalYesoUC()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
-              </div>
-              <div id="yesouc-card-wrap" style="margin-top:.5rem"></div>
-              <div id="yesouc-result-wrap" style="margin-top:.5rem;display:none"></div>
-            </div>
+        <div class="section" id="section-cieloraso">
+          <h2>Cielo Raso en Lámina de Yeso</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Ancho (m)
+              <input type="number" id="cr-an" placeholder="Ej: 3" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Largo (m)
+              <input type="number" id="cr-la" placeholder="Ej: 5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">
+              <input type="checkbox" id="cr-varilla" style="width:16px;height:16px"> Varilla roscada
+            </label>
+            <button onclick="calcularCieloRaso()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+            <button onclick="abrirModalCR()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
           </div>
+          <div id="cr-card-wrap" style="margin-top:.5rem"></div>
+          <div id="cr-result-wrap" style="margin-top:.5rem;display:none"></div>
+        </div>
+
+        <div class="section" id="section-yesouc">
+          <h2>Muro Una Cara en Yeso</h2>
+          <div class="form-row" style="flex-wrap:wrap;gap:.5rem">
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Altura (m)
+              <input type="number" id="yesouc-h" placeholder="Ej: 2.5" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Longitud (m)
+              <input type="number" id="yesouc-l" placeholder="Ej: 4" min="0.1" step="0.05" style="width:75px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <label style="display:flex;align-items:center;gap:.3rem;font-size:.8rem;color:var(--text2)">Sep. Mont. (m)
+              <input type="number" id="yesouc-e" value="0.6" min="0.1" step="0.05" style="width:65px;background:#fff;border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem .65rem;color:var(--text);font-family:inherit;font-size:.8125rem;text-align:right">
+            </label>
+            <button onclick="calcularYesoUnaCara()" style="background:var(--accent);color:#fff;border:none;border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;font-weight:600;cursor:pointer">Calcular</button>
+            <button onclick="abrirModalYesoUC()" style="background:var(--card2);color:var(--text);border:1.5px solid var(--border);border-radius:.5rem;padding:.45rem 1rem;font-family:inherit;font-size:.8125rem;cursor:pointer">&#9881; Parámetros</button>
+          </div>
+          <div id="yesouc-card-wrap" style="margin-top:.5rem"></div>
+          <div id="yesouc-result-wrap" style="margin-top:.5rem;display:none"></div>
         </div>
 
   </div>
@@ -663,6 +655,6 @@
   </div>
 </div>
 
-<script src="/static/js/app.js?v=3"></script>
+<script src="/static/js/app.js?v=4"></script>
 </body>
 </html>

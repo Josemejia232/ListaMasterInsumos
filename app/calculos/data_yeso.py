@@ -39,7 +39,11 @@ def calcular_yeso(
     if e > l:
         raise ValueError("Separacion de montantes no puede superar la longitud")
 
-    p = precios or PRECIOS_YESO
+    p = PRECIOS_YESO.copy()
+    if precios:
+        for k, v in precios.items():
+            if v is not None:
+                p[k] = v
     A = h * l
 
     lamina = round(A * 2 / 2.9768 * (1 + desp), 2)
