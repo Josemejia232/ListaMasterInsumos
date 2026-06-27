@@ -423,8 +423,13 @@ Abono ──> Prestamo (id_prestamo)
 
 - Acceso desde el sidebar → submenú **NÓMINA**
 - Pestañas: Proyectos, Personas, Vinculaciones, Quincenas, Préstamos, Abonos
-- **Modales inline**: Uso de Proyecto (desde Proyectos), EPS/AFP/Cargo (desde Personas) — creación, edición y eliminación sin cambiar de pestaña
-- **Edición inline**: cada fila de tabla tiene botón ✏️ que pre‑carga el formulario para actualizar (aplica a todas las pestañas: Proyectos, Personas, Vinculaciones, Quincenas, Préstamos, Abonos)
+- **Edición inline sobre la fila**: al hacer clic en ✏️ las celdas se convierten en inputs/selects editables directamente en la tabla (aplica a todas las pestañas)
+- **Agregar inline**: botón "+ Agregar" inserta una fila vacía editable al inicio de la tabla
+- **Guardar**: botón 💾 en la fila envía POST (nuevo) o PUT (edición) al endpoint correspondiente
+- **Cancelar**: botón ✕ restaura los valores originales de la fila
+- **Columnas con nombre descriptivo**: Uso (en Proyectos), EPS y AFP (en Personas) muestran el nombre en lugar del ID interno
+- **Órden de columnas en Personas**: Nombre, Celular, Cédula, F. Expedición, EPS, AFP
+- **Modales de gestión**: Uso de Proyecto (desde Proyectos), EPS/AFP/Cargo (desde Personas) — se abren desde el botón `+` junto al select en edición inline
 - **Formato moneda**: valores en `$COP` con `toLocaleString('es-CO')`
 
 ### Endpoints Nómina
