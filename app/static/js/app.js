@@ -72,26 +72,7 @@ function toggleDrywall(){
   } catch(e){}
 })();
 
-// ─── Calculos collapsible ────────────────────────────
-function toggleCalculos(){
-  const body = document.getElementById('calculos-body');
-  const toggle = document.getElementById('calculos-toggle');
-  if(!body || !toggle) return;
-  const isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : '';
-  toggle.textContent = isOpen ? '▶' : '▼';
-  try { localStorage.setItem('lm_calculos_open', isOpen ? '0' : '1'); } catch(e){}
-}
-(function(){
-  try {
-    if(localStorage.getItem('lm_calculos_open') === '1'){
-      const body = document.getElementById('calculos-body');
-      const toggle = document.getElementById('calculos-toggle');
-      if(body) body.style.display = '';
-      if(toggle) toggle.textContent = '▼';
-    }
-  } catch(e){}
-})();
+
 
 // ─── XSS Protection ───────────────────────────────────
 function escapeHtml(s){
@@ -288,25 +269,15 @@ function irA(section, el){
   if(section==='mezclas'||section==='mamposteria'||section==='anclajes'||section==='boquilla'){
     if(section==='mezclas') cargarSelectMezclas();
     if(section==='mamposteria') cargarSelectMamposteria();
-    _expandCalculos();
+    _expandDrywall();
   }
   if(section==='yeso'||section==='yesouc'||section==='cieloraso'){
     if(section==='yeso') cargarParametrosYeso();
     if(section==='yesouc') cargarParametrosYesoUC();
     if(section==='cieloraso') cargarParametrosCR();
-    _expandCalculos();
     _expandDrywall();
   }
   if(section==='nomina') cargarNomina();
-}
-function _expandCalculos(){
-  const cb = document.getElementById('calculos-body');
-  if(cb && cb.style.display === 'none'){
-    cb.style.display = '';
-    const t = document.getElementById('calculos-toggle');
-    if(t) t.textContent = '▼';
-    try { localStorage.setItem('lm_calculos_open', '1'); } catch(e){}
-  }
 }
 function _expandDrywall(){
   const db = document.getElementById('drywall-body');
