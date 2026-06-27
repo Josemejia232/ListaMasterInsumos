@@ -285,12 +285,37 @@ function irA(section, el){
   if(section==='pagos') cargarPagos();
   if(section==='mi-token') cargarMiToken();
   if(section==='insumos-calc') cargarInsumosCalc();
-  if(section==='mezclas') cargarSelectMezclas();
-  if(section==='mamposteria') cargarSelectMamposteria();
-  if(section==='yeso') cargarParametrosYeso();
-  if(section==='yesouc') cargarParametrosYesoUC();
-  if(section==='cieloraso') cargarParametrosCR();
+  if(section==='mezclas'||section==='mamposteria'||section==='anclajes'||section==='boquilla'){
+    if(section==='mezclas') cargarSelectMezclas();
+    if(section==='mamposteria') cargarSelectMamposteria();
+    _expandCalculos();
+  }
+  if(section==='yeso'||section==='yesouc'||section==='cieloraso'){
+    if(section==='yeso') cargarParametrosYeso();
+    if(section==='yesouc') cargarParametrosYesoUC();
+    if(section==='cieloraso') cargarParametrosCR();
+    _expandCalculos();
+    _expandDrywall();
+  }
   if(section==='nomina') cargarNomina();
+}
+function _expandCalculos(){
+  const cb = document.getElementById('calculos-body');
+  if(cb && cb.style.display === 'none'){
+    cb.style.display = '';
+    const t = document.getElementById('calculos-toggle');
+    if(t) t.textContent = '▼';
+    try { localStorage.setItem('lm_calculos_open', '1'); } catch(e){}
+  }
+}
+function _expandDrywall(){
+  const db = document.getElementById('drywall-body');
+  if(db && db.style.display === 'none'){
+    db.style.display = '';
+    const t = document.getElementById('drywall-toggle');
+    if(t) t.textContent = '▼';
+    try { localStorage.setItem('lm_drywall_open', '1'); } catch(e){}
+  }
 }
 document.addEventListener('click', function(e){
   const s = document.getElementById('sidebar');
