@@ -432,6 +432,23 @@ def crear_quincena(req: QuincenaIn, db: Session = Depends(get_db)):
     return item
 
 
+@router.put("/quincenas/{id}", response_model=QuincenaOut)
+def actualizar_quincena(id: int, req: QuincenaIn, db: Session = Depends(get_db)):
+    item = db.query(Quincena).filter(Quincena.id_quincena == id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    for k, v in req.model_dump().items():
+        setattr(item, k, v)
+    item.valor_neto = Quincena.calcular_neto(item.valor_bruto, item.desc_abono, item.desc_seguro)
+    db.commit()
+    db.refresh(item)
+    persona = db.query(Persona.nombre).join(Vinculacion, Persona.cedula == Vinculacion.cedula).filter(
+        Vinculacion.id_vinculacion == item.id_vinculacion
+    ).scalar()
+    item.vinculacion_info = persona
+    return item
+
+
 @router.delete("/quincenas/{id}")
 def eliminar_quincena(id: int, db: Session = Depends(get_db)):
     item = db.query(Quincena).filter(Quincena.id_quincena == id).first()
@@ -488,6 +505,25 @@ def crear_prestamo(req: PrestamoIn, db: Session = Depends(get_db)):
     return item
 
 
+@router.put("/prestamos/{id}", response_model=PrestamoOut)
+def actualizar_prestamo(id: int, req: PrestamoIn, db: Session = Depends(get_db)):
+    item = db.query(Prestamo).filter(Prestamo.id_prestamo == id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    old_valor = item.valor
+    for k, v in req.model_dump().items():
+        setattr(item, k, v)
+    diff = round(item.valor - old_valor, 2)
+    item.saldo = round(item.saldo + diff, 2)
+    db.commit()
+    db.refresh(item)
+    persona = db.query(Persona.nombre).join(Vinculacion, Persona.cedula == Vinculacion.cedula).filter(
+        Vinculacion.id_vinculacion == item.id_vinculacion
+    ).scalar()
+    item.vinculacion_info = persona
+    return item
+
+
 @router.delete("/prestamos/{id}")
 def eliminar_prestamo(id: int, db: Session = Depends(get_db)):
     item = db.query(Prestamo).filter(Prestamo.id_prestamo == id).first()
@@ -527,6 +563,31 @@ def crear_abono(req: AbonoIn, db: Session = Depends(get_db)):
     item = Abono(**req.model_dump())
     prestamo.saldo = round(prestamo.saldo - req.valor_abono, 2)
     db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.put("/abonos/{id}", response_model=AbonoOut)
+def actualizar_abono(id: int, req: AbonoIn, db: Session = Depends(get_db)):
+    item = db.query(Abono).filter(Abono.id_abono == id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="No encontrado")
+    old_prestamo_id = item.id_prestamo
+    old_valor = item.valor_abono
+    prestamo = db.query(Prestamo).filter(Prestamo.id_prestamo == old_prestamo_id).first()
+    if prestamo:
+        prestamo.saldo = round(prestamo.saldo + old_valor, 2)
+    for k, v in req.model_dump().items():
+        setattr(item, k, v)
+    if req.valor_abono <= 0:
+        raise HTTPException(status_code=400, detail="Valor de abono debe ser > 0")
+    nuevo_prestamo = db.query(Prestamo).filter(Prestamo.id_prestamo == item.id_prestamo).first()
+    if not nuevo_prestamo:
+        raise HTTPException(status_code=400, detail="Prestamo no existe")
+    if item.valor_abono > nuevo_prestamo.saldo:
+        raise HTTPException(status_code=400, detail="Abono excede el saldo del prestamo")
+    nuevo_prestamo.saldo = round(nuevo_prestamo.saldo - item.valor_abono, 2)
     db.commit()
     db.refresh(item)
     return item

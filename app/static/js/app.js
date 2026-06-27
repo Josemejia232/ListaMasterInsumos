@@ -1288,7 +1288,6 @@ async function _renderTabNomina(tab){
     case 'vinculacion': await _renderVinculacion(content); break;
     case 'quincena': await _renderQuincena(content); break;
     case 'prestamo': await _renderPrestamo(content); break;
-    case 'abono': await _renderAbono(content); break;
   }
 }
 
@@ -1413,38 +1412,226 @@ async function _renderPrestamo(content){
       _apiNomina('/vinculaciones').then(r=>r.ok?r.json():[]),
     ]);
     const vincOpts = vinculaciones.map(v => `<option value="${v.id_vinculacion}">${escapeHtml(v.persona_nombre||'')} - ${escapeHtml(v.proyecto_nombre||'')}</option>`).join('');
-    content.innerHTML = _nomFormTable({
-      title:'Préstamos', singular:'préstamo',
-      fields:[
-        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
-        {key:'fecha_prestamo',label:'F. Préstamo',type:'date'},
-        {key:'valor',label:'Valor',type:'number'},
-      ],
-      data:prestamos, idKey:'id_prestamo',
-      extraHeaders:['Saldo'],
-      extraCols: d => '<td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.saldo).toLocaleString('es-CO')+'</td>',
-    });
+    const fields = [
+      {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
+      {key:'fecha_prestamo',label:'F. Préstamo',type:'date'},
+      {key:'valor',label:'Valor',type:'number'},
+    ];
+    const tableFields = fields.filter(f => !f.noTable);
+    const cols = tableFields.map(f => `<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">${escapeHtml(f.label)}</th>`).join('');
+    const singular = 'préstamo';
+    const idKey = 'id_prestamo';
+    const rows = prestamos.map(d => {
+      const id = d[idKey];
+      const valCols = tableFields.map(f => {
+        const v = d[f.key];
+        const display = _nomCellDisplay(f, v);
+        return `<td class="nom-cell" data-key="${f.key}" data-type="${f.type||'text'}" data-orig="${escapeHtml(v != null ? String(v) : '')}" data-display="${escapeHtml(display)}">${display}</td>`;
+      }).join('');
+      const saldo = '<td class="nom-saldo-cell" style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.saldo).toLocaleString('es-CO')+'</td>';
+      return `<tr class="nom-prestamo-row" data-id="${id}">`+
+        `<td style="text-align:center;width:30px"><button class="nom-expand-btn" onclick="_nomToggleAbonos(this,${id})" style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--text2);padding:.1rem .2rem;transition:transform .15s" title="Ver abonos">▶</button></td>`+
+        valCols+saldo+
+        `<td style="text-align:center;white-space:nowrap">`+
+        `<button class="nom-btn-edit" onclick="_nomInlineEdit(this,${id})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Editar">✏️</button>`+
+        `<button class="nom-btn-del" onclick="if(confirm('Eliminar ${singular}?')){ _nomDel(${id}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.82rem;padding:.1rem .25rem" title="Eliminar">✕</button></td></tr>`+
+        `<tr class="nom-abono-detail" data-prestamo-id="${id}" style="display:none"><td colspan="${tableFields.length+3}" style="padding:.2rem .5rem .5rem .5rem;background:var(--card)"><div class="nom-abono-container"></div></td></tr>`;
+    }).join('');
+    content.innerHTML = `<div class="section-card" style="padding:1rem">
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.8rem">
+        <h3 style="margin:0;flex:1;font-size:.95rem">Préstamos</h3>
+        <button onclick="_nomInlineAdd(this)" data-fields='${escapeHtml(JSON.stringify(fields))}' data-singular="${escapeHtml(singular)}" data-idkey="${escapeHtml(idKey)}" style="background:var(--accent);color:#fff;border:none;border-radius:.4rem;padding:.35rem .85rem;font-size:.8rem;font-weight:600;cursor:pointer">+ Agregar préstamo</button>
+      </div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr><th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);width:30px"></th>${cols}<th style="padding:.3rem .3rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Saldo</th><th style="padding:.3rem .3rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);width:70px"></th></tr></thead>
+          <tbody>${rows||'<tr><td colspan="99" style="padding:1rem;text-align:center;color:var(--muted);font-size:.8rem">Sin registros</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
 
-// ─── Abono ───────────────────────────────────
-async function _renderAbono(content){
+// ─── Abonos (sub‑tabla expandible en Préstamos) ─
+async function _nomToggleAbonos(btn, prestamoId){
+  const detailRow = btn.closest('tr').nextElementSibling;
+  if(!detailRow || !detailRow.classList.contains('nom-abono-detail')) return;
+  if(detailRow.style.display !== 'none'){
+    detailRow.style.display = 'none';
+    btn.textContent = '▶';
+    return;
+  }
+  detailRow.style.display = '';
+  btn.textContent = '▼';
+  const container = detailRow.querySelector('.nom-abono-container');
+  if(!container || container.dataset.loaded) return;
+  await _nomLoadAbonos(container, prestamoId);
+  container.dataset.loaded = '1';
+}
+
+async function _nomLoadAbonos(container, prestamoId){
   try {
-    const [abonos, prestamos] = await Promise.all([
-      _apiNomina('/abonos').then(r=>r.ok?r.json():[]),
-      _apiNomina('/prestamos').then(r=>r.ok?r.json():[]),
-    ]);
-    const presOpts = prestamos.map(p => `<option value="${p.id_prestamo}">#${p.id_prestamo} - ${escapeHtml(p.vinculacion_info||'')} (saldo: $${Number(p.saldo).toLocaleString('es-CO')})</option>`).join('');
-    content.innerHTML = _nomFormTable({
-      title:'Abonos a Préstamos', singular:'abono',
-      fields:[
-        {key:'id_prestamo',label:'Préstamo',type:'select',options:presOpts},
-        {key:'fecha_abono',label:'F. Abono',type:'date'},
-        {key:'valor_abono',label:'Valor',type:'number'},
-      ],
-      data:abonos, idKey:'id_abono',
+    const abonos = await _apiNomina('/abonos?prestamo_id='+prestamoId).then(r=>r.ok?r.json():[]);
+    container.innerHTML = _nomAbonoSubtableHTML(abonos, prestamoId);
+  } catch(e){ container.innerHTML = '<div style="color:var(--muted);font-size:.75rem">Error al cargar abonos</div>'; }
+}
+
+function _nomAbonoSubtableHTML(abonos, prestamoId){
+  const rows = abonos.map(a => _nomAbonoRowHTML(a)).join('');
+  return `<div style="padding:.3rem 0">
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem">
+      <span style="font-size:.78rem;font-weight:600;color:var(--text2)">Abonos</span>
+      <button onclick="_nomAbonoAdd(this,${prestamoId})" style="background:none;border:1px solid var(--accent);color:var(--accent);border-radius:.3rem;padding:.15rem .5rem;font-size:.7rem;cursor:pointer">+ Agregar abono</button>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="padding:.2rem .3rem;font-size:.68rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">F. Abono</th>
+        <th style="padding:.2rem .3rem;font-size:.68rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border)">Valor</th>
+        <th style="padding:.2rem .3rem;font-size:.68rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border);width:60px"></th>
+      </tr></thead>
+      <tbody>${rows||'<tr><td colspan="3" style="padding:.5rem;text-align:center;color:var(--muted);font-size:.72rem">Sin abonos</td></tr>'}</tbody>
+    </table>
+  </div>`;
+}
+
+function _nomAbonoRowHTML(a){
+  return `<tr class="nom-abono-row" data-id="${a.id_abono}">
+    <td class="nom-abono-cell" data-key="fecha_abono" data-type="date" data-orig="${escapeHtml(a.fecha_abono||'')}" data-display="${escapeHtml(a.fecha_abono||'')}" style="padding:.2rem .3rem;font-size:.75rem">${escapeHtml(a.fecha_abono||'')}</td>
+    <td class="nom-abono-cell" data-key="valor_abono" data-type="number" data-orig="${a.valor_abono}" data-display="$${Number(a.valor_abono).toLocaleString('es-CO')}" style="padding:.2rem .3rem;font-size:.75rem;text-align:right">$${Number(a.valor_abono).toLocaleString('es-CO')}</td>
+    <td style="padding:.2rem .3rem;text-align:center;white-space:nowrap">
+      <button onclick="_nomAbonoEdit(this,${a.id_abono})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.75rem;padding:.05rem .2rem" title="Editar">✏️</button>
+      <button onclick="if(confirm('Eliminar abono?')){ _nomAbonoDel(${a.id_abono}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.75rem;padding:.05rem .2rem" title="Eliminar">✕</button>
+    </td>
+  </tr>`;
+}
+
+async function _nomAbonoEdit(btn, id){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  const container = tr.closest('.nom-abono-container');
+  const prestamoId = container ? container.closest('[data-prestamo-id]')?.dataset.prestamoId : null;
+  try {
+    const r = await _apiNomina('/abonos/'+id);
+    if(!r.ok) return;
+    const data = await r.json();
+    tr.querySelectorAll('.nom-abono-cell').forEach(td => {
+      const key = td.dataset.key;
+      const v = data[key];
+      if(key==='fecha_abono') td.innerHTML = `<input type="date" id="abono-${key}" value="${escapeHtml(v||'')}" style="width:100%;min-width:80px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000">`;
+      else if(key==='valor_abono') td.innerHTML = `<input type="number" step="0.01" id="abono-${key}" value="${v!=null?v:''}" style="width:100%;min-width:60px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000;text-align:right">`;
     });
-  } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
+    const actionTd = tr.querySelector('td:last-child');
+    if(actionTd){
+      actionTd.innerHTML =
+        `<button onclick="_nomAbonoSave(this,${id})" style="background:var(--accent);color:#fff;border:none;border-radius:.25rem;padding:.1rem .35rem;font-size:.7rem;font-weight:600;cursor:pointer">💾</button>`+
+        `<button onclick="_nomAbonoCancel(this)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:.78rem;padding:.05rem .2rem" title="Cancelar">✕</button>`;
+    }
+  } catch(e){}
+}
+
+async function _nomAbonoSave(btn, id){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  const container = tr.closest('.nom-abono-container');
+  if(!container) return;
+  const detailRow = container.closest('[data-prestamo-id]');
+  const prestamoId = detailRow ? detailRow.dataset.prestamoId : null;
+  const body = {
+    id_prestamo: parseInt(prestamoId),
+    fecha_abono: tr.querySelector('#abono-fecha_abono')?.value || null,
+    valor_abono: parseFloat(tr.querySelector('#abono-valor_abono')?.value) || 0,
+  };
+  try {
+    const r = await _apiNomina('/abonos/'+id, {method:'PUT', body:JSON.stringify(body)});
+    if(!r.ok){
+      const err = await r.json().catch(()=>({detail:'Error'}));
+      alert('Error: '+(err.detail||''));
+      return;
+    }
+    await _nomRefreshAbonos(container, prestamoId);
+    await _nomRefreshPrestamoSaldo(prestamoId);
+  } catch(e){ alert('Error de conexion'); }
+}
+
+async function _nomAbonoSaveNew(btn, prestamoId){
+  const tr = btn.closest('tr.nom-abono-row');
+  if(!tr) return;
+  const container = tr.closest('.nom-abono-container');
+  if(!container) return;
+  const body = {
+    id_prestamo: parseInt(prestamoId),
+    fecha_abono: tr.querySelector('#abono-fecha_abono')?.value || null,
+    valor_abono: parseFloat(tr.querySelector('#abono-valor_abono')?.value) || 0,
+  };
+  try {
+    const r = await _apiNomina('/abonos', {method:'POST', body:JSON.stringify(body)});
+    if(!r.ok){
+      const err = await r.json().catch(()=>({detail:'Error'}));
+      alert('Error: '+(err.detail||''));
+      return;
+    }
+    await _nomRefreshAbonos(container, prestamoId);
+    await _nomRefreshPrestamoSaldo(prestamoId);
+  } catch(e){ alert('Error de conexion'); }
+}
+
+function _nomAbonoCancel(btn){
+  const tr = btn.closest('tr');
+  if(!tr) return;
+  tr.querySelectorAll('.nom-abono-cell').forEach(td => {
+    td.innerHTML = td.dataset.display || escapeHtml(td.dataset.orig || '');
+  });
+  const id = tr.dataset.id;
+  const actionTd = tr.querySelector('td:last-child');
+  if(actionTd && id){
+    actionTd.innerHTML =
+      `<button onclick="_nomAbonoEdit(this,${id})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.75rem;padding:.05rem .2rem" title="Editar">✏️</button>`+
+      `<button onclick="if(confirm('Eliminar abono?')){ _nomAbonoDel(${id}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.75rem;padding:.05rem .2rem" title="Eliminar">✕</button>`;
+  }
+}
+
+function _nomAbonoAdd(btn, prestamoId){
+  const tbody = btn.closest('div').querySelector('table tbody');
+  if(!tbody) return;
+  const tr = document.createElement('tr');
+  tr.className = 'nom-abono-row';
+  tr.innerHTML =
+    `<td class="nom-abono-cell" data-key="fecha_abono" data-type="date" data-orig="" data-display="" style="padding:.2rem .3rem;font-size:.75rem"><input type="date" id="abono-fecha_abono" value="" style="width:100%;min-width:80px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000"></td>`+
+    `<td class="nom-abono-cell" data-key="valor_abono" data-type="number" data-orig="" data-display="" style="padding:.2rem .3rem;font-size:.75rem;text-align:right"><input type="number" step="0.01" id="abono-valor_abono" value="" style="width:100%;min-width:60px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000;text-align:right"></td>`+
+    `<td style="padding:.2rem .3rem;text-align:center;white-space:nowrap">`+
+    `<button onclick="_nomAbonoSaveNew(this,${prestamoId})" style="background:var(--accent);color:#fff;border:none;border-radius:.25rem;padding:.1rem .35rem;font-size:.7rem;font-weight:600;cursor:pointer">💾</button>`+
+    `<button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.78rem;padding:.05rem .2rem" title="Cancelar">✕</button></td>`;
+  tbody.insertBefore(tr, tbody.firstChild);
+}
+
+async function _nomAbonoDel(id){
+  const tr = document.querySelector(`.nom-abono-row[data-id="${id}"]`);
+  const container = tr ? tr.closest('.nom-abono-container') : null;
+  const detailRow = container ? container.closest('[data-prestamo-id]') : null;
+  const prestamoId = detailRow ? detailRow.dataset.prestamoId : null;
+  try {
+    await _apiNomina('/abonos/'+id, {method:'DELETE'});
+    if(container && prestamoId){
+      await _nomRefreshAbonos(container, prestamoId);
+      await _nomRefreshPrestamoSaldo(prestamoId);
+    }
+  } catch(e){ alert('Error de conexion'); }
+}
+
+async function _nomRefreshAbonos(container, prestamoId){
+  container.dataset.loaded = '';
+  await _nomLoadAbonos(container, prestamoId);
+  container.dataset.loaded = '1';
+}
+
+async function _nomRefreshPrestamoSaldo(prestamoId){
+  try {
+    const r = await _apiNomina('/prestamos/'+prestamoId);
+    if(!r.ok) return;
+    const p = await r.json();
+    const saldoCell = document.querySelector(`.nom-prestamo-row[data-id="${prestamoId}"] .nom-saldo-cell`);
+    if(saldoCell) saldoCell.textContent = '$'+Number(p.saldo).toLocaleString('es-CO');
+  } catch(e){}
 }
 
 // ─── Helper: form + table generator ──────────
@@ -1503,7 +1690,7 @@ function _nomMakeInput(f, val){
   return `<input ${typeAttr} ${stepAttr} id="${id}" value="${escapeHtml(sv)}" style="width:100%;min-width:50px;padding:.2rem .3rem;border:1px solid var(--accent);border-radius:.3rem;font-size:.75rem;background:#fff;color:#000">`;
 }
 
-const _NOM_ENDPOINTS = {proyecto:'proyectos', persona:'personas', vinculacion:'vinculaciones', quincena:'quincenas', prestamo:'prestamos', abono:'abonos'};
+const _NOM_ENDPOINTS = {proyecto:'proyectos', persona:'personas', vinculacion:'vinculaciones', quincena:'quincenas', prestamo:'prestamos'};
 
 function _nomGetFields(btn){
   const card = btn ? btn.closest('.section-card') : null;
