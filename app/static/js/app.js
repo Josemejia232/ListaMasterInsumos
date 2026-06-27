@@ -1391,15 +1391,16 @@ async function _renderQuincena(content){
     content.innerHTML = _nomFormTable({
       title:'Quincenas', singular:'quincena',
       fields:[
-        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts,noTable:true},
+        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
         {key:'numero_quincena',label:'N° Quincena',type:'number'},
         {key:'fecha_pago',label:'F. Pago',type:'date'},
+        {key:'valor_bruto',label:'Bruto',type:'number'},
+        {key:'desc_abono',label:'Desc. Abono',type:'number'},
+        {key:'desc_seguro',label:'Desc. Seguro',type:'number'},
       ],
       data:quincenas, idKey:'id_quincena',
-      onSave: async (body) => { await _apiNomina('/quincenas', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('quincena'); },
-      onDelete: async (id) => { if(confirm('Eliminar quincena?')){ await _apiNomina('/quincenas/'+id, {method:'DELETE'}); await _renderTabNomina('quincena'); } },
-      extraHeaders:['Persona','Bruto','Desc.Abono','Desc.Seguro','Neto'],
-      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.vinculacion_info||'')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.valor_bruto).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.desc_abono).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.desc_seguro).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.valor_neto).toLocaleString('es-CO')+'</td>',
+      extraHeaders:['Neto'],
+      extraCols: d => '<td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.valor_neto).toLocaleString('es-CO')+'</td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
@@ -1415,14 +1416,13 @@ async function _renderPrestamo(content){
     content.innerHTML = _nomFormTable({
       title:'Préstamos', singular:'préstamo',
       fields:[
-        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts,noTable:true},
+        {key:'id_vinculacion',label:'Vinculación',type:'select',options:vincOpts},
         {key:'fecha_prestamo',label:'F. Préstamo',type:'date'},
+        {key:'valor',label:'Valor',type:'number'},
       ],
       data:prestamos, idKey:'id_prestamo',
-      onSave: async (body) => { await _apiNomina('/prestamos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('prestamo'); },
-      onDelete: async (id) => { if(confirm('Eliminar prestamo?')){ await _apiNomina('/prestamos/'+id, {method:'DELETE'}); await _renderTabNomina('prestamo'); } },
-      extraHeaders:['Persona','Valor','Saldo'],
-      extraCols: d => '<td style="font-size:.78rem">'+escapeHtml(d.vinculacion_info||'')+'</td><td style="font-size:.78rem;text-align:right">$'+Number(d.valor).toLocaleString('es-CO')+'</td><td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.saldo).toLocaleString('es-CO')+'</td>',
+      extraHeaders:['Saldo'],
+      extraCols: d => '<td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.saldo).toLocaleString('es-CO')+'</td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
@@ -1438,14 +1438,11 @@ async function _renderAbono(content){
     content.innerHTML = _nomFormTable({
       title:'Abonos a Préstamos', singular:'abono',
       fields:[
-        {key:'id_prestamo',label:'Préstamo',type:'select',options:presOpts,noTable:true},
+        {key:'id_prestamo',label:'Préstamo',type:'select',options:presOpts},
         {key:'fecha_abono',label:'F. Abono',type:'date'},
+        {key:'valor_abono',label:'Valor',type:'number'},
       ],
       data:abonos, idKey:'id_abono',
-      onSave: async (body) => { await _apiNomina('/abonos', {method:'POST',body:JSON.stringify(body)}); await _renderTabNomina('abono'); },
-      onDelete: async (id) => { if(confirm('Eliminar abono?')){ await _apiNomina('/abonos/'+id, {method:'DELETE'}); await _renderTabNomina('abono'); } },
-      extraHeaders:['Préstamo','Valor'],
-      extraCols: d => '<td style="font-size:.78rem">#'+d.id_prestamo+'</td><td style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.valor_abono).toLocaleString('es-CO')+'</td>',
     });
   } catch(e){ content.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error</div>'; }
 }
