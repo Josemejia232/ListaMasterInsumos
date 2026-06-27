@@ -1480,7 +1480,8 @@ async function _renderPrestamo(content){
       const valCols = tableFields.map(f => {
         const v = d[f.key];
         const display = _nomCellDisplay(f, v);
-        return `<td class="nom-cell" data-key="${f.key}" data-type="${f.type||'text'}" data-orig="${escapeHtml(v != null ? String(v) : '')}" data-display="${escapeHtml(display)}">${display}</td>`;
+        const al = /^(valor|saldo|desc_|salario)/.test(f.key) ? 'text-align:right' : '';
+        return `<td class="nom-cell" data-key="${f.key}" data-type="${f.type||'text'}" data-orig="${escapeHtml(v != null ? String(v) : '')}" data-display="${escapeHtml(display)}" style="${al};padding:.25rem .3rem;font-size:.75rem">${display}</td>`;
       }).join('');
       const saldo = '<td class="nom-saldo-cell" style="font-size:.78rem;text-align:right;font-weight:600">$'+Number(d.saldo).toLocaleString('es-CO')+'</td>';
       return `<tr class="nom-prestamo-row" data-id="${id}">`+
@@ -1548,12 +1549,12 @@ function _nomCreateAbonoRow(a, prestamoId){
   tr.dataset.id = a.id_abono;
   tr.dataset.prestamoId = prestamoId;
   tr.innerHTML =
-    `<td style="text-align:center;font-size:.62rem;color:var(--muted);padding:.15rem .3rem">↳</td>`+
-    `<td style="padding:.15rem .3rem"></td>`+
-    `<td class="nom-abono-cell" data-key="fecha_abono" data-type="date" data-orig="${escapeHtml(a.fecha_abono||'')}" data-display="${escapeHtml(a.fecha_abono||'')}" style="padding:.15rem .3rem;font-size:.75rem">${escapeHtml(a.fecha_abono||'')}</td>`+
-    `<td class="nom-abono-cell" data-key="valor_abono" data-type="number" data-orig="${a.valor_abono}" data-display="$${Number(a.valor_abono).toLocaleString('es-CO')}" style="padding:.15rem .3rem;font-size:.75rem;text-align:right">$${Number(a.valor_abono).toLocaleString('es-CO')}</td>`+
-    `<td style="padding:.15rem .3rem"></td>`+
-    `<td style="padding:.15rem .3rem;text-align:center;white-space:nowrap">`+
+    `<td style="text-align:center;font-size:.62rem;color:var(--muted);padding:.25rem .3rem">↳</td>`+
+    `<td style="padding:.25rem .3rem"></td>`+
+    `<td class="nom-abono-cell" data-key="fecha_abono" data-type="date" data-orig="${escapeHtml(a.fecha_abono||'')}" data-display="${escapeHtml(a.fecha_abono||'')}" style="padding:.25rem .3rem;font-size:.75rem">${escapeHtml(a.fecha_abono||'')}</td>`+
+    `<td class="nom-abono-cell" data-key="valor_abono" data-type="number" data-orig="${a.valor_abono}" data-display="$${Number(a.valor_abono).toLocaleString('es-CO')}" style="padding:.25rem .3rem;font-size:.75rem;text-align:right">$${Number(a.valor_abono).toLocaleString('es-CO')}</td>`+
+    `<td style="padding:.25rem .3rem"></td>`+
+    `<td style="padding:.25rem .3rem;text-align:center;white-space:nowrap">`+
       `<button onclick="_nomAbonoEdit(this,${a.id_abono})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.72rem;padding:.05rem .2rem" title="Editar">✏️</button>`+
       `<button onclick="if(confirm('Eliminar abono?')){ _nomAbonoDel(${a.id_abono}) }" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.72rem;padding:.05rem .2rem" title="Eliminar">✕</button>`+
     `</td>`;
@@ -1590,7 +1591,7 @@ async function _nomAbonoSave(btn, id){
   if(!prestamoId) return;
   const body = {
     id_prestamo: parseInt(prestamoId),
-    fecha_abono: tr.querySelector('#abono-fecha_abono')?.value || null,
+    fecha_abono: tr.querySelector('#abono-fecha_abono')?.value || new Date().toISOString().slice(0,10),
     valor_abono: parseFloat(tr.querySelector('#abono-valor_abono')?.value) || 0,
   };
   try {
@@ -1610,7 +1611,7 @@ async function _nomAbonoSaveNew(btn, prestamoId){
   if(!tr) return;
   const body = {
     id_prestamo: parseInt(prestamoId),
-    fecha_abono: tr.querySelector('#abono-fecha_abono')?.value || null,
+    fecha_abono: tr.querySelector('#abono-fecha_abono')?.value || new Date().toISOString().slice(0,10),
     valor_abono: parseFloat(tr.querySelector('#abono-valor_abono')?.value) || 0,
   };
   try {
@@ -1647,12 +1648,12 @@ function _nomAbonoAdd(btn, prestamoId){
   tr.className = 'nom-abono-row';
   tr.dataset.prestamoId = prestamoId;
   tr.innerHTML =
-    `<td style="text-align:center;font-size:.62rem;color:var(--muted);padding:.15rem .3rem">↳</td>`+
-    `<td style="padding:.15rem .3rem"></td>`+
-    `<td class="nom-abono-cell" data-key="fecha_abono" data-type="date" data-orig="" data-display="" style="padding:.15rem .3rem;font-size:.75rem"><input type="date" id="abono-fecha_abono" value="" style="width:100%;min-width:80px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000"></td>`+
-    `<td class="nom-abono-cell" data-key="valor_abono" data-type="number" data-orig="" data-display="" style="padding:.15rem .3rem;font-size:.75rem;text-align:right"><input type="number" step="0.01" id="abono-valor_abono" value="" style="width:100%;min-width:60px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000;text-align:right"></td>`+
-    `<td style="padding:.15rem .3rem"></td>`+
-    `<td style="padding:.15rem .3rem;text-align:center;white-space:nowrap">`+
+    `<td style="text-align:center;font-size:.62rem;color:var(--muted);padding:.25rem .3rem">↳</td>`+
+    `<td style="padding:.25rem .3rem"></td>`+
+    `<td class="nom-abono-cell" data-key="fecha_abono" data-type="date" data-orig="" data-display="" style="padding:.25rem .3rem;font-size:.75rem"><input type="date" id="abono-fecha_abono" value="" style="width:100%;min-width:80px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000"></td>`+
+    `<td class="nom-abono-cell" data-key="valor_abono" data-type="number" data-orig="" data-display="" style="padding:.25rem .3rem;font-size:.75rem;text-align:right"><input type="number" step="0.01" id="abono-valor_abono" value="" style="width:100%;min-width:60px;padding:.15rem .2rem;border:1px solid var(--accent);border-radius:.25rem;font-size:.72rem;background:#fff;color:#000;text-align:right"></td>`+
+    `<td style="padding:.25rem .3rem"></td>`+
+    `<td style="padding:.25rem .3rem;text-align:center;white-space:nowrap">`+
     `<button onclick="_nomAbonoSaveNew(this,${prestamoId})" style="background:var(--accent);color:#fff;border:none;border-radius:.25rem;padding:.1rem .35rem;font-size:.7rem;font-weight:600;cursor:pointer">💾</button>`+
     `<button onclick="this.closest('tr').remove()" style="background:none;border:none;color:#e63946;cursor:pointer;font-size:.78rem;padding:.05rem .2rem" title="Cancelar">✕</button></td>`;
   const infoRow = tbody.querySelector(`.nom-abono-info[data-prestamo-id="${prestamoId}"]`);
