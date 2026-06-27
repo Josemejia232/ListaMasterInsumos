@@ -263,6 +263,7 @@ body{
 .page-wrap{padding:1.6rem;flex:1}
 .section{display:none}
 .section.active{display:block}
+#section-calculadora{display:block}
 
 /* ══════════════════════════════════════
    FORM COMPONENTS
