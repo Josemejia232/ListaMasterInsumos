@@ -1102,7 +1102,7 @@ function _nomCreateAbonoRow(a, prestamoId){
   const tr = document.createElement('tr');
   tr.className = 'nom-abono-row';
   tr.dataset.id = a.id_abono;
-  tr.dataset.prestamoId = prestamoId;
+  tr.dataset.prestamoid = prestamoId;
   tr.innerHTML =
     `<td style="text-align:center;font-size:.62rem;color:var(--muted);padding:.25rem .3rem">↳</td>`+
     `<td style="padding:.25rem .3rem"></td>`+
@@ -1201,7 +1201,7 @@ function _nomAbonoAdd(btn, prestamoId){
   if(!tbody) return;
   const tr = document.createElement('tr');
   tr.className = 'nom-abono-row';
-  tr.dataset.prestamoId = prestamoId;
+  tr.dataset.prestamoid = prestamoId;
   tr.innerHTML =
     `<td style="text-align:center;font-size:.62rem;color:var(--muted);padding:.25rem .3rem">↳</td>`+
     `<td style="padding:.25rem .3rem"></td>`+
