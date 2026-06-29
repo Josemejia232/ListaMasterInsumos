@@ -94,6 +94,8 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 - Backend: nómina protegida con dependency _requiere_nomina (solo plan pro o admin)
 - Frontend: tarjeta Pro en landing page y plan banner
 - Frontend: sidebar nómina solo visible para plan pro o admin
+- Landing: 5 calculadoras (Mezclas, Mampostería, Anclajes, Drywall, Boquilla para Pisos)
+- Landing: 4 planes, descripción actualizada con todas las funciones
 - Fix: admin token ya no se sobreescribe en cada reinicio del servidor
 - Tests: 72/72 pasan
 
