@@ -405,13 +405,7 @@ def startup():
         admin = db.query(Usuario).filter(Usuario.tipo == "admin").first()
         admin_email = os.getenv("ADMIN_EMAIL")
         admin_token = os.getenv("ADMIN_TOKEN")
-        if admin and admin_token:
-            stored_hash = hashlib.sha256(admin_token.encode()).hexdigest()
-            if admin.token != stored_hash:
-                admin.token = stored_hash
-                db.commit()
-                logger.info(f"[Security] Admin token actualizado (hasheado) para {admin.email}")
-        elif not admin:
+        if not admin:
             if not admin_email or not admin_token:
                 logger.warning("ADMIN_EMAIL o ADMIN_TOKEN no configurados en .env — seed admin omitido")
             else:
