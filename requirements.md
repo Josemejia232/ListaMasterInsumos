@@ -26,10 +26,16 @@ Aplicación web para consulta de precios de insumos de construcción en Colombia
 - Pasarela de pago integrada con Bold
 - Renovación automática al pagar
 
-### Upgrade Básico → Plus (prorrateo)
-- Se calcula el crédito por los días **no usados** del Básico: `$10,000 × días_restantes / 30`
-- El usuario paga: `$15,000 - crédito`
-- Al pagar, el ciclo **reinicia por 30 días limpios** de Plus
+### Usuario Pro (Plan Activo)
+- Todo del plan Plus + **Módulo de Nómina completo**
+- Plan de **$20,000 COP por 30 días**
+- Gestión de proyectos, personas, vinculaciones, quincenas, préstamos y abonos
+- Sidebar de Nómina visible solo para plan Pro o admin
+
+### Upgrade
+- **Básico → Plus/Pro:** prorrateo automático por días no usados
+- **Plus → Pro:** prorrateo automático por días no usados
+- Al pagar, el ciclo **reinicia por 30 días limpios**
 
 ### Módulo Cálculos
 
@@ -46,6 +52,7 @@ Módulo colapsable con sub-módulos de cálculo agrupados. El estado (abierto/ce
 - **Plan Free**: 3 usos por tipo (mezclas, mampostería, anclajes). Bloqueo con mensaje de upgrade.
 - **Plan Básico**: Sin acceso a calculadora (403).
 - **Plan Plus**: Uso ilimitado.
+- **Plan Pro**: Uso ilimitado + Nómina.
 - Selector desplegable para elegir la mezcla/mampostería/anclaje a calcular
 - Campos editables en la interfaz: **Material, Unidad y Vr Unitario** (tabla InsCal)
 - CRUD completo de materiales en InsCal: agregar filas (`+ Agregar material`), editar en línea, eliminar (`✕`)
@@ -104,13 +111,13 @@ Módulo colapsable con sub-módulos de cálculo agrupados. El estado (abierto/ce
 
 ## Landing Page
 
-Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism:
+Página de marketing premium (`/`) con diseño dark theme y glassmorphism:
 - **Hero:** Headline emocional, stats dinámicos en tiempo real (5+ tiendas, 12 mezclas, 37 mamposterías), card de precios en vivo
 - **El Dolor:** 3 pain points (precios cambian, cálculos fallan, horas perdidas)
 - **La Solución:** 3 pasos (consulta precios → calcula → elige plan)
 - **Funciones:** 6 cards (Insumos Actualizados, Consulta Precios, Gestión Usuarios, Panel Admin, Pagos Bold)
-- **Calculadoras:** 3 cards (Mezclas, Mampostería, Anclajes)
-- **Planes:** 3 cards (Free, Plus, Básico) con botones de compra unificados
+- **Calculadoras:** 5 cards (Mezclas, Mampostería, Anclajes, Drywall, Boquilla para Pisos)
+- **Planes:** 4 cards (Free, Básico, Plus, Pro) con botones de compra unificados
 - **WhatsApp:** Botón flotante verde (+57 324 622 5685)
 - **Animaciones:** Scroll reveal, floating elements, hover effects
 - **Stats dinámicos:** Se cargan en tiempo real desde `/api/calculos/stats`
@@ -141,8 +148,8 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 | GET | `/api/auth/mi-token` | Mostrar token enmascarado (`******XXXXXX`) |
 | PUT | `/api/auth/mi-token` | Cambiar token/contraseña (`{token: "nuevo"}`) |
 | GET | `/api/auth/planes` | Ver plan actual + opciones de upgrade |
-| POST | `/api/auth/comprar-plan` | Crear link de pago Bold (`{plan: "basico" \| "plus"}`) |
-| POST | `/api/auth/upgrade-plan` | Upgrade Básico → Plus (prorrateo automático) |
+| POST | `/api/auth/comprar-plan` | Crear link de pago Bold (`{plan: "basico" \| "plus" \| "pro"}`) |
+| POST | `/api/auth/upgrade-plan` | Upgrade automático (Básico→Plus/Pro, Plus→Pro) con prorrateo |
 
 ### Productos
 | Método | Ruta | Descripción |
@@ -220,13 +227,14 @@ Página de marketing premium (`/landing`) con diseño dark theme y glassmorphism
 
 ## Planes y Límites
 
-| Plan | Precio | Duración | Productos | Calculadora |
-|------|--------|----------|-----------|-------------|
-| Free | Gratis | Ilimitado | 10 insumos por categoría (n01) | 3 cálculos por tipo (mezcla, mampostería, anclajes) |
-| Básico | $10,000 COP | 30 días | Ilimitados | ❌ Sin calculadora |
-| Plus | $15,000 COP | 30 días | Ilimitados | ✅ Ilimitada |
+| Plan | Precio | Duración | Productos | Calculadora | Nómina |
+|------|--------|----------|-----------|-------------|--------|
+| Free | Gratis | Ilimitado | 10 insumos por categoría (n01) | 3 cálculos por tipo | ❌ |
+| Básico | $10,000 COP | 30 días | Ilimitados | ❌ Sin calculadora | ❌ |
+| Plus | $15,000 COP | 30 días | Ilimitados | ✅ Ilimitada | ❌ |
+| Pro | $20,000 COP | 30 días | Ilimitados | ✅ Ilimitada | ✅ Completa |
 
-**Upgrade Básico → Plus:** prorrateo automático por días no usados del Básico. Pago mínimo $5,000 (día 0). Al pagar, reinicia a 30 días limpios de Plus.
+**Upgrade:** prorrateo automático por días no usados del plan actual. Pago mínimo $5,000 (día 0). Al pagar, reinicia a 30 días limpios.
 
 ## Seguridad
 
