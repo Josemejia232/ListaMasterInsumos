@@ -102,7 +102,13 @@ async def sync_pago(pago_id: int, _admin = Depends(require_admin), db: Session =
                 ref = pago.reference or ""
                 if ref.startswith("basico_"):
                     usuario.plan = "basico"
-                elif ref.startswith("upgrade_") or ref.startswith("plus_"):
+                elif ref.startswith("plus_"):
+                    usuario.plan = "plus"
+                elif ref.startswith("pro_"):
+                    usuario.plan = "pro"
+                elif ref.startswith("upgrade_pro_"):
+                    usuario.plan = "pro"
+                elif ref.startswith("upgrade_plus_"):
                     usuario.plan = "plus"
         db.commit()
         db.refresh(pago)

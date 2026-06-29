@@ -173,6 +173,7 @@ function toggleSidebar(){
 }
 function buildSidebar(){
   const isAdmin = _user && _user.tipo === 'admin';
+  const isPro = isAdmin || (_user && _user.plan === 'pro');
   const items = [];
   if(isAdmin){
     items.push({label:'ADMIN', header:true});
@@ -190,8 +191,10 @@ function buildSidebar(){
   items.push({id:'boquilla', icon:'&#9881;', text:'Boquilla'});
   items.push({id:'drywall', icon:'&#9881;', text:'Drywall'});
 
-  items.push({label:'NÓMINA', header:true});
-  items.push({id:'nomina', icon:'&#9881;', text:'Dashboard'});
+  if(isPro){
+    items.push({label:'NÓMINA', header:true});
+    items.push({id:'nomina', icon:'&#9881;', text:'Dashboard'});
+  }
   const menu = document.getElementById('sidebar-menu');
   menu.innerHTML = items.map(i => {
     if(i.header) return '<div class="menu-label">'+i.label+'</div>';
@@ -2144,10 +2147,21 @@ function renderPlanBanner(){
   var cardFree = document.getElementById('plan-card-free');
   var cardBasico = document.getElementById('plan-card-basico');
   var cardPlus = document.getElementById('plan-card-plus');
+  var cardPro = document.getElementById('plan-card-pro');
 
-  [cardFree, cardBasico, cardPlus].forEach(function(c){ c.style.border = '1px solid var(--border)'; });
+  [cardFree, cardBasico, cardPlus, cardPro].forEach(function(c){ c.style.border = '1px solid var(--border)'; });
 
-  if(activo && plan === 'plus'){
+  if(activo && plan === 'pro'){
+    statusEl.textContent = 'Pro activo';
+    statusEl.style.color = 'var(--green)';
+    vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
+    msgEl.textContent = 'Acceso total: productos, calculadora y módulo de Nómina completo.';
+    btn.textContent = 'Renovar Pro — $20.000';
+    btn.onclick = function(){ comprarPlan('pro'); };
+    upInfo.textContent = '';
+    cardPro.style.border = '2px solid var(--green)';
+    tagFree.textContent = '';
+  } else if(activo && plan === 'plus'){
     statusEl.textContent = 'Plus activo';
     statusEl.style.color = 'var(--green)';
     vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
@@ -2161,11 +2175,21 @@ function renderPlanBanner(){
     statusEl.textContent = 'Basico activo';
     statusEl.style.color = 'var(--accent)';
     vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
-    msgEl.textContent = 'Productos ilimitados pero sin acceso a la calculadora.';
-    btn.textContent = 'Actualizar a Plus — desde $5.000';
+    msgEl.textContent = 'Productos ilimitados pero sin acceso a la calculadora ni Nómina.';
+    btn.textContent = 'Actualizar a Pro — desde $10.000';
     btn.onclick = function(){ upgradePlan(); };
-    upInfo.textContent = dias ? 'Prorrateo: $15.000 - credito por '+dias+' dias restantes' : '';
+    upInfo.textContent = dias ? 'Prorrateo: $20.000 - credito por '+dias+' dias restantes' : '';
     cardBasico.style.border = '2px solid var(--accent)';
+    tagFree.textContent = '';
+  } else if(activo && plan === 'plus'){
+    statusEl.textContent = 'Plus activo';
+    statusEl.style.color = 'var(--green)';
+    vencEl.textContent = 'Vence '+(vence? vence.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'}):'');
+    msgEl.textContent = 'Productos y calculadora ilimitados. Actualiza a Pro para Nómina.';
+    btn.textContent = 'Actualizar a Pro — desde $5.000';
+    btn.onclick = function(){ upgradePlan(); };
+    upInfo.textContent = dias ? 'Prorrateo: $20.000 - credito por '+dias+' dias restantes' : '';
+    cardPlus.style.border = '2px solid var(--green)';
     tagFree.textContent = '';
   } else if(activo){
     statusEl.textContent = 'Plan activo (legacy)';
@@ -2183,19 +2207,19 @@ function renderPlanBanner(){
     msgEl.textContent = 'Ves 10 insumos por categoria y 3 calculos por tipo. Actualiza para acceso completo.';
     btn.textContent = 'Comprar Basico — $10.000';
     btn.onclick = function(){ comprarPlan('basico'); };
-    upInfo.innerHTML = '<button class="btn btn-green" style="font-size:.78rem;padding:.35rem .8rem" onclick="comprarPlan(\'plus\')">Comprar Plus — $15.000</button>';
+    upInfo.innerHTML = '<button class="btn btn-green" style="font-size:.78rem;padding:.35rem .8rem;margin-right:.3rem" onclick="comprarPlan(\'plus\')">Plus — $15.000</button><button class="btn btn-green" style="font-size:.78rem;padding:.35rem .8rem" onclick="comprarPlan(\'pro\')">Pro — $20.000</button>';
     cardFree.style.border = '2px solid #f59e0b';
     tagFree.textContent = 'Plan actual';
   }
 }
 
-var _planPrice = {'basico':10000,'plus':15000};
+var _planPrice = {'basico':10000,'plus':15000,'pro':20000};
 async function accionPlan(){
   var plan = _user.plan || 'free';
   var fp = _user && _user.fecha_pago ? new Date(_user.fecha_pago) : null;
   var dias = fp ? Math.ceil((new Date(fp.getTime()+30*24*60*60*1000)-Date.now())/(1000*60*60*24)) : 0;
-  if(dias > 0 && (plan === 'plus' || plan === 'basico')){
-    if(plan === 'basico') upgradePlan();
+  if(dias > 0 && (plan === 'plus' || plan === 'basico' || plan === 'pro')){
+    if(plan === 'basico' || plan === 'plus') upgradePlan();
     else comprarPlan(plan);
   } else {
     comprarPlan('basico');
@@ -2239,7 +2263,7 @@ async function upgradePlan(){
       renderPlanBanner();
       return;
     }
-    if(confirm('Upgrade a Plus por $'+Number(d.amount).toLocaleString('es-CO')+' (credito Basico: $'+Number(d.credito_basico).toLocaleString('es-CO')+'). Al pagar, el ciclo se reinicia por 30 dias.')){
+    if(confirm('Upgrade a Pro por $'+Number(d.amount).toLocaleString('es-CO')+' (credito: $'+Number(d.credito_basico).toLocaleString('es-CO')+'). Al pagar, el ciclo se reinicia por 30 dias.')){
       window.open(d.url, '_blank');
     }
     btn.disabled = false;

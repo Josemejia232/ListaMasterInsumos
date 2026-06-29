@@ -245,7 +245,13 @@ async def webhook_bold(request: Request, db: Session = Depends(get_db)):
             ref = pago.reference or ""
             if ref.startswith("basico_"):
                 usuario.plan = "basico"
-            elif ref.startswith("upgrade_") or ref.startswith("plus_"):
+            elif ref.startswith("plus_"):
+                usuario.plan = "plus"
+            elif ref.startswith("pro_"):
+                usuario.plan = "pro"
+            elif ref.startswith("upgrade_pro_"):
+                usuario.plan = "pro"
+            elif ref.startswith("upgrade_plus_"):
                 usuario.plan = "plus"
     else:
         pago.status = "REJECTED"
