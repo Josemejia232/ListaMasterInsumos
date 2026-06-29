@@ -188,6 +188,7 @@ function buildSidebar(){
   items.push({id:'mamposteria', icon:'&#9881;', text:'Mamposterías'});
   items.push({id:'anclajes', icon:'&#9881;', text:'Anclajes'});
   items.push({id:'boquilla', icon:'&#9881;', text:'Boquilla'});
+  items.push({id:'drywall', icon:'&#9881;', text:'Drywall'});
 
   items.push({label:'NÓMINA', header:true});
   items.push({id:'nomina', icon:'&#9881;', text:'Dashboard'});
@@ -234,7 +235,13 @@ function irA(section, el){
   if(el && el.dataset.mode) _viewMode = el.dataset.mode;
   const sec = document.getElementById('section-'+section);
   if(sec) sec.classList.add('active');
-  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'nomina':'Nómina'};
+  if(section==='drywall'){
+    ['section-yeso','section-yesouc','section-cieloraso'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.classList.add('active');
+    });
+  }
+  const titles = {'ver-insumos': 'Insumos', 'usuarios':'Usuarios', 'pagos':'Pagos', 'mi-token':'Mi Token', 'insumos-calc':'InsCal', 'mezclas':'Mezclas', 'mamposteria':'Mamposterías', 'anclajes':'Anclajes Químicos', 'boquilla':'Boquilla', 'drywall':'Drywall', 'nomina':'Nómina'};
   document.getElementById('page-title').textContent = titles[section]||'Insumos';
   if(window.innerWidth<=768) document.getElementById('sidebar').classList.add('collapsed');
   if(section==='ver-insumos') cargarVerInsumos();
@@ -242,7 +249,7 @@ function irA(section, el){
   if(section==='pagos') cargarPagos();
   if(section==='mi-token') cargarMiToken();
   if(section==='insumos-calc') cargarInsumosCalc();
-  if(section==='mezclas'||section==='mamposteria'||section==='anclajes'||section==='boquilla'){
+  if(section==='mezclas'||section==='mamposteria'||section==='anclajes'||section==='boquilla'||section==='drywall'){
     if(section==='mezclas') cargarSelectMezclas();
     if(section==='mamposteria') cargarSelectMamposteria();
   }
@@ -864,7 +871,160 @@ async function calcularBoquilla(){
   } catch(e){}
 }
 
+// ─── DRYWALL ───────────────────────────────────────────
+async function calcularYeso(){
+  const h = parseFloat(document.getElementById('yeso-h').value) || 0;
+  const l = parseFloat(document.getElementById('yeso-l').value) || 0;
+  const e = parseFloat(document.getElementById('yeso-e').value) || 0.6;
+  const conLana = document.getElementById('yeso-lana').checked;
+  const wrap = document.getElementById('yeso-card-wrap');
+  const rwrap = document.getElementById('yeso-result-wrap');
+  rwrap.style.display = 'none';
+  if(h <= 0 || l <= 0){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Ingrese altura y longitud</div>'; return; }
+  _showLoading('yeso-card-wrap');
+  try {
+    const r = await apiFetch('/api/calculos/yeso', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({h, l, e, con_lana: conLana})
+    });
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ const me = await r.json().catch(()=>({})); wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">'+(me.detail||'Error al realizar el cálculo')+'</div>'; return; }
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Muro Yeso DC '+h+'×'+l+'m</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Sep. mont. '+data.e+'m'+(data.con_lana ? ' · +Lana mineral' : '')+'</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);min-width:120px">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
 
+async function calcularYesoUnaCara(){
+  const h = parseFloat(document.getElementById('yesouc-h').value) || 0;
+  const l = parseFloat(document.getElementById('yesouc-l').value) || 0;
+  const e = parseFloat(document.getElementById('yesouc-e').value) || 0.6;
+  const wrap = document.getElementById('yesouc-card-wrap');
+  const rwrap = document.getElementById('yesouc-result-wrap');
+  rwrap.style.display = 'none';
+  if(h <= 0 || l <= 0){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Ingrese altura y longitud</div>'; return; }
+  _showLoading('yesouc-card-wrap');
+  try {
+    const r = await apiFetch('/api/calculos/yeso-una-cara', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({h, l, e})
+    });
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al realizar el cálculo</div>'; return; }
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Muro Yeso 1C '+h+'×'+l+'m</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Sep. mont. '+data.e+'m</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);min-width:120px">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
+
+async function calcularCieloRaso(){
+  const an = parseFloat(document.getElementById('cr-an').value) || 0;
+  const la = parseFloat(document.getElementById('cr-la').value) || 0;
+  const conVarilla = document.getElementById('cr-varilla').checked;
+  const wrap = document.getElementById('cr-card-wrap');
+  const rwrap = document.getElementById('cr-result-wrap');
+  rwrap.style.display = 'none';
+  if(an <= 0 || la <= 0){ wrap.innerHTML='<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Ingrese ancho y largo</div>'; return; }
+  _showLoading('cr-card-wrap');
+  try {
+    const r = await apiFetch('/api/calculos/cielo-raso', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({an, la, con_varilla: conVarilla})
+    });
+    if(r.status === 403){ const me = await r.json(); wrap.innerHTML = _limiteCalcMsg(me.detail||'Sin acceso a calculadora.'); return; }
+    if(!r.ok){ wrap.innerHTML = '<div class="section-card" style="padding:1rem;text-align:center;color:var(--muted)">Error al realizar el cálculo</div>'; return; }
+    const data = await r.json();
+    _calcData = data;
+    const matRows = data.materiales.map(m =>
+      '<tr class="calc-row">'+
+      '<td style="padding:.3rem .5rem;font-size:.8rem">'+escapeHtml(m.nombre)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:center">'+escapeHtml(m.unidad)+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">'+Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right">$'+Number(m.vr_unitario).toLocaleString('es-CO')+'</td>'+
+      '<td style="padding:.3rem .3rem;font-size:.78rem;text-align:right;font-weight:600">$'+Math.round(m.vr_total).toLocaleString('es-CO')+'</td></tr>'
+    ).join('');
+    const skipWords = ['M.O.'];
+    const parts = data.materiales.map(m => {
+      if(skipWords.some(w => m.nombre.includes(w))) return null;
+      return Number(m.cantidad).toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2})+' '+escapeHtml(m.unidad)+' de '+escapeHtml(m.nombre);
+    }).filter(Boolean);
+    const note = '<div style="padding:.5rem .7rem .6rem;font-size:.8rem;color:var(--text2);border-top:1px solid var(--border);background:var(--card2)"><strong style="display:block;margin-bottom:.3rem">Nota: debes comprar</strong><ul style="margin:0;padding-left:1.2rem;list-style:disc">'+parts.map(p => '<li>'+p+'</li>').join('')+'</ul></div>';
+    wrap.innerHTML = '<div class="calc-card section-card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:.7rem 1rem;background:var(--card2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-weight:600;font-size:.85rem">Cielo Raso '+an+'×'+la+'m</div>'+
+      '<div style="font-size:.76rem;color:var(--muted)">'+data.area_m2+' m² · Perímetro '+data.perimetro_ml+'ml'+(conVarilla ? ' · +Varilla' : '')+'</div></div>'+
+      '<div style="font-size:1.05rem;font-weight:700;color:var(--accent);white-space:nowrap">$'+Math.round(data.total).toLocaleString('es-CO')+'</div></div>'+
+      '<div style="padding:.2rem .6rem .5rem">'+
+      '<table style="width:100%;border-collapse:collapse">'+
+      '<colgroup><col style="width:auto"><col style="width:48px"><col style="width:72px"><col style="width:80px"><col style="width:80px"></colgroup><thead><tr>'+
+      '<th style="padding:.25rem .4rem;font-size:.72rem;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);min-width:120px">Material</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:center;color:var(--muted);border-bottom:1px solid var(--border)">Und</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Cant</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Vr Unit</th>'+
+      '<th style="padding:.25rem .2rem;font-size:.72rem;text-align:right;color:var(--muted);border-bottom:1px solid var(--border)">Total</th>'+
+      '</tr></thead><tbody>'+matRows+'</tbody></table></div>'+note+'</div>';
+    rwrap.style.display = 'block';
+  } catch(e){}
+}
 
 // ─── NÓMINA ────────────────────────────────────────────
 function cambiarTabNomina(tab, el){
