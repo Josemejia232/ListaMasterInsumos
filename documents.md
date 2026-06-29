@@ -87,6 +87,16 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 
 ## Historial de Cambios (versiones)
 
+### v2.3.0 — Plan Pro ($20.000/mes)
+- Nuevo plan "Pro": Plus + Nómina completa
+- Backend: amounts incluye pro ($20.000), upgrade soporta basico→pro y plus→pro
+- Backend: webhook y sync_pago manejan ref pro_ y upgrade_pro_
+- Backend: nómina protegida con dependency _requiere_nomina (solo plan pro o admin)
+- Frontend: tarjeta Pro en landing page y plan banner
+- Frontend: sidebar nómina solo visible para plan pro o admin
+- Fix: admin token ya no se sobreescribe en cada reinicio del servidor
+- Tests: 72/72 pasan
+
 ### v2.2.0 — Integración Drywall a Cálculos
 - Integración del módulo Drywall dentro de Cálculos (subtítulo "Drywall" con 3 subsecciones)
 - Backend: 3 endpoints POST (/yeso, /yeso-una-cara, /cielo-raso)
