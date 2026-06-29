@@ -86,6 +86,13 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 
 ## Historial de Cambios (versiones)
 
+### Final calculos-nomina
+- Eliminación completa del módulo Drywall (HTML, JS, Backend)
+- Fix: abonos no guardaban actualización (case mismatch `dataset.prestamoId` vs `prestamoid`)
+- Fix: abonos creaban copias al guardar (selectores `data-prestamo-id` vs `data-prestamoid`)
+- Selectores unificados para `.nom-abono-row` y `.nom-abono-info`
+- Commits: c4e66e5, 8fbf548, 69c17c1, 853b893
+
 ### CHECK POINT Drywall-Caluclos (commit c4e66e5)
 - Eliminación completa del módulo Drywall
 - Secciones eliminadas del HTML: Muro Yeso DC, Cielo Raso, Muro Una Cara
