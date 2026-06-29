@@ -8,12 +8,9 @@ import logging
 from app.database import get_db
 from app.models import Insumo, Producto, Usuario, UsoCalculo, UserMaterialOverride, UserCalcConfig
 from app.calculos.data import MEZCLAS, PRECIOS_FIJOS
-from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse, BoquillaRequest, BoquillaResponse, MaterialBoquilla, YesoRequest, YesoResponse, MaterialYeso, CieloRasoRequest, CieloRasoResponse, MaterialCieloRaso, YesoUnaCaraRequest, YesoUnaCaraResponse
+from app.calculos.schemas import MezclaResponse, MaterialCalculado, AnclajeRequest, AnclajeResponse, MaterialAnclaje, MezclaMetaResponse, BoquillaRequest, BoquillaResponse, MaterialBoquilla
 from app.calculos.data_anclajes import calcular_anclaje
 from app.calculos.data_boquilla import calcular_boquilla, FORMATOS, ANCHOS_DISPONIBLES
-from app.calculos.data_yeso import calcular_yeso, PRECIOS_YESO, VALORES_DEFAULT
-from app.calculos.data_yeso_una_cara import calcular_yeso_una_cara, PRECIOS_YESO_UC
-from app.calculos.data_cielo_raso import calcular_cielo_raso, PRECIOS_CIELO_RASO, VALORES_DEFAULT_CR
 from app.services.session_service import leer_cookie
 
 router = APIRouter(prefix="/api/calculos", tags=["Cálculos"])
@@ -515,56 +512,4 @@ def calcular_boquillas(req: BoquillaRequest, user: Usuario = Depends(_get_user),
     return calcular_boquilla(req.formato, req.ancho_mm, req.area_m2)
 
 
-@router.post("/yeso", response_model=YesoResponse)
-def calcular_yesos(req: YesoRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
-    _requiere_plan_calculo("yeso", user, db)
-    if req.h <= 0 or req.l <= 0:
-        raise HTTPException(status_code=400, detail="Altura y longitud deben ser mayores a 0")
-    if req.e <= 0 or req.e > req.l:
-        raise HTTPException(status_code=400, detail="Separacion de montantes invalida")
-    try:
-        return calcular_yeso(
-            h=req.h, l=req.l, e=req.e, con_lana=req.con_lana,
-            desp=req.desp, factor_torn=req.factor_torn,
-            kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
-            rendimiento_m2_dia=req.rendimiento_m2_dia,
-            n_operarios=req.n_operarios, jornal=req.jornal,
-            precios=req.precios,
-        )
-    except Exception as e:
-        logger.exception("Error en calculo yeso")
-        raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
-
-@router.post("/yeso/una-cara", response_model=YesoUnaCaraResponse)
-def calcular_yesos_una_cara(req: YesoUnaCaraRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
-    _requiere_plan_calculo("yeso", user, db)
-    if req.h <= 0 or req.l <= 0:
-        raise HTTPException(status_code=400, detail="Altura y longitud deben ser mayores a 0")
-    if req.e <= 0 or req.e > req.l:
-        raise HTTPException(status_code=400, detail="Separacion de montantes invalida")
-    return calcular_yeso_una_cara(
-        h=req.h, l=req.l, e=req.e,
-        desp=req.desp, factor_torn=req.factor_torn,
-        kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
-        rendimiento_m2_dia=req.rendimiento_m2_dia,
-        n_operarios=req.n_operarios, jornal=req.jornal,
-        precios=req.precios,
-    )
-
-
-@router.post("/cielo-raso", response_model=CieloRasoResponse)
-def calcular_cielo_rasos(req: CieloRasoRequest, user: Usuario = Depends(_get_user), db: Session = Depends(get_db)):
-    _requiere_plan_calculo("cieloraso", user, db)
-    if req.an <= 0 or req.la <= 0:
-        raise HTTPException(status_code=400, detail="Ancho y largo deben ser mayores a 0")
-    return calcular_cielo_raso(
-        an=req.an, la=req.la, desp=req.desp,
-        sep_vp=req.sep_vp, sep_vs=req.sep_vs, sep_colg=req.sep_colg,
-        h_colg=req.h_colg, l_varilla=req.l_varilla,
-        factor_torn=req.factor_torn,
-        kg_m2_masilla=req.kg_m2_masilla, n_manos_masilla=req.n_manos_masilla,
-        rendimiento_m2_dia=req.rendimiento_m2_dia,
-        n_operarios=req.n_operarios, jornal=req.jornal,
-        con_varilla=req.con_varilla, precios=req.precios,
-    )
