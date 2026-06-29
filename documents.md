@@ -65,6 +65,7 @@ ListaMasterInsumos/
 - **Mampostería:** 37 ítems
 - **Anclajes:** Sika AnchorFix
 - **Boquilla:** 5 formatos × 4 anchos
+- **Drywall:** Muro Doble Cara, Muro Una Cara, Cielo Raso (subtítulo dentro de Cálculos)
 
 ### Nómina
 Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
@@ -85,6 +86,15 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 - Fechas vacías se envían como fecha actual (fix: `new Date().toISOString().slice(0,10)`)
 
 ## Historial de Cambios (versiones)
+
+### v2.2.0 — Integración Drywall a Cálculos
+- Integración del módulo Drywall dentro de Cálculos (subtítulo "Drywall" con 3 subsecciones)
+- Backend: 3 endpoints POST (/yeso, /yeso-una-cara, /cielo-raso)
+- Frontend: 3 formularios directos con botón ⚙️ Parámetros
+- 3 modales de parámetros (precios y rendimientos editables, guardados en localStorage)
+- Sidebar: 1 entrada "Drywall"
+- Fix: Drywall encapsulado en `section-drywall` (no aparece en otros módulos)
+- Tests: 5 cálculos verificados, 14 endpoints OK
 
 ### Final calculos-nomina
 - Eliminación completa del módulo Drywall (HTML, JS, Backend)
