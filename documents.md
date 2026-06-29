@@ -89,10 +89,12 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 
 ### v2.2.0 — Integración Drywall a Cálculos
 - Integración del módulo Drywall dentro de Cálculos (subtítulo "Drywall" con 3 subsecciones)
-- Backend: 3 endpoints POST restaurados (/yeso, /yeso-una-cara, /cielo-raso)
-- Frontend: 3 formularios directos (sin modales de parámetros)
-- Sidebar: 1 entrada "Drywall" en vez de 3 entradas separadas
-- Archivos: router.py, index.html, app.js
+- Backend: 3 endpoints POST (/yeso, /yeso-una-cara, /cielo-raso)
+- Frontend: 3 formularios directos con botón ⚙️ Parámetros
+- 3 modales de parámetros (precios y rendimientos editables, guardados en localStorage)
+- Sidebar: 1 entrada "Drywall"
+- Fix: Drywall encapsulado en `section-drywall` (no aparece en otros módulos)
+- Tests: 5 cálculos verificados, 14 endpoints OK
 
 ### Final calculos-nomina
 - Eliminación completa del módulo Drywall (HTML, JS, Backend)
