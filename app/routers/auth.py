@@ -203,9 +203,9 @@ async def comprar_plan(
     info = _plan_info(user)
     if info["plan"] != "free":
         raise HTTPException(status_code=400, detail="Ya tienes un plan activo. Usa /upgrade-plan para mejorar.")
-    amounts = {"basico": 10000, "plus": 15000}
+    amounts = {"basico": 10000, "plus": 15000, "pro": 20000}
     amount = amounts.get(req.plan, 10000)
-    desc = {"basico": "Plan Basico - Insumos ilimitados", "plus": "Plan Plus - Acceso completo"}
+    desc = {"basico": "Plan Basico - Insumos ilimitados", "plus": "Plan Plus - Acceso completo", "pro": "Plan Pro - Acceso total + Nomina"}
     reference = f"{req.plan}_usr_{user.id}_{int(time.time())}"
     try:
         payload = await bold_client.create_payment_link(
@@ -240,18 +240,26 @@ async def upgrade_plan(
 ):
     rate_limit_scrape(request)
     info = _plan_info(user)
-    if info["plan"] != "basico":
-        raise HTTPException(status_code=400, detail="Solo puedes hacer upgrade desde el plan Basico.")
+    current = info["plan"]
     dias_rest = info["dias_restantes"] or 0
     if dias_rest <= 0:
-        raise HTTPException(status_code=400, detail="Tu plan Basico ya vencio. Compra Plus directamente.")
-    credito = round((10000 * dias_rest) / 30, 0)
-    amount = max(5000, round(15000 - credito, 0))
-    reference = f"upgrade_usr_{user.id}_{int(time.time())}"
+        raise HTTPException(status_code=400, detail="Tu plan ya vencio. Compra uno nuevo directamente.")
+    precios = {"basico": 10000, "plus": 15000, "pro": 20000}
+    destinos = {
+        "basico": ["plus", "pro"],
+        "plus": ["pro"],
+    }
+    if current not in destinos:
+        raise HTTPException(status_code=400, detail="No puedes hacer upgrade desde tu plan actual.")
+    destino = "pro" if current == "basico" else "pro"
+    precio_destino = precios[destino]
+    credito = round((precios[current] * dias_rest) / 30, 0)
+    amount = max(5000, round(precio_destino - credito, 0))
+    reference = f"upgrade_{destino}_usr_{user.id}_{int(time.time())}"
     try:
         payload = await bold_client.create_payment_link(
             amount_total=amount,
-            description="Upgrade a Plan Plus - Acceso completo",
+            description=f"Upgrade a Plan Pro - Acceso total + Nomina",
             reference=reference,
             payer_email=user.email,
             expiration_minutes=120,
@@ -272,6 +280,6 @@ async def upgrade_plan(
     db.refresh(pago)
     return UpgradePlanResponse(
         id=pago.id, url=pago.url, amount=amount,
-        monto_original=15000.0, credito_basico=credito,
+        monto_original=float(precio_destino), credito_basico=credito,
         status=pago.status,
     )

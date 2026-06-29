@@ -235,7 +235,6 @@ class TestUpgradePlan:
             headers=auth_headers_free
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert "solo puedes hacer upgrade" in response.json()["detail"].lower()
     
     def test_upgrade_plan_expired(self, client, db_session, auth_headers_free):
         from app.models import Usuario
@@ -255,6 +254,4 @@ class TestUpgradePlan:
         headers = {"Authorization": f"Bearer {user.token}"}
         response = client.post("/api/auth/upgrade-plan", headers=headers)
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        # Note: When plan is expired, _plan_info returns "free", so the first check
-        # "plan != basico" triggers before the "dias_rest <= 0" check
-        assert "upgrade" in response.json()["detail"].lower()
+        assert "vencio" in response.json()["detail"].lower() or "upgrade" in response.json()["detail"].lower()

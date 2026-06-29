@@ -198,15 +198,15 @@ class ComprarPlanRequest(BaseModel):
     @field_validator("plan")
     @classmethod
     def validate_plan(cls, v):
-        if v not in ("basico", "plus"):
-            raise ValueError("Plan debe ser 'basico' o 'plus'")
+        if v not in ("basico", "plus", "pro"):
+            raise ValueError("Plan debe ser 'basico', 'plus' o 'pro'")
         return v
 
 class UpgradePlanResponse(BaseModel):
     id: int
     url: str
     amount: float
-    monto_original: float = 15000.0
+    monto_original: float = 20000.0
     credito_basico: float = 0.0
     status: str
 

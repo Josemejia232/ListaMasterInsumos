@@ -60,7 +60,7 @@ def require_admin(user: Usuario = Depends(get_current_user)):
 
 def _plan_info(user: Usuario) -> dict:
     if user.tipo == "admin":
-        return {"plan": "plus", "activo": True, "dias_restantes": 9999}
+        return {"plan": "pro", "activo": True, "dias_restantes": 9999}
     if not user.fecha_pago:
         return {"plan": "free", "activo": True, "dias_restantes": None}
     delta = (datetime.utcnow() - user.fecha_pago).days

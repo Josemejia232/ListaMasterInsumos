@@ -1,9 +1,12 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Optional
 
 from app.database import get_db
+from app.models import Usuario
+from app.services.auth_service import get_current_user, _plan_info
 from app.models_nomina import (
     UsoProyecto, Proyecto, Eps, Afp, Cargo,
     Persona, Vinculacion, Quincena, Prestamo, Abono,
@@ -21,7 +24,20 @@ from app.nomina.schemas import (
     AbonoIn, AbonoOut,
 )
 
-router = APIRouter(prefix="/api/nomina", tags=["Nomina"])
+
+def _requiere_nomina(user: Usuario = Depends(get_current_user)):
+    if user.tipo == "admin":
+        return user
+    info = _plan_info(user)
+    if info["plan"] == "pro" and info["activo"]:
+        return user
+    raise HTTPException(
+        status_code=403,
+        detail="El modulo Nomina requiere plan Pro ($20.000/mes). Actualiza tu plan."
+    )
+
+
+router = APIRouter(prefix="/api/nomina", tags=["Nomina"], dependencies=[Depends(_requiere_nomina)])
 
 
 # ─── USO PROYECTO ────────────────────────────────
