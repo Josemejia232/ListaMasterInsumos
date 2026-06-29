@@ -1069,7 +1069,7 @@ async function _nomToggleAbonos(btn, prestamoId){
   const infoRow = tbody.querySelector(`.nom-abono-info[data-prestamo-id="${prestamoId}"]`);
   if(!infoRow) return;
   const isVisible = infoRow.style.display !== 'none';
-  const abonoRows = tbody.querySelectorAll(`.nom-abono-row[data-prestamo-id="${prestamoId}"]`);
+  const abonoRows = tbody.querySelectorAll(`.nom-abono-row[data-prestamoid="${prestamoId}"]`);
   if(isVisible){
     infoRow.style.display = 'none';
     abonoRows.forEach(r => r.style.display = 'none');
@@ -1080,7 +1080,7 @@ async function _nomToggleAbonos(btn, prestamoId){
   btn.textContent = '▼';
   if(abonoRows.length === 0){
     await _nomLoadAbonos(tbody, prestamoId);
-    const newRows = tbody.querySelectorAll(`.nom-abono-row[data-prestamo-id="${prestamoId}"]`);
+    const newRows = tbody.querySelectorAll(`.nom-abono-row[data-prestamoid="${prestamoId}"]`);
     newRows.forEach(r => r.style.display = '');
   } else {
     abonoRows.forEach(r => r.style.display = '');
@@ -1230,7 +1230,7 @@ async function _nomAbonoDel(id){
 }
 
 async function _nomRefreshAbonos(tbody, prestamoId){
-  const oldRows = tbody.querySelectorAll(`.nom-abono-row[data-prestamo-id="${prestamoId}"]`);
+  const oldRows = tbody.querySelectorAll(`.nom-abono-row[data-prestamoid="${prestamoId}"]`);
   oldRows.forEach(r => r.remove());
   await _nomLoadAbonos(tbody, prestamoId);
 }
