@@ -25,7 +25,12 @@ ListaMasterInsumos/
 │   │   ├── schemas.py             → Schemas Pydantic de nómina
 │   │   └── router.py             → CRUD endpoints nómina (606 líneas)
 │   ├── calculos/
-│   │   ├── schemas.py, data.py, data_mamposteria.py, data_anclajes.py
+│   │   ├── schemas.py (sin drywall schemas)
+│   │   ├── data.py, data_mamposteria.py, data_anclajes.py
+│   │   ├── data_boquilla.py
+│   │   ├── data_yeso.py (no usado - módulo Drywall eliminado)
+│   │   ├── data_yeso_una_cara.py (no usado - módulo Drywall eliminado)
+│   │   ├── data_cielo_raso.py (no usado - módulo Drywall eliminado)
 │   │   └── router.py             → Endpoints de calculadora
 │   ├── routers/
 │   │   ├── auth.py                → Login, registro, planes, pagos
@@ -35,9 +40,9 @@ ListaMasterInsumos/
 │   │   ├── auth_service.py        → Auth logic
 │   │   └── email_service.py       → SMTP
 │   └── static/
-│       ├── index.html             → SPA principal (676 líneas)
+│       ├── index.html             → SPA principal (600+ líneas)
 │       ├── css/app.css            → Estilos (521 líneas)
-│       └── js/app.js              → Lógica frontend (2760+ líneas)
+│       └── js/app.js              → Lógica frontend (2300+ líneas)
 ├── alembic/                       → Migraciones de BD
 ├── scripts/syncPrices.gs          → Google Apps Script
 └── requirements.md                → Requerimientos detallados
@@ -60,7 +65,6 @@ ListaMasterInsumos/
 - **Mampostería:** 37 ítems
 - **Anclajes:** Sika AnchorFix
 - **Boquilla:** 5 formatos × 4 anchos
-- **Drywall** (colapsable anidado): Muro Doble Cara, Cielo Raso, Muro Una Cara
 
 ### Nómina
 Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
@@ -82,6 +86,22 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 
 ## Historial de Cambios (versiones)
 
+### Final calculos-nomina
+- Eliminación completa del módulo Drywall (HTML, JS, Backend)
+- Fix: abonos no guardaban actualización (case mismatch `dataset.prestamoId` vs `prestamoid`)
+- Fix: abonos creaban copias al guardar (selectores `data-prestamo-id` vs `data-prestamoid`)
+- Selectores unificados para `.nom-abono-row` y `.nom-abono-info`
+- Commits: c4e66e5, 8fbf548, 69c17c1, 853b893
+
+### CHECK POINT Drywall-Caluclos (commit c4e66e5)
+- Eliminación completa del módulo Drywall
+- Secciones eliminadas del HTML: Muro Yeso DC, Cielo Raso, Muro Una Cara
+- Modales eliminados: modal-yeso, modal-yesouc, modal-cr
+- Funciones JS eliminadas: calcularYeso, calcularCieloRaso, calcularYesoUnaCara y modales
+- Sidebar: eliminadas entradas Drywall (Muro Yeso DC, Muro Yeso 1C, Cielo Raso)
+- Backend: eliminadas rutas /yeso, /yeso/una-cara, /cielo-raso
+- Archivos modificados: router.py, index.html, app.js (-700 líneas)
+
 ### v2.1.0
 - Alineación de columnas entre préstamos y abonos (padding, text-align)
 - Tabla responsive sin `table-layout:fixed`
@@ -97,7 +117,6 @@ Módulo completo de gestión de nómina de obra entre InsCal y Cálculos.
 ### v2.0.0
 - Módulo nómina completo con edición inline
 - Abonos como sub-tabla expandible en Préstamos
-- Cálculos colapsable con Drywall anidado
 - PUT endpoints para quincenas, préstamos, abonos
 
 ## Endpoints Nómina
