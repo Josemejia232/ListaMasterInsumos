@@ -25,12 +25,12 @@ ListaMasterInsumos/
 │   │   ├── schemas.py             → Schemas Pydantic de nómina
 │   │   └── router.py             → CRUD endpoints nómina (606 líneas)
 │   ├── calculos/
-│   │   ├── schemas.py (sin drywall schemas)
+│   │   ├── schemas.py
 │   │   ├── data.py, data_mamposteria.py, data_anclajes.py
 │   │   ├── data_boquilla.py
-│   │   ├── data_yeso.py (no usado - módulo Drywall eliminado)
-│   │   ├── data_yeso_una_cara.py (no usado - módulo Drywall eliminado)
-│   │   ├── data_cielo_raso.py (no usado - módulo Drywall eliminado)
+│   │   ├── data_yeso.py
+│   │   ├── data_yeso_una_cara.py
+│   │   ├── data_cielo_raso.py
 │   │   └── router.py             → Endpoints de calculadora
 │   ├── routers/
 │   │   ├── auth.py                → Login, registro, planes, pagos
