@@ -18,7 +18,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[UsuarioResponse])
 def listar_usuarios(_admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):
-    return db.query(Usuario).order_by(Usuario.email).all()
+    return db.query(Usuario).order_by(Usuario.id).all()
 
 @router.post("", response_model=UsuarioResponse)
 def crear_usuario(req: UsuarioRequest, _admin: Usuario = Depends(require_admin), db: Session = Depends(get_db)):

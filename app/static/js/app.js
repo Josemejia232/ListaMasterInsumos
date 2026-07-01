@@ -2050,15 +2050,18 @@ async function cargarUsuarios(){
       var vence=fp?new Date(fp.getTime()+30*24*60*60*1000):null;
       var dias=fp?Math.ceil((vence.getTime()-Date.now())/(1000*60*60*24)):null;
       var colorDias=dias!=null?(dias<=0?'var(--red)':dias<=5?'#f59e0b':'var(--green)'):'var(--muted)';
+      var creado=u.created_at?new Date(u.created_at):null;
+      var esNuevo=creado?((Date.now()-creado.getTime())/(1000*60*60*24))<7:false;
       return `<tr>
       <td style="color:var(--muted)">${u.id}</td>
-      <td style="font-weight:500">${escapeHtml(u.email)}</td>
+      <td style="font-weight:500">${escapeHtml(u.email)}${esNuevo?' <span style="font-size:.65rem;background:#e0f2fe;color:#0284c7;padding:.1rem .45rem;border-radius:1rem;font-weight:600">Nuevo</span>':''}</td>
       <td><span style="background:${u.activo?'var(--green-light)':'var(--red-light)'};color:${u.activo?'var(--green)':'var(--red)'};padding:.2rem .55rem;border-radius:1rem;font-size:.73rem;font-weight:600">${u.activo?'Activo':'Bloqueado'}</span></td>
       <td style="color:var(--muted)">${escapeHtml(u.tipo)}</td>
       <td><code style="font-size:0.73rem;word-break:break-all;background:#f4f5ff;padding:.15rem .4rem;border-radius:.3rem;color:var(--accent2)">${escapeHtml(u.token)}</code> <button class="btn btn-sm btn-outline" onclick="resetearToken(${u.id})" title="Resetear token">⟳</button></td>
       <td style="color:var(--muted)">${fp?fp.toLocaleDateString('es-CO'):'-'}</td>
       <td style="color:${colorDias};font-weight:500">${vence?vence.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'2-digit'}):'-'}</td>
       <td style="color:${colorDias};font-weight:700">${dias!=null?dias:'-'}</td>
+      <td style="color:var(--muted);font-size:.8rem">${creado?creado.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'2-digit'}):'-'}</td>
       <td><div class="actions">
         <button class="btn btn-sm btn-outline" data-edit-id="${u.id}" data-edit-email="${escapeHtml(u.email)}" data-edit-tipo="${escapeHtml(u.tipo)}" data-edit-activo="${u.activo}" onclick="editarUsuarioBtn(this)">Editar</button>
         <button class="btn btn-sm ${u.activo?'btn-red':'btn-green'}" onclick="toggleActivo(${u.id},${!u.activo})">${u.activo?'Bloquear':'Activar'}</button>
